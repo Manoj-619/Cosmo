@@ -3,7 +3,7 @@ import time
 import functools
 import simplejson as json
 import hashlib
-
+import logging
 
 def timer(func):
     """Print the runtime of the decorated function"""
@@ -42,3 +42,14 @@ def md5_sha_from_dict(obj, ignore_nan=False, default=None,):
     json_data = json.dumps(obj, sort_keys=True,
                            ignore_nan=ignore_nan, default=default)
     return md5_sha_from_str(json_data)
+
+
+def get_logger(name):
+    """Get logger object."""
+    logger = logging.getLogger(name)
+    logger.setLevel(logging.DEBUG)
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    ch = logging.StreamHandler()
+    ch.setFormatter(formatter)
+    logger.addHandler(ch)
+    return logger
