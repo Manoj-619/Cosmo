@@ -1,7 +1,17 @@
+
+celerybeat-schedule*.db
+celerybeat-schedule*.bak
+celerybeat-schedule*.dat
+celerybeat-schedule*.dir
+
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
 *$py.class
+.env
+.DS_Store
+
 
 # C extensions
 *.so

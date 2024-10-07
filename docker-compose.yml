@@ -1,0 +1,13 @@
+services:
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+      - "5555:5555"
+    expose:
+      - "8000"
+      - "5555"
+    volumes:
+      - .:/app
+    env_file:
+      - .env      

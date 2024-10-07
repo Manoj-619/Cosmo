@@ -1,0 +1,51 @@
+## basic setup packages
+wheel
+setuptools
+python-dotenv
+httpx_oauth
+# for data/DB
+pandas
+simplejson
+### for DB
+pg8000
+sqlalchemy
+psycopg2
+psycopg[pool]   # for connection pooling
+
+# monitoring
+# supervisor
+# superlance
+
+
+# LLM
+openai>=1.44.0
+pydantic==2.9.1
+anthropic
+tiktoken
+tenacity
+
+# for web
+# gunicorn>=20.0.4
+gevent>=20.6.2
+eventlet>=0.25.2
+celery==5.2.3
+flower==2.0.1
+kombu==5.4.0
+
+# Redis for caching and stuff
+redis
+# NOTE: not sure if needed
+# hiredis-py 
+django-redis==5.4.0
+
+### Django
+django>=5.1.1
+djangorestframework
+python-decouple
+django-environ
+
+# Rate limiting
+django-ratelimit
+
+### Wikipedia
+pymediawiki
