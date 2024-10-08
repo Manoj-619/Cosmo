@@ -1,6 +1,13 @@
 from django.db import models
 from django.contrib.auth.models import User
 
+class Org(models.Model):
+    org_id = models.AutoField(primary_key=True)
+    org_name = models.CharField(max_length=255,unique=True)
+
+    def __str__(self):
+        return self.org_name
+
 class Profile(models.Model):
     STAGE_CHOICES = [
         ('profile', 'Profile Collection'),
@@ -14,12 +21,16 @@ class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile', primary_key=True)
     stage = models.CharField(max_length=20, choices=STAGE_CHOICES, default='profile')
 
+
     # Links to the different stage models
     profile_stage = models.OneToOneField('ProfileStage', on_delete=models.SET_NULL, null=True, blank=True, related_name='profile')
     discover_stage = models.OneToOneField('DiscoverStage', on_delete=models.SET_NULL, null=True, blank=True, related_name='profile')
     discuss_stage = models.OneToOneField('DiscussStage', on_delete=models.SET_NULL, null=True, blank=True, related_name='profile')
     deliver_stage = models.OneToOneField('DeliverStage', on_delete=models.SET_NULL, null=True, blank=True, related_name='profile')
     demonstrate_stage = models.OneToOneField('DemonstrateStage', on_delete=models.SET_NULL, null=True, blank=True, related_name='profile')
+
+    #New field to link user to org
+    org = models.OneToOneField(Org, on_delete=models.SET_NULL, null=True, blank=True, related_name='profile')
 
     def increment_stage(self):
         """Increment the current stage to the next stage in the sequence."""
