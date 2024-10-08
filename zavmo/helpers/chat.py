@@ -5,6 +5,7 @@ import random
 import tiktoken
 import numpy as np
 import openai
+import anthropic
 from openai import OpenAI
 from dotenv import load_dotenv
 from pydantic import BaseModel
@@ -78,6 +79,16 @@ def get_openai_completion(messages, model="gpt-4o-mini", **kwargs):
         **kwargs,
     )        
     return response.choices[0].message.content
+
+def get_claude_response(sys_mssg,messages,model="claude-3-opus-20240229"):
+    client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+    message = client.messages.create(
+        model=model,
+        max_tokens=1024,
+        system=sys_mssg,
+        messages=messages
+    )
+    return message.content[0].text
 
 def make_function_call(func, messages=[], model='gpt-4o-mini',force=True, **kwargs):
     """    
