@@ -1,156 +1,145 @@
-import json
-import random
-from rest_framework.decorators import api_view
-from rest_framework.response import Response
+""" 
+Contains views for the stage app.
+- create_org: Creates a new organization or returns an existing one.
+- sync_user: Synchronizes user data: creates a new user if not exists, or returns existing user data.
+- get_user_profile: Retrieves the user's complete profile data.
+- chat_view: Handles chat sessions between a user and the AI assistant.
+
+"""
 from rest_framework import status
-from rest_framework.exceptions import AuthenticationFailed
+from rest_framework.decorators import api_view, authentication_classes, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
-from django.utils.decorators import method_decorator
-from django.views.decorators.cache import cache_page
-from .models import Profile
-from .serializers import OrgSerializer, UserSerializer, ProfileSerializer
-from django.conf import settings
+from zavmo.authentication import CustomJWTAuthentication
+from django.db import IntegrityError
 from django.core.cache import cache
 from django.contrib.auth.models import User
-from rest_framework.views import APIView
-import jwt
-from .models import ChatSession
+from .models import Org, Profile
+from .serializers import UserSerializer, ProfileSerializer
 
+# Endpoint: /api/org/create/
 @api_view(['POST'])
 def create_org(request):
     """
-    API to create a new organization.
-    Accepts an organization name in the request and returns the org_id.
+    API to create a new organization or return an existing one.
+    Accepts an organization name in the request and returns the org_id along with a message.
     """
-    serializer = OrgSerializer(data=request.data)
+    org_id   = request.data.get('org_id')
+    org_name = request.data.get('org_name')
+    if not org_name:
+        return Response({"error": "Organization name is required."}, status=status.HTTP_400_BAD_REQUEST)
+    
+    try:
+        org, created = Org.objects.get_or_create(org_name=org_name, org_id=org_id)
+        message = "Organization created successfully." if created else "Organization already exists."
+        return Response({
+            "message": message,
+            "org_id": org.org_id,
+            "org_name": org.org_name
+        }, status=status.HTTP_200_OK)
+    except IntegrityError:
+        return Response({"error": "An error occurred while creating the organization."},
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+# Endpoint: /api/user/sync/
+@api_view(['POST'])
+def sync_user(request):
+    """
+    Synchronize user data: create a new user if not exists, or return existing user data.
+    This endpoint allows clients to send user details via a POST request.
+    If the user doesn't exist, it creates a new one. If the user exists, it returns the existing user data.
+    
+    Returns:
+    Response: JSON object with user data, status message, or error messages.
+    """
+    serializer = UserSerializer(data=request.data, context={'request': request})
     if serializer.is_valid():
-        serializer.save()
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        email = serializer.validated_data['email']
+        org_id = request.data.get('org_id')  # Ensure org_id is provided for new users
+
+        if not org_id:
+            return Response({"error": "Organization ID is required for new users."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            user, created = User.objects.get_or_create(
+                email=email,
+                defaults={'username': email, **serializer.validated_data}
+            )
+            
+            if created:
+                message = "User created successfully."
+                status_code = status.HTTP_201_CREATED
+                stage = 1  # Default stage for new users
+            else:
+                message = "User already exists."
+                status_code = status.HTTP_200_OK
+                profile = Profile.objects.filter(user=user).first()
+                stage = profile.stage if profile else 1
+            
+            return Response({
+                "message": message,
+                "user_id": user.id,
+                "email": user.email,
+                "stage": stage
+            }, status=status_code)
+        
+        except IntegrityError:
+            return Response({"error": "An error occurred while synchronizing the user data."},
+                            status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-@api_view(['POST'])
-def create_user(request):
-    """
-    Create a new user.
-    This endpoint allows clients to create a user by sending a POST request
-    with user details.
-    Returns:
-    Response: JSON object with user data or error messages.
-    """
-    if request.method == 'POST':
-        serializer = UserSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-class UserProfileView(APIView):
+# Endpoint: /api/user/profile
+@api_view(['GET'])
+@authentication_classes([CustomJWTAuthentication])
+@permission_classes([IsAuthenticated])
+def get_user_profile(request):
     """
     API to retrieve the user's complete profile data.
     """
+    user = request.user  # The authenticated user
 
-    @method_decorator(cache_page(3600))  # Cache this view for 1 hour
-    def get(self, request):
-        # Extract token from request headers
-        token = request.headers.get('Authorization', None)
-        
-        if not token:
-            raise AuthenticationFailed("Token not provided")
+    # Attempt to get the profile from the cache
+    cache_key = f'user_profile_{user.id}'
+    profile = cache.get(cache_key)
 
-        try:
-            # Decode the token to get the user ID
-            payload = jwt.decode(token.split()[1], settings.SECRET_KEY, algorithms=['HS256'])
-            user_id = payload.get('user_id')  # Adjust according to your JWT payload structure
-            user = get_object_or_404(User, id=user_id)
-        except (jwt.ExpiredSignatureError, jwt.DecodeError):
-            raise AuthenticationFailed("Invalid or expired token")
-
-        # Attempt to get the profile from the cache
-        cache_key = f'user_profile_{user.id}'
-        profile = cache.get(cache_key)
-
-        if not profile:
-            # If not cached, fetch the profile and cache it
-            profile = get_object_or_404(Profile, user=user)
-            cache.set(cache_key, profile, 3600)  # Cache profile for 1 hour
-        
-        serializer = ProfileSerializer(profile)
-        return Response(serializer.data)
+    if not profile:
+        # If not cached, fetch the profile and cache it
+        profile = get_object_or_404(Profile, user=user)
+        cache.set(cache_key, profile, timeout=60) # Cache for 60 seconds
     
-class ChatAPI(APIView):
-    """
-    ChatAPI handles chat sessions between a user and the AI assistant.
+    serializer = ProfileSerializer(profile)
+    return Response(serializer.data)
 
-    Request Headers:
-    - Authorization: Bearer <JWT_TOKEN> (required)
+# Endpoint: /api/chat/
+@api_view(['POST'])
+@authentication_classes([CustomJWTAuthentication])
+@permission_classes([IsAuthenticated])
+def chat_view(request):
+    """
+    handles chat sessions between a user and the AI assistant.
     
     Request Body:
     - message (optional): The message sent by the user. If the session is new, no message is required.
 
     Response Structure:
-    - type (str): "text" (indicates the response is textual).
-    - message (str): The AI's message or an empty string if no message is processed.
-    - stage (int): The current stage of the user's journey. Possible stages:
-        0 - Profile Collection
-        1 - Discover
-        3 - Discuss
-        5 - Deliver
-        7 - Demonstrate
+    - type (str): "text" (Just text for now, can add more types later for example for mcqs etc)
+    - message (str, list): The AI's response.
+    - stage (int): The current stage of the user's journey.
 
     Workflow:
     - If a new chat session is initiated, the AI responds with an initial message and the current stage is set.
     - If a session already exists, the current stage is returned, and the user's message is processed based on their profile.
     - JWT token is used to authenticate the user and retrieve their profile information.
     """
-    def post(self, request):
-        token = request.headers.get('Authorization', None)
-
-        if token:
-            # Extract token without 'Bearer '
-            try:
-                token = token.split()[1]  # Strip 'Bearer' from token
-                payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
-            except (jwt.ExpiredSignatureError, jwt.DecodeError, IndexError):
-                return Response({"error": "Invalid or expired token"}, status=status.HTTP_401_UNAUTHORIZED)
-
-            # Get or create the chat session based on the token
-            chat_session, created = ChatSession.objects.get_or_create(token=token)
-
-            # Retrieve the user's profile based on the JWT token (assuming user ID is in the token)
-            user_id = payload.get('user_id')  # Adjust according to your JWT payload structure
-            profile = get_object_or_404(Profile, user__id=user_id)
-
-            if created:
-                # New session created, initialize the stage to the user's current stage
-                chat_session.stage = self.get_stage_value(profile.stage)
-                chat_session.save()
-
-                # Send an initial message from the AI
-                initial_ai_message = "Hello! I'm here to assist you."
-                
-                return Response({
-                    "type": "text",  # Indicate that the response is a text message
-                    "message": initial_ai_message,  # AI's initial message
-                    "stage": chat_session.stage  # Return current stage
-                }, status=status.HTTP_201_CREATED)
-
-            # If a session already exists, just return the current stage without processing a message
-            return Response({
-                "type": "text",  # Indicate that the response is a text message
-                "message": "",  # Empty message
-                "stage": chat_session.stage  # Return current stage
-            }, status=status.HTTP_200_OK)
-        
-        else:
-            return Response({"error": "Token not provided"}, status=status.HTTP_401_UNAUTHORIZED)
-
-    def get_stage_value(self, stage):
-        """Convert stage string to corresponding numeric value."""
-        stage_mapping = {
-            'profile': 0,
-            'discover': 1,
-            'discuss': 3,
-            'deliver': 5,
-            'demonstrate': 7
-        }
-        return stage_mapping.get(stage, 0)  # Default to 0 if stage is not recognized
+    user    = request.user
+    profile = get_object_or_404(Profile, user=user)
+    # Get current stage
+    stage = profile.stage
+    
+    return Response({
+            "type": "text",
+            "message": "test",
+            "stage": stage
+        }, status=status.HTTP_201_CREATED)

@@ -7,7 +7,7 @@ from typing import Any, Callable, List, Type, Union, Dict, Optional, get_type_hi
 # Mapping of basic type names to actual Python types
 basic_types = {
     'str': str, 'int': int, 'float': float, 'bool': bool, 
-    'Any': Any, 'Dict': Dict, 'List': List, 'Optional': Optional, 'Union': Union,
+    'Any': Any, 'Dict': Dict, 'List': List, 'Optional': Optional, 'Union':Union,
 }
     
 def eval_type_ast(node):
@@ -56,4 +56,47 @@ def parse_type(type_str: str):
         # Recursively evaluate the AST node to get the type
         return eval_type_ast(type_ast)
     except Exception as e:
-        raise ValueError(f"Error parsing type '{type_str}': {e}")
+        raise ValueError(f"Error parsing type '{type_str}': {e}")        
+    
+    
+def create_model_fields(fields):
+    """
+    Dynamically creates fields for the model using Annotated and Field.
+
+    Args:
+        fields (list): A list of dictionaries containing field data.
+
+    Returns:
+        dict: A dictionary of model fields.
+    """
+    model_fields = {}
+    for field_data in fields:
+        field_name = field_data['title']
+        annotation_str = field_data['annotation']  # Annotation is now required
+        field_annotation = parse_type(annotation_str)
+        field = Field(**{k: v for k, v in field_data.items() if k not in ['title', 'annotation']})
+        model_fields[field_name] = Annotated[field_annotation, field]
+    return model_fields
+
+def create_pydantic_model(name: str, fields: List[Dict[str, Any]], description: str = None):
+    """
+    Dynamically creates a Pydantic model based on the provided name, description (optional), and fields.
+
+    Args:
+        name (str): The name of the model.
+        description (str, optional): The description of the model. Defaults to None.
+        fields (List[Dict[str, Any]]): A list of dictionaries containing field data.
+
+    Returns:
+        Type[BaseModel]: A dynamically created Pydantic model.
+    """
+    model_fields = create_model_fields(fields)
+    
+    model_attributes = {
+        'model_config': {'title': name},
+    }
+    
+    if description:
+        model_attributes['__doc__'] = description
+    
+    return create_model(name, **model_fields, **model_attributes)

@@ -9,17 +9,18 @@ class OrgSerializer(serializers.ModelSerializer):
         fields = ['org_id', 'org_name']
 
 class UserSerializer(serializers.ModelSerializer):
-    org_id = serializers.CharField(source='org.org_id')  # Assuming a OneToOne relation with Org
+    org_id = serializers.CharField(source='profile.org.org_id', read_only=True)  # Accessing org_id through the Profile model
 
     class Meta:
         model = User
         fields = ['email', 'org_id']
 
     def create(self, validated_data):
-        org_id = validated_data.pop('org')['org_id']  # Extracting org_id from the validated data
+        # Extract org_id from the request data instead of validated_data
+        org_id = self.context['request'].data.get('org_id')
         user = User.objects.create(**validated_data)
-        user.profile.org_id = org_id  
-        user.save()
+        # Create a Profile instance with the org_id
+        Profile.objects.create(user=user, org_id=org_id)
         return user
     
 class ProfileStageSerializer(serializers.ModelSerializer):
@@ -59,4 +60,3 @@ class ProfileSerializer(serializers.ModelSerializer):
         model = Profile
         fields = ['user', 'stage', 'profile_stage', 'discover_stage', 'discuss_stage', 'deliver_stage', 'demonstrate_stage', 'org']
 
-    

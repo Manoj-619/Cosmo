@@ -17,9 +17,9 @@ class Profile(models.Model):
         DELIVER = 4, 'Deliver'
         DEMONSTRATE = 5, 'Demonstrate'
 
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile', primary_key=True)
+    user  = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile', primary_key=True)
     stage = models.PositiveSmallIntegerField(choices=Stage.choices, default=Stage.PROFILE)
-    org = models.ForeignKey(Org, on_delete=models.SET_NULL, null=True, blank=True, related_name='profiles')
+    org   = models.ForeignKey(Org, on_delete=models.SET_NULL, null=True, blank=True, related_name='profiles')
 
     def increment_stage(self):
         """Increment the current stage to the next stage in the sequence."""
@@ -30,62 +30,44 @@ class Profile(models.Model):
     def __str__(self):
         return f"{self.user.username} - Stage: {self.get_stage_display()}"
 
-
+# Stage 1 or (0th D)
 class ProfileStage(models.Model):
     user         = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile_stage')
     first_name   = models.CharField(max_length=100)
-    last_name    = models.CharField(max_length=100)    
-    current_role   = models.CharField(max_length=200)
-    hobbies        = models.TextField()
-    learning_goals = models.JSONField(default=list)  # List of learning goals
-    available_study_time = models.CharField(max_length=100)
+    last_name    = models.CharField(max_length=100)
+    age          = models.PositiveIntegerField()
+    edu_level    = models.PositiveSmallIntegerField(choices=[
+        (1, 'Primary School'),
+        (2, 'Middle School'),
+        (3, 'High School'),
+        (4, 'Associate Degree'),
+        (5, 'Bachelor\'s Degree'),
+        (6, 'Master\'s Degree'),
+        (7, 'PhD')
+    ])
 
-    def __str__(self):
-        return f"Profile Stage - {self.user.username}"
-
-
+# Stage 2 or (1st D)
 class DiscoverStage(models.Model):
     user             = models.OneToOneField(User, on_delete=models.CASCADE, related_name='discover_stage')
     learning_goals   = models.JSONField(default=list)  # List of dicts: {'topic': 'string', 'reason': 'string'}
-    related_interests = models.JSONField(default=list)  # List of strings
-    motivation = models.TextField()
-    potential_applications = models.JSONField(default=list)  # List of strings
-    current_knowledge_level = models.CharField(max_length=200)
 
-    def __str__(self):
-        return f"Discover Stage - {self.user.username}"
-
-
+# Stage 3 or (2nd D)
 class DiscussStage(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='discuss_stage')
-    content_preference = models.CharField(max_length=200)
-    structure_preference = models.CharField(max_length=200)
-    pacing_preference = models.CharField(max_length=200)
-    neurodiversity_considerations = models.TextField(blank=True, null=True)
-    additional_preferences = models.TextField(blank=True, null=True)
-    habit_preferences = models.TextField(blank=True, null=True)
-    ideal_learning_time = models.CharField(max_length=100)
+    content_preference   = models.CharField(max_length=200) # For example: "Textbooks", "Videos", "Interactive Content"
+    structure_preference = models.CharField(max_length=200) # For example: "Sequential", "Hierarchical", "Flexible"
+    pacing_preference     = models.CharField(max_length=200) # For example: "Fast-paced", "Slow-paced", "Adaptive"
+    neurodiversity_considerations = models.TextField(blank=True, null=True) # For example: "Visual Aids", "Break Time", "Small Group Activities"
 
-    def __str__(self):
-        return f"Discuss Stage - {self.user.username}"
-
-
+# Stage 4 or (3rd D)
 class DeliverStage(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='deliver_stage')
-    modules = models.JSONField(default=list)  # List of dicts: {'title': 'string', 'description': 'string', 'resources': ['string'], 'activities': ['string'], 'estimated_duration': 'string'}
-    timeline = models.TextField()
-    milestones = models.JSONField(default=list)  # List of strings
+    user       = models.OneToOneField(User, on_delete=models.CASCADE, related_name='deliver_stage')
+    modules    = models.JSONField(default=list)  # List of dicts: {'title': 'string', 'description': 'string', 'resources': ['string']}
+    timeline   = models.TextField()
 
-    def __str__(self):
-        return f"Deliver Stage - {self.user.username}"
-
-
+# Stage 5 or (4th D)
 class DemonstrateStage(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='demonstrate_stage')
     current_module = models.CharField(max_length=200)
     completed_modules = models.JSONField(default=list)  # List of strings
-    understanding_level = models.CharField(max_length=200)
-    next_steps = models.TextField()
-
-    def __str__(self):
-        return f"Demonstrate Stage - {self.user.username}"
+    understanding_level = models.CharField(max_length=200) # For example: "Basic Understanding", "Intermediate", "Advanced"

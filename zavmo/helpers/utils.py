@@ -4,13 +4,12 @@ import functools
 import simplejson as json
 import hashlib
 import logging
+import jwt
+from django.conf import settings
 
 def timer(func):
     """Print the runtime of the decorated function"""
-
-    @functools.wraps(
-        func
-    )  # This line preserves the name and docstring of the decorated function
+    @functools.wraps(func)  # This line preserves the name and docstring of the decorated function
     def wrapper(*args, **kwargs):
         start_time = time.time()
         result = func(*args, **kwargs)
@@ -24,6 +23,30 @@ def timer(func):
             )
         return result
     return wrapper
+
+
+def create_jwt(payload, expiration_time=3600):
+    """
+    Create a JWT token from a given payload
+    
+    Args:
+        payload (dict): The payload to be encoded in the JWT.
+        expiration_time (int): Token expiration time in seconds (default: 1 hour).
+    
+    Returns:
+        str: The generated JWT token.
+    """
+    current_time = int(time.time())
+    payload['exp'] = current_time + expiration_time
+    payload['iat'] = current_time
+
+    token = jwt.encode(
+        payload,
+        settings.JWT_PRIVATE_KEY,
+        algorithm=settings.JWT_ALGORITHM
+    )
+
+    return token
 
 def batch_list(data, batch_size):
     """Generate batches of data with a given batch size."""

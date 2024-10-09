@@ -19,7 +19,7 @@ psycopg[pool]   # for connection pooling
 
 # LLM
 anthropic
-openai>=1.44.0
+openai>=1.51.2
 pydantic==2.9.1
 anthropic
 tiktoken
@@ -40,7 +40,7 @@ redis
 django-redis==5.4.0
 
 ### Django
-django>=5.1.1
+django==5.1.1
 ## JWT for Django
 djangorestframework-simplejwt
 PyJWT
