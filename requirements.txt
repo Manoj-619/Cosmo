@@ -50,3 +50,6 @@ django-ratelimit
 
 ### Wikipedia
 pymediawiki
+
+# JWT handling
+PyJWT
