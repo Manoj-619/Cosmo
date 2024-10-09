@@ -56,10 +56,11 @@ def sync_user(request):
     serializer = UserSerializer(data=request.data, context={'request': request})
     if serializer.is_valid():
         email = serializer.validated_data['email']
-        org_id = request.data.get('org_id')  # Ensure org_id is provided for new users
+        org_id = request.data.get('org_id')  # Ensure org_id is provided
 
+        # Validate org_id presence
         if not org_id:
-            return Response({"error": "Organization ID is required for new users."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "Organization ID is required."}, status=status.HTTP_400_BAD_REQUEST)
         
         try:
             user, created = User.objects.get_or_create(
@@ -70,18 +71,34 @@ def sync_user(request):
             if created:
                 message = "User created successfully."
                 status_code = status.HTTP_201_CREATED
-                stage = 1  # Default stage for new users
+                profile = Profile.objects.create(user=user, org_id=org_id)
+                stage = profile.stage
             else:
                 message = "User already exists."
                 status_code = status.HTTP_200_OK
                 profile = Profile.objects.filter(user=user).first()
-                stage = profile.stage if profile else 1
+                if profile:
+                    # Update org_id if necessary
+                    if profile.org_id != org_id:
+                        profile.org_id = org_id
+                        profile.save()
+                    stage = profile.stage
+                else:
+                    # Create profile if it doesn't exist
+                    profile = Profile.objects.create(user=user, org_id=org_id)
+                    stage = profile.stage
+            
+            # Fetch the organization details
+            org = Org.objects.filter(org_id=org_id).first()
+            org_name = org.org_name if org else None
             
             return Response({
                 "message": message,
                 "user_id": user.id,
                 "email": user.email,
-                "stage": stage
+                "stage": stage,
+                "org_id": org_id,
+                "org_name": org_name
             }, status=status_code)
         
         except IntegrityError:
