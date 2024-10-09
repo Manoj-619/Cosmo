@@ -33,9 +33,9 @@ class Profile(models.Model):
 # Stage 1 or (0th D)
 class ProfileStage(models.Model):
     user         = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile_stage')
-    first_name   = models.CharField(max_length=100)
-    last_name    = models.CharField(max_length=100)
-    age          = models.PositiveIntegerField()
+    first_name   = models.CharField(max_length=100, blank=True, null=True)
+    last_name    = models.CharField(max_length=100, blank=True, null=True)
+    age          = models.PositiveIntegerField(null=True, blank=True)
     edu_level    = models.PositiveSmallIntegerField(choices=[
         (1, 'Primary School'),
         (2, 'Middle School'),
@@ -44,7 +44,7 @@ class ProfileStage(models.Model):
         (5, 'Bachelor\'s Degree'),
         (6, 'Master\'s Degree'),
         (7, 'PhD')
-    ])
+    ], blank=True, null=True)
 
 # Stage 2 or (1st D)
 class DiscoverStage(models.Model):
@@ -54,20 +54,20 @@ class DiscoverStage(models.Model):
 # Stage 3 or (2nd D)
 class DiscussStage(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='discuss_stage')
-    content_preference   = models.CharField(max_length=200) # For example: "Textbooks", "Videos", "Interactive Content"
-    structure_preference = models.CharField(max_length=200) # For example: "Sequential", "Hierarchical", "Flexible"
-    pacing_preference     = models.CharField(max_length=200) # For example: "Fast-paced", "Slow-paced", "Adaptive"
+    content_preference   = models.CharField(max_length=200, blank=True, null=True) # For example: "Textbooks", "Videos", "Interactive Content"
+    structure_preference = models.CharField(max_length=200, blank=True, null=True) # For example: "Sequential", "Hierarchical", "Flexible"
+    pacing_preference     = models.CharField(max_length=200, blank=True, null=True) # For example: "Fast-paced", "Slow-paced", "Adaptive"
     neurodiversity_considerations = models.TextField(blank=True, null=True) # For example: "Visual Aids", "Break Time", "Small Group Activities"
 
 # Stage 4 or (3rd D)
 class DeliverStage(models.Model):
     user       = models.OneToOneField(User, on_delete=models.CASCADE, related_name='deliver_stage')
     modules    = models.JSONField(default=list)  # List of dicts: {'title': 'string', 'description': 'string', 'resources': ['string']}
-    timeline   = models.TextField()
+    timeline   = models.TextField(blank=True, null=True)
 
 # Stage 5 or (4th D)
 class DemonstrateStage(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='demonstrate_stage')
-    current_module = models.CharField(max_length=200)
+    current_module = models.CharField(max_length=200, blank=True, null=True)
     completed_modules = models.JSONField(default=list)  # List of strings
-    understanding_level = models.CharField(max_length=200) # For example: "Basic Understanding", "Intermediate", "Advanced"
+    understanding_level = models.CharField(max_length=200, blank=True, null=True) # For example: "Basic Understanding", "Intermediate", "Advanced"

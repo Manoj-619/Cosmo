@@ -6,6 +6,9 @@ import hashlib
 import logging
 import jwt
 from django.conf import settings
+from dotenv import load_dotenv
+
+load_dotenv()
 
 def timer(func):
     """Print the runtime of the decorated function"""
@@ -24,7 +27,6 @@ def timer(func):
         return result
     return wrapper
 
-
 def create_jwt(payload, expiration_time=3600):
     """
     Create a JWT token from a given payload
@@ -41,9 +43,9 @@ def create_jwt(payload, expiration_time=3600):
     payload['iat'] = current_time
 
     token = jwt.encode(
-        payload,
-        settings.JWT_PRIVATE_KEY,
-        algorithm=settings.JWT_ALGORITHM
+        payload, 
+        key=os.getenv('JWT_PRIVATE_KEY'),
+        algorithm=os.getenv('JWT_ALGORITHM')
     )
 
     return token

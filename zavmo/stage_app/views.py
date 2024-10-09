@@ -17,6 +17,9 @@ from django.core.cache import cache
 from django.contrib.auth.models import User
 from .models import Org, Profile
 from .serializers import UserSerializer, ProfileSerializer
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Endpoint: /api/org/create/
 @api_view(['POST'])
@@ -56,11 +59,15 @@ def sync_user(request):
     serializer = UserSerializer(data=request.data, context={'request': request})
     if serializer.is_valid():
         email = serializer.validated_data['email']
-        org_id = request.data.get('org_id')  # Ensure org_id is provided
+        org_id = request.data.get('org_id')
 
-        # Validate org_id presence
+        # Validate org_id presence and existence
         if not org_id:
             return Response({"error": "Organization ID is required."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        org = Org.objects.filter(org_id=org_id).first()
+        if not org:
+            return Response({"error": "Organization with this ID does not exist."}, status=status.HTTP_400_BAD_REQUEST)
         
         try:
             user, created = User.objects.get_or_create(
@@ -71,22 +78,36 @@ def sync_user(request):
             if created:
                 message = "User created successfully."
                 status_code = status.HTTP_201_CREATED
-                profile = Profile.objects.create(user=user, org_id=org_id)
-                stage = profile.stage
+                try:
+                    profile = Profile.objects.create(user=user, org=org)
+                    stage = profile.stage
+                    logger.info(f"Profile created for user {user.username}")
+                except Exception as e:
+                    logger.error(f"Error creating profile for user {user.username}: {str(e)}")
+                    # Delete the user if profile creation fails
+                    user.delete()
+                    return Response({"error": f"An error occurred while creating the profile: {str(e)}"},
+                                    status=status.HTTP_500_INTERNAL_SERVER_ERROR)
             else:
                 message = "User already exists."
                 status_code = status.HTTP_200_OK
                 profile = Profile.objects.filter(user=user).first()
                 if profile:
-                    # Update org_id if necessary
-                    if profile.org_id != org_id:
-                        profile.org_id = org_id
+                    # Update org if necessary
+                    if profile.org != org:
+                        profile.org = org
                         profile.save()
                     stage = profile.stage
                 else:
                     # Create profile if it doesn't exist
-                    profile = Profile.objects.create(user=user, org_id=org_id)
-                    stage = profile.stage
+                    try:
+                        profile = Profile.objects.create(user=user, org=org)
+                        stage = profile.stage
+                        logger.info(f"Profile created for existing user {user.username}")
+                    except Exception as e:
+                        logger.error(f"Error creating profile for existing user {user.username}: {str(e)}")
+                        return Response({"error": f"An error occurred while creating the profile: {str(e)}"},
+                                        status=status.HTTP_500_INTERNAL_SERVER_ERROR)
             
             # Fetch the organization details
             org = Org.objects.filter(org_id=org_id).first()
@@ -94,15 +115,15 @@ def sync_user(request):
             
             return Response({
                 "message": message,
-                "user_id": user.id,
                 "email": user.email,
                 "stage": stage,
                 "org_id": org_id,
                 "org_name": org_name
             }, status=status_code)
         
-        except IntegrityError:
-            return Response({"error": "An error occurred while synchronizing the user data."},
+        except IntegrityError as e:
+            logger.error(f"IntegrityError during user sync: {str(e)}")
+            return Response({"error": f"An error occurred while synchronizing the user data: {str(e)}"},
                             status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -115,17 +136,9 @@ def get_user_profile(request):
     """
     API to retrieve the user's complete profile data.
     """
-    user = request.user  # The authenticated user
+    # Use the profile attached by the JWT authentication
+    profile = request.profile
 
-    # Attempt to get the profile from the cache
-    cache_key = f'user_profile_{user.id}'
-    profile = cache.get(cache_key)
-
-    if not profile:
-        # If not cached, fetch the profile and cache it
-        profile = get_object_or_404(Profile, user=user)
-        cache.set(cache_key, profile, timeout=60) # Cache for 60 seconds
-    
     serializer = ProfileSerializer(profile)
     return Response(serializer.data)
 

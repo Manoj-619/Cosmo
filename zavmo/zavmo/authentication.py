@@ -1,4 +1,5 @@
-# myapp/authentication.py
+# zavmo/authentication.py
+import os
 from rest_framework.authentication import BaseAuthentication
 from rest_framework import exceptions
 import jwt
@@ -18,12 +19,16 @@ class CustomJWTAuthentication(BaseAuthentication):
         try:
             decoded_token = jwt.decode(
                 token,
-                settings.JWT_PUBLIC_KEY,
+                key=settings.JWT_PRIVATE_KEY,
                 algorithms=[settings.JWT_ALGORITHM]
             )
             email = decoded_token.get('email')
-            if not email:
-                raise exceptions.AuthenticationFailed('Email not found in token')
+            org_id = decoded_token.get('org_id')  # Fetch org_id from the token
+
+            # Check if both email and org_id are present
+            if not email or not org_id:
+                raise exceptions.AuthenticationFailed('Email and org_id are required in token')
+
             try:
                 user = User.objects.get(email=email)
                 profile = Profile.objects.get(user=user)  # Fetch the profile associated with the user

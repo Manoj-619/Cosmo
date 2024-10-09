@@ -20,7 +20,7 @@ load_dotenv()
 # JWT settings
 JWT_PUBLIC_KEY = os.getenv('JWT_PUBLIC_KEY')
 JWT_ALGORITHM = os.getenv('JWT_ALGORITHM', 'RS256')
-JWT_KEY_ID = os.getenv('JWT_KEY_ID')
+JWT_PRIVATE_KEY = os.getenv('JWT_PRIVATE_KEY')
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
