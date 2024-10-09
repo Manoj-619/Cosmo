@@ -12,6 +12,15 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 import os
 from pathlib import Path
 from decouple import config
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
+
+# JWT settings
+JWT_PUBLIC_KEY = os.getenv('JWT_PUBLIC_KEY')
+JWT_ALGORITHM = os.getenv('JWT_ALGORITHM', 'RS256')
+JWT_KEY_ID = os.getenv('JWT_KEY_ID')
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -39,17 +48,23 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'stage_app'
+    'rest_framework',  # Required for Django REST framework if you're using it
+    'stage_app',    
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    # 'corsheaders.middleware.CorsMiddleware',  # Disabling CORS middleware for now
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+
+     # NOTE: Using django-rest-framework-simplejwt and creating a custom authentication permission class
+     # instead of using a middleware
+    # 'zavmo.middleware.CustomJWTMiddleware', 
 ]
 
 ROOT_URLCONF = 'zavmo.urls'
@@ -76,13 +91,38 @@ WSGI_APPLICATION = 'zavmo.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
-# TODO: We will connect it to a PostgreSQL database later
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
+# TODO: Configure the PostgreSQL database settings
+
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql',
+#         'NAME': config('POSTGRES_DB'),
+#         'USER': config('POSTGRES_USERNAME'),
+#         'PASSWORD': config('POSTGRES_PASSWORD'),
+#         'HOST': config('POSTGRES_HOST'),
+#         'PORT': config('POSTGRES_PORT', default='5432'),
+#     "OPTIONS": {
+#         "pool": True,
+#     },    
+# }
+# }
+### Redis settings
+
+CACHES = {
+    'default': {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        'LOCATION': f'redis://{config("REDIS_HOST")}:{config("REDIS_PORT")}',  # Redis server address
+        'KEY_PREFIX': 'zavmo-',  # Prefix for all cache keys
+    }
+}
+
 
 
 # Password validation
@@ -114,6 +154,10 @@ TIME_ZONE = 'UTC'
 USE_I18N = True
 
 USE_TZ = True
+
+REST_FRAMEWORK = {
+    # Do not set 'DEFAULT_AUTHENTICATION_CLASSES' to avoid affecting all views
+}
 
 
 # Static files (CSS, JavaScript, Images)
