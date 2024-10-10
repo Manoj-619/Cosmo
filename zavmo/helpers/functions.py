@@ -6,6 +6,7 @@ import codecs
 from functools import wraps
 from pydantic import BaseModel, create_model, Field, validate_call
 from typing import Any, Callable, List, Type, Union, Dict, Optional, get_type_hints, Annotated
+from helpers.chat import get_prompt
 
 # Mapping of basic type names to actual Python types
 basic_types = {
@@ -50,28 +51,35 @@ def get_yaml_data(yaml_path, yaml_dir="assets/data"):
         raise
 
 
-def format_field_for_probe(field):
+def format_field(field, mode='probe'):
     """
     Create a markdown-formatted text for a given field.
 
     Args:
         field (dict): A dictionary containing field information.
+        mode (str): Either 'probe' or 'extract'. Defaults to 'probe'.
 
     Returns:
         str: Markdown-formatted text for the field.
     """
-    markdown = f"## to probe for `{field['title']}`:\n"
+    markdown = f"## to {'probe for' if mode == 'probe' else 'extract'} `{field['title']}`:\n"
     markdown += f"{field['description']}\n\n"
 
-    if 'user_examples' in field:
+    if mode == 'probe' and 'user_examples' in field:
         markdown += "- Examples of learner responses:\n"
         for example in field['user_examples']:
             markdown += f"- {example}\n"
         markdown += "\n"
 
-    if 'probe_examples' in field:
+    if mode == 'probe' and 'probe_examples' in field:
         markdown += "- Examples of Zavmo's responses:\n"
         for example in field['probe_examples']:
+            markdown += f"- {example}\n"
+        markdown += "\n"
+
+    if mode == 'extract' and 'user_examples' in field:
+        markdown += "- Examples of learner inputs:\n"
+        for example in field['user_examples']:
             markdown += f"- {example}\n"
         markdown += "\n"
 
@@ -191,4 +199,22 @@ def create_pydantic_model(name: str, fields: List[Dict[str, Any]], description: 
         model_attributes['__doc__'] = description
     
     return create_model(name, **model_fields, **model_attributes)
+
+
+def create_system_message(stage_name, conf_data, mode='probe'):
+    """
+    Create a system message for either probing or extracting.
+
+    Args:
+        stage_name (str): The name of the current stage.
+        conf_data (dict): Configuration data containing model information.
+        mode (str): Either 'probe' or 'extract'. Defaults to 'probe'.
+
+    Returns:
+        dict: A system message for the specified mode.
+    """
+    p_model = conf_data['primary']
+    instructions = '\n\n'.join([format_field(f, mode) for f in p_model['fields']])
+    system_content = get_prompt(f"{stage_name}/{mode}").format(STAGE=stage_name.title(), INSTRUCTIONS=instructions)
+    return {"role": "system", "content": system_content}
 

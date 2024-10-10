@@ -181,9 +181,9 @@ def create_message_payload(user_message=None, system_message=None, messages=[], 
     message_history = []
     total_tokens = 0
     system_token_count = count_tokens([system_message])
-    max_tokens -= system_token_count  # subtract the system prompt tokens
+    max_tokens        -= system_token_count  # subtract the system prompt tokens
 
-    if user_message and user_message.get('content'):
+    if user_message:
         messages = messages + [user_message]
 
     for message in reversed(messages):

@@ -19,10 +19,32 @@ from .serializers import (
 )
 
 from helpers.chat import get_prompt, force_tool_call, get_openai_completion, create_message_payload
-from helpers.functions import create_model_fields, create_pydantic_model, get_yaml_data, format_field_for_probe, format_field_for_extract
-
+from helpers.functions import create_model_fields, create_pydantic_model, get_yaml_data, create_system_message
 
 logger = logging.getLogger(__name__)
+
+def get_stage_model(stage_name, user=None):
+    """
+    Get the stage model for a given stage name.
+    If a user is provided, return the user's instance of that stage model and its serialized data.
+    """
+    stage_models = {
+        'profile': (ProfileStage, ProfileStageSerializer),
+        'discover': (DiscoverStage, DiscoverStageSerializer),
+        'discuss': (DiscussStage, DiscussStageSerializer),
+        'deliver': (DeliverStage, DeliverStageSerializer),
+        'demonstrate': (DemonstrateStage, DemonstrateStageSerializer)
+    }
+    
+    model, serializer_class = stage_models.get(stage_name, (None, None))
+    
+    if user and model:
+        instance = model.objects.filter(user=user).first()
+        if instance:
+            serialized_data = serializer_class(instance).data
+            return instance, serialized_data
+    
+    return None, {}
 
 # Utility function to get stage data
 def add_stage_data(stage_name, user):
@@ -192,17 +214,20 @@ def chat_view(request):
     """
     handles chat sessions between a user and the AI assistant.
     """
-    user            = request.user
+    user            = request.user    
     learner_journey = request.learner_journey
     stage           = learner_journey.stage
     stage_name      = learner_journey.get_stage_display()
+    cache_key       = f"{user.email}_history"
+    user_input      = request.data.get('message', None)    
+    clear_history   = request.data.get('clear', False)
+    if clear_history:
+        cache.delete(cache_key)
     
-    message         = request.data.get('message', None)
-    
-    message_history = cache.get(f"{user.email}_messages", [])
+    message_history = cache.get(cache_key, [])
     
     # This can be used to get the correct directory for prompts, or for loading any other assets.    
-    stage_data      = add_stage_data(stage_name, user)
+    stage_model, stage_data = get_stage_model(stage_name, user)
     logger.info(f"Stage data: {stage_data}")
     
     conf_data       = get_yaml_data(stage_name)
@@ -213,33 +238,52 @@ def chat_view(request):
 
     p_model = conf_data['primary']
     i_model = conf_data['identify']
-
-    probe_instructions     = f'\n\n'.join([format_field_for_probe(f) for f in p_model['fields']])
-    probe_system_content = get_prompt(f"{stage_name}/probe").format(STAGE=stage_name.title(), INSTRUCTIONS=probe_instructions)
-    probe_system_message = {"role": "system", "content": probe_system_content}
     
-    extract_instructions   = f'\n\n'.join([format_field_for_extract(f) for f in p_model['fields']])
-    extract_system_content = get_prompt(f"{stage_name}/extract").format(STAGE=stage_name.title(), INSTRUCTIONS=extract_instructions)
-    extract_system_message = {"role": "system","content": extract_system_content}
+    identifier_model = create_pydantic_model(
+        name=i_model['title'],  description=i_model['description'], fields=i_model['fields'])
 
-    identifier_model = create_pydantic_model(name=i_model['title'],  description=i_model['description'], fields=i_model['fields'])
-    primary_model    = create_pydantic_model(name=p_model['title'],  description=p_model['description'], fields=p_model['fields'])
+    extract_system_message = create_system_message(stage_name, conf_data, mode='extract')
+    probe_system_message   = create_system_message(stage_name, conf_data, mode='probe')
     
-    # If message is not empty, create an extract payload
-    if message:
-        extract_payload  = create_message_payload(message, extract_system_message, message_history, max_tokens=10000)
-        extract_response = force_tool_call(identifier_model, extract_payload, model='gpt-4o-mini', tool_choice='required', parallel_tool_calls=False)
-        new_attributes   = extract_response.attributes
-        xp               = max(10, len(new_attributes) * 100)
-        # Then we need to check these attributes against the primary model.
-    else:
-        extract_payload = None
-        new_attributes = {}
-        xp = 0
-        
-    probe_payload    = create_message_payload(message, probe_system_message, message_history, max_tokens=10000)
-    probe_response   = get_openai_completion(probe_payload, model='gpt-4o-mini')
+    if user_input:
+        user_message     = {"role": "user", "content": user_input}
+        message_history.append(user_message)
+        extract_payload  = create_message_payload(user_message, extract_system_message, message_history, max_tokens=10000)
+        id_response = force_tool_call(tools=[identifier_model], messages=extract_payload,
+                                      model='gpt-4o-mini', tool_choice='required', parallel_tool_calls=False)[0]
+        new_attributes   = id_response.attributes
+        #  If new attributes were detected, parse the message and extract the new data.
+        if new_attributes:
+            extract_fields = [f for f in p_model['fields'] if f['title'] in new_attributes]
+            xp = max(10, len(extract_fields) * 100)
+            primary_model = create_pydantic_model(
+                name=p_model['title'],  
+                description=p_model['description'], 
+                fields=extract_fields
+            )
             
+            extract_response = force_tool_call(tools=[primary_model], messages=extract_payload, model='gpt-4o-mini', tool_choice='required', parallel_tool_calls=False)[0]
+            new_stage_data   = extract_response.model_dump() # as json
+            if new_stage_data:
+                for field, value in new_stage_data.items():
+                    # Update stage model with new data
+                    setattr(stage_model, field, value)
+                stage_model.save()
+                
+                # Update available_fields and missing_fields
+                available_fields = list(stage_data.keys()) + list(new_stage_data.keys())
+                missing_fields = [field for field in required_fields if field not in available_fields]
+        else:
+            xp = 10 # Give 10 xp anyway for trying.                                                    
+        
+    else:
+        xp = 0
+        user_message = None
+        
+    probe_payload    = create_message_payload(user_message, probe_system_message, message_history, max_tokens=10000)
+    probe_response   = get_openai_completion(probe_payload, model='gpt-4o-mini')
+    message_history.append({'role':'assistant', 'content':probe_response})
+    cache.set(cache_key, message_history)
         
     return Response({
             "type": "text",
@@ -248,6 +292,5 @@ def chat_view(request):
             "credits":xp,
             "stage_data": stage_data,
             "missing_fields": missing_fields,
-            "new_attributes": new_attributes,
             "available_fields": available_fields
         }, status=status.HTTP_201_CREATED)
