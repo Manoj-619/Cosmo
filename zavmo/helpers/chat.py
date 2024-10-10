@@ -25,6 +25,9 @@ def get_prompt(prompt_file, prompt_dir="assets/prompts"):
     Returns:
         str: prompt
     """
+    if not prompt_file.endswith('.md'):
+        prompt_file += '.md'
+        
     prompt_path = os.path.join(prompt_dir, prompt_file)
     with open(prompt_path, "r", encoding="utf-8") as f:
         prompt = f.read()

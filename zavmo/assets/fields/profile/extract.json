@@ -1,0 +1,27 @@
+[
+    {
+        "title": "first_name",
+        "annotation": "str",
+        "description": "The first name of the user, often used to address them directly, e.g., 'Diana' or 'John'."
+    },
+    {
+        "title": "last_name",
+        "annotation": "str",
+        "description": "The last name of the user, used to address them more formally or as part of their full name."
+    },
+    {
+        "title": "age",
+        "annotation": "int",
+        "description": "The age of the user."
+    },
+    {
+        "title": "edu_level",
+        "annotation": "int",
+        "description": "The education level of the user, represented by a number (1 for Primary School, 2 for Middle School, 3 for High School, etc.)."
+    },
+    {
+        "title": "current_role",
+        "annotation": "str",
+        "description": "The current occupation or role of the user, indicating their professional or educational status, e.g., 'Data Scientist', 'Student'."
+    }
+]

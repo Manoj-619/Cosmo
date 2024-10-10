@@ -3,44 +3,17 @@ from .models import (
     Org, 
     LearnerJourney,
     ProfileStage, 
-    DiscoverStage, DiscussStage, DeliverStage, DemonstrateStage
+    DiscoverStage, 
+    DiscussStage, 
+    DeliverStage, 
+    DemonstrateStage
 )
 
-@admin.register(Org)
-class OrgAdmin(admin.ModelAdmin):
-    list_display = ['org_name', 'org_id']  
-    search_fields = ['org_name'] 
-    list_filter = ['org_name']
-    
-    
-@admin.register(LearnerJourney)
-class LearnerJourneyAdmin(admin.ModelAdmin):
-    list_display = ['user', 'stage', 'org']
-    search_fields = ['user__username']
-
-@admin.register(ProfileStage)
-class ProfileStageAdmin(admin.ModelAdmin):
-    list_display = ['user', 'first_name', 'last_name', 'age', 'edu_level']
-    search_fields = ['user__username', 'first_name', 'last_name']
-    list_filter = ['edu_level']
-
-@admin.register(DiscoverStage)
-class DiscoverStageAdmin(admin.ModelAdmin):
-    list_display = ['user', 'learning_goals']
-    search_fields = ['user__username']
-    
-@admin.register(DiscussStage)
-class DiscussStageAdmin(admin.ModelAdmin):
-    list_display = ['user', 'content_preference', 'structure_preference']
-    search_fields = ['user__username']
-
-@admin.register(DeliverStage)
-class DeliverStageAdmin(admin.ModelAdmin):
-    list_display = ['user', 'modules', 'timeline']
-    search_fields = ['user__username']
-    
-@admin.register(DemonstrateStage)
-class DemonstrateStageAdmin(admin.ModelAdmin):
-    list_display = ['user', 'current_module', 'completed_modules', 'understanding_level']
-    search_fields = ['user__username']
+admin.site.register(Org)
+admin.site.register(LearnerJourney)
+admin.site.register(ProfileStage)
+admin.site.register(DiscoverStage)
+admin.site.register(DiscussStage)
+admin.site.register(DeliverStage)
+admin.site.register(DemonstrateStage)
 

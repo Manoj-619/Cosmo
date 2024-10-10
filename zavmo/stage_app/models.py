@@ -11,11 +11,11 @@ class Org(models.Model):
 
 class LearnerJourney(models.Model):
     class Stage(models.IntegerChoices):
-        PROFILE = 1, 'Profile'
-        DISCOVER = 2, 'Discover'
-        DISCUSS = 3, 'Discuss'
-        DELIVER = 4, 'Deliver'
-        DEMONSTRATE = 5, 'Demonstrate'
+        PROFILE = 1, 'profile'
+        DISCOVER = 2, 'discover'
+        DISCUSS = 3, 'discuss'
+        DELIVER = 4, 'deliver'
+        DEMONSTRATE = 5, 'demonstrate'
 
     user = models.OneToOneField(
         User, on_delete=models.CASCADE, related_name='learner_journey', primary_key=True)
@@ -39,7 +39,7 @@ class ProfileStage(models.Model):
     user         = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile_stage')
     first_name   = models.CharField(max_length=100, blank=True, null=True)
     last_name    = models.CharField(max_length=100, blank=True, null=True)
-    age          = models.PositiveIntegerField(null=True, blank=True)
+    age          = models.PositiveIntegerField(null=True, blank=True)    
     edu_level    = models.PositiveSmallIntegerField(choices=[
         (1, 'Primary School'),
         (2, 'Middle School'),
@@ -49,24 +49,34 @@ class ProfileStage(models.Model):
         (6, 'Master\'s Degree'),
         (7, 'PhD')
     ], blank=True, null=True)
+    current_role = models.CharField(max_length=100, blank=True, null=True)
 
 # Stage 2 or (1st D)
 class DiscoverStage(models.Model):
     user             = models.OneToOneField(User, on_delete=models.CASCADE, related_name='discover_stage')
     learning_goals   = models.JSONField(default=list)  # List of dicts: {'topic': 'string', 'reason': 'string'}
+    # Something to capture about why the learning goals were chosen, like importance, relevance, etc
+    learning_goal_rationale = models.TextField(blank=True, null=True)
+    # self assessed knowledge level on a scale of 1-5
+    knowledge_level = models.PositiveSmallIntegerField(choices=[
+        (1, 'Beginner'),
+        (2, 'Intermediate'),
+        (3, 'Advanced'),
+        (4, 'Expert')
+    ], blank=True, null=True)    
+    # How does the learner want to apply the knowledge
+    application_area = models.TextField(blank=True, null=True)
 
 # Stage 3 or (2nd D)
 class DiscussStage(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='discuss_stage')
-    content_preference   = models.CharField(max_length=200, blank=True, null=True) # For example: "Textbooks", "Videos", "Interactive Content"
-    structure_preference = models.CharField(max_length=200, blank=True, null=True) # For example: "Sequential", "Hierarchical", "Flexible"
-    pacing_preference     = models.CharField(max_length=200, blank=True, null=True) # For example: "Fast-paced", "Slow-paced", "Adaptive"
-    neurodiversity_considerations = models.TextField(blank=True, null=True) # For example: "Visual Aids", "Break Time", "Small Group Activities"
+    learning_objective = models.TextField(blank=True, null=True)
+    
 
 # Stage 4 or (3rd D)
 class DeliverStage(models.Model):
     user       = models.OneToOneField(User, on_delete=models.CASCADE, related_name='deliver_stage')
-    modules    = models.JSONField(default=list)  # List of dicts: {'title': 'string', 'description': 'string', 'resources': ['string']}
+    modules    = models.JSONField(default=list) 
     timeline   = models.TextField(blank=True, null=True)
 
 # Stage 5 or (4th D)

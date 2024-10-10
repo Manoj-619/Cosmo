@@ -1,3 +1,4 @@
+import os
 import ast
 import json
 from functools import wraps
@@ -9,7 +10,26 @@ basic_types = {
     'str': str, 'int': int, 'float': float, 'bool': bool, 
     'Any': Any, 'Dict': Dict, 'List': List, 'Optional': Optional, 'Union':Union,
 }
+
     
+def get_fields(json_path, json_dir="assets/fields"):
+    """Load a JSON file containing field data.
+
+    Args:
+        json_path (str): Path to the JSON file.
+        json_dir (str, optional): Directory containing the JSON file. Defaults to 'assets/fields'.
+
+    Returns:
+        dict: A dictionary of field data.
+    """
+    # Check if json_path ends with .json
+    if not json_path.endswith('.json'):
+        json_path += '.json'
+    json_path = os.path.join(json_dir, json_path)
+    with open(json_path, 'r') as f:
+        return json.load(f)
+    
+
 def eval_type_ast(node):
     """
     Recursively evaluates an AST node representing a type.

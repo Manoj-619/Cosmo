@@ -5,40 +5,45 @@ from .models import LearnerJourney, ProfileStage, DiscoverStage, DiscussStage, D
 class OrgSerializer(serializers.ModelSerializer):
     class Meta:
         model = Org
-        fields = ['org_id', 'org_name']
+        fields = '__all__'
 
-class ProfileStageSerializer(serializers.ModelSerializer):
+class BaseStageSerializer(serializers.ModelSerializer):
+    def to_representation(self, instance):
+        result = super().to_representation(instance)
+        return {k: v for k, v in result.items() if v is not None}
+
+class ProfileStageSerializer(BaseStageSerializer):
     class Meta:
         model = ProfileStage
-        fields = ['first_name', 'last_name', 'age', 'edu_level']
+        exclude = ('user',)
 
-class DiscoverStageSerializer(serializers.ModelSerializer):
+class DiscoverStageSerializer(BaseStageSerializer):
     class Meta:
         model = DiscoverStage
-        fields = ['learning_goals']
+        exclude = ('user',)
 
-class DiscussStageSerializer(serializers.ModelSerializer):
+class DiscussStageSerializer(BaseStageSerializer):
     class Meta:
         model = DiscussStage
-        fields = ['content_preference', 'structure_preference', 'pacing_preference', 'neurodiversity_considerations']
+        exclude = ('user',)
 
-class DeliverStageSerializer(serializers.ModelSerializer):
+class DeliverStageSerializer(BaseStageSerializer):
     class Meta:
         model = DeliverStage
-        fields = ['modules', 'timeline']
+        exclude = ('user',)
 
-class DemonstrateStageSerializer(serializers.ModelSerializer):
+class DemonstrateStageSerializer(BaseStageSerializer):
     class Meta:
         model = DemonstrateStage
-        fields = ['current_module', 'completed_modules', 'understanding_level']
+        exclude = ('user',)
 
+####### NOTE: This is the `manager` serializer
 class LearnerJourneySerializer(serializers.ModelSerializer):
     org = OrgSerializer()
 
     class Meta:
         model = LearnerJourney
         fields = ['user', 'stage', 'org']
-
 
 class UserSerializer(serializers.ModelSerializer):
     org_id = serializers.CharField(source='learner_journey.org.org_id', read_only=True)

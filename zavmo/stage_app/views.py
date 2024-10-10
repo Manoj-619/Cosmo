@@ -20,7 +20,10 @@ from .serializers import (
     UserSerializer, LearnerJourneySerializer, ProfileStageSerializer, DiscoverStageSerializer, 
     DiscussStageSerializer, DeliverStageSerializer, DemonstrateStageSerializer
 )
+
+from helpers.functions import create_model_fields, create_pydantic_model
 import logging
+
 
 logger = logging.getLogger(__name__)
 
@@ -143,40 +146,23 @@ def get_user_profile(request):
     # Add stage data
     stage_data = {}
 
-    # ProfileStage
-    try:
-        profile_stage = ProfileStageSerializer(user.profile_stage).data
-        stage_data['profile_stage'] = profile_stage
-    except ProfileStage.DoesNotExist:
-        pass
+    # Helper function to add non-empty stage data
+    def add_stage_data(stage_name, serializer_class):
+        try:
+            stage_instance = getattr(user, f'{stage_name}_stage')
+            stage_serializer = serializer_class(stage_instance)
+            stage_data = stage_serializer.data
+            if stage_data:  # Only add if there's non-null data
+                stage_data[f'{stage_name}_stage'] = stage_data
+        except AttributeError:
+            pass
 
-    # DiscoverStage
-    try:
-        discover_stage = DiscoverStageSerializer(user.discover_stage).data
-        stage_data['discover_stage'] = discover_stage
-    except DiscoverStage.DoesNotExist:
-        pass
-
-    # DiscussStage
-    try:
-        discuss_stage = DiscussStageSerializer(user.discuss_stage).data
-        stage_data['discuss_stage'] = discuss_stage
-    except DiscussStage.DoesNotExist:
-        pass
-
-    # DeliverStage
-    try:
-        deliver_stage = DeliverStageSerializer(user.deliver_stage).data
-        stage_data['deliver_stage'] = deliver_stage
-    except DeliverStage.DoesNotExist:
-        pass
-
-    # DemonstrateStage
-    try:
-        demonstrate_stage = DemonstrateStageSerializer(user.demonstrate_stage).data
-        stage_data['demonstrate_stage'] = demonstrate_stage
-    except DemonstrateStage.DoesNotExist:
-        pass
+    # Add data for each stage
+    add_stage_data('profile', ProfileStageSerializer)
+    add_stage_data('discover', DiscoverStageSerializer)
+    add_stage_data('discuss', DiscussStageSerializer)
+    add_stage_data('deliver', DeliverStageSerializer)
+    add_stage_data('demonstrate', DemonstrateStageSerializer)
 
     # Combine profile data with stage data
     response_data = {
@@ -193,27 +179,19 @@ def get_user_profile(request):
 def chat_view(request):
     """
     handles chat sessions between a user and the AI assistant.
-    
-    Request Body:
-    - message (optional): The message sent by the user. If the session is new, no message is required.
-
-    Response Structure:
-    - type (str): "text" (Just text for now, can add more types later for example for mcqs etc)
-    - message (str, list): The AI's response.
-    - stage (int): The current stage of the user's journey.
-
-    Workflow:
-    - If a new chat session is initiated, the AI responds with an initial message and the current stage is set.
-    - If a session already exists, the current stage is returned, and the user's message is processed based on their profile.
-    - JWT token is used to authenticate the user and retrieve their profile information.
     """
-    user    = request.user
+    user = request.user
     learner_journey = get_object_or_404(LearnerJourney, user=user)
     # Get current stage
     stage = learner_journey.stage
     
+    # This can be used to get the correct directory for prompts, or for loading any other assets.
+    stage_name = learner_journey.get_stage_display()
+    
+#    probe_system = get_prompt()
+    
     return Response({
             "type": "text",
             "message": "test",
-            "stage": stage
+            "stage": stage,
         }, status=status.HTTP_201_CREATED)
