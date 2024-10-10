@@ -3,12 +3,11 @@
 import logging
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from .models import Profile, ProfileStage, DiscoverStage, DiscussStage, DeliverStage, DemonstrateStage
-
+from .models import LearnerJourney, ProfileStage, DiscoverStage, DiscussStage, DeliverStage, DemonstrateStage
 
 logger = logging.getLogger(__name__)
 
-@receiver(post_save, sender=Profile)
+@receiver(post_save, sender=LearnerJourney)
 def create_stage_models(sender, instance, created, **kwargs):
     if created:
         ProfileStage.objects.create(user=instance.user)

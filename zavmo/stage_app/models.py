@@ -9,7 +9,7 @@ class Org(models.Model):
         return self.org_name
 
 
-class Profile(models.Model):
+class LearnerJourney(models.Model):
     class Stage(models.IntegerChoices):
         PROFILE = 1, 'Profile'
         DISCOVER = 2, 'Discover'
@@ -17,9 +17,12 @@ class Profile(models.Model):
         DELIVER = 4, 'Deliver'
         DEMONSTRATE = 5, 'Demonstrate'
 
-    user  = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile', primary_key=True)
-    stage = models.PositiveSmallIntegerField(choices=Stage.choices, default=Stage.PROFILE)
-    org   = models.ForeignKey(Org, on_delete=models.SET_NULL, null=True, blank=True, related_name='profiles')
+    user = models.OneToOneField(
+        User, on_delete=models.CASCADE, related_name='learner_journey', primary_key=True)
+    stage = models.PositiveSmallIntegerField(
+        choices=Stage.choices, default=Stage.PROFILE)
+    org = models.ForeignKey(Org, on_delete=models.SET_NULL,
+                            null=True, blank=True, related_name='learner_journeys')
 
     def increment_stage(self):
         """Increment the current stage to the next stage in the sequence."""
@@ -29,6 +32,7 @@ class Profile(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - Stage: {self.get_stage_display()}"
+
 
 # Stage 1 or (0th D)
 class ProfileStage(models.Model):

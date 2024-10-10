@@ -5,7 +5,7 @@ from rest_framework import exceptions
 import jwt
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from stage_app.models import Profile  # Import the Profile model
+from stage_app.models import LearnerJourney  # Import the LearnerJourney model
 
 User = get_user_model()
 
@@ -31,15 +31,15 @@ class CustomJWTAuthentication(BaseAuthentication):
 
             try:
                 user = User.objects.get(email=email)
-                profile = Profile.objects.get(user=user)  # Fetch the profile associated with the user
+                learner_journey = LearnerJourney.objects.get(user=user)  # Fetch the learner journey associated with the user
 
             except User.DoesNotExist:
                 raise exceptions.AuthenticationFailed('User not found')
-            except Profile.DoesNotExist:
-                raise exceptions.AuthenticationFailed('Profile not found for the user')
+            except LearnerJourney.DoesNotExist:
+                raise exceptions.AuthenticationFailed('Learner journey not found for the user')
 
-            # Attach the profile to the request
-            request.profile = profile
+            # Attach the learner journey to the request
+            request.learner_journey = learner_journey
 
             return (user, None)
         

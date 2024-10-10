@@ -1,9 +1,9 @@
 from django.contrib import admin
 from .models import (
     Org, 
-    Profile,
+    LearnerJourney,
     ProfileStage, 
-    DiscoverStage, DiscussStage,  DeliverStage, DemonstrateStage
+    DiscoverStage, DiscussStage, DeliverStage, DemonstrateStage
 )
 
 @admin.register(Org)
@@ -13,11 +13,10 @@ class OrgAdmin(admin.ModelAdmin):
     list_filter = ['org_name']
     
     
-@admin.register(Profile)
-class ProfileAdmin(admin.ModelAdmin):
+@admin.register(LearnerJourney)
+class LearnerJourneyAdmin(admin.ModelAdmin):
     list_display = ['user', 'stage', 'org']
     search_fields = ['user__username']
-    
 
 @admin.register(ProfileStage)
 class ProfileStageAdmin(admin.ModelAdmin):

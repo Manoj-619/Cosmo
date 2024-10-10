@@ -15,8 +15,11 @@ from zavmo.authentication import CustomJWTAuthentication
 from django.db import IntegrityError
 from django.core.cache import cache
 from django.contrib.auth.models import User
-from .models import Org, Profile
-from .serializers import UserSerializer, ProfileSerializer
+from .models import Org, LearnerJourney, ProfileStage, DiscoverStage, DiscussStage, DeliverStage, DemonstrateStage
+from .serializers import (
+    UserSerializer, LearnerJourneySerializer, ProfileStageSerializer, DiscoverStageSerializer, 
+    DiscussStageSerializer, DeliverStageSerializer, DemonstrateStageSerializer
+)
 import logging
 
 logger = logging.getLogger(__name__)
@@ -79,34 +82,31 @@ def sync_user(request):
                 message = "User created successfully."
                 status_code = status.HTTP_201_CREATED
                 try:
-                    profile = Profile.objects.create(user=user, org=org)
-                    stage = profile.stage
-                    logger.info(f"Profile created for user {user.username}")
+                    learner_journey = LearnerJourney.objects.create(user=user, org=org)
+                    stage = learner_journey.stage
+                    logger.info(f"LearnerJourney created for user {user.username}")
                 except Exception as e:
-                    logger.error(f"Error creating profile for user {user.username}: {str(e)}")
-                    # Delete the user if profile creation fails
+                    logger.error(f"Error creating learner journey for user {user.username}: {str(e)}")
                     user.delete()
-                    return Response({"error": f"An error occurred while creating the profile: {str(e)}"},
+                    return Response({"error": f"An error occurred while creating the learner journey: {str(e)}"},
                                     status=status.HTTP_500_INTERNAL_SERVER_ERROR)
             else:
                 message = "User already exists."
                 status_code = status.HTTP_200_OK
-                profile = Profile.objects.filter(user=user).first()
-                if profile:
-                    # Update org if necessary
-                    if profile.org != org:
-                        profile.org = org
-                        profile.save()
-                    stage = profile.stage
+                learner_journey = LearnerJourney.objects.filter(user=user).first()
+                if learner_journey:
+                    if learner_journey.org != org:
+                        learner_journey.org = org
+                        learner_journey.save()
+                    stage = learner_journey.stage
                 else:
-                    # Create profile if it doesn't exist
                     try:
-                        profile = Profile.objects.create(user=user, org=org)
-                        stage = profile.stage
-                        logger.info(f"Profile created for existing user {user.username}")
+                        learner_journey = LearnerJourney.objects.create(user=user, org=org)
+                        stage = learner_journey.stage
+                        logger.info(f"LearnerJourney created for existing user {user.username}")
                     except Exception as e:
-                        logger.error(f"Error creating profile for existing user {user.username}: {str(e)}")
-                        return Response({"error": f"An error occurred while creating the profile: {str(e)}"},
+                        logger.error(f"Error creating learner journey for existing user {user.username}: {str(e)}")
+                        return Response({"error": f"An error occurred while creating the learner journey: {str(e)}"},
                                         status=status.HTTP_500_INTERNAL_SERVER_ERROR)
             
             # Fetch the organization details
@@ -136,11 +136,55 @@ def get_user_profile(request):
     """
     API to retrieve the user's complete profile data.
     """
-    # Use the profile attached by the JWT authentication
-    profile = request.profile
+    user = request.user
+    learner_journey = user.learner_journey
+    learner_journey_data = LearnerJourneySerializer(learner_journey).data
 
-    serializer = ProfileSerializer(profile)
-    return Response(serializer.data)
+    # Add stage data
+    stage_data = {}
+
+    # ProfileStage
+    try:
+        profile_stage = ProfileStageSerializer(user.profile_stage).data
+        stage_data['profile_stage'] = profile_stage
+    except ProfileStage.DoesNotExist:
+        pass
+
+    # DiscoverStage
+    try:
+        discover_stage = DiscoverStageSerializer(user.discover_stage).data
+        stage_data['discover_stage'] = discover_stage
+    except DiscoverStage.DoesNotExist:
+        pass
+
+    # DiscussStage
+    try:
+        discuss_stage = DiscussStageSerializer(user.discuss_stage).data
+        stage_data['discuss_stage'] = discuss_stage
+    except DiscussStage.DoesNotExist:
+        pass
+
+    # DeliverStage
+    try:
+        deliver_stage = DeliverStageSerializer(user.deliver_stage).data
+        stage_data['deliver_stage'] = deliver_stage
+    except DeliverStage.DoesNotExist:
+        pass
+
+    # DemonstrateStage
+    try:
+        demonstrate_stage = DemonstrateStageSerializer(user.demonstrate_stage).data
+        stage_data['demonstrate_stage'] = demonstrate_stage
+    except DemonstrateStage.DoesNotExist:
+        pass
+
+    # Combine profile data with stage data
+    response_data = {
+        **learner_journey_data,
+        'stage_data': stage_data
+    }
+
+    return Response(response_data)
 
 # Endpoint: /api/chat/
 @api_view(['POST'])
@@ -164,9 +208,9 @@ def chat_view(request):
     - JWT token is used to authenticate the user and retrieve their profile information.
     """
     user    = request.user
-    profile = get_object_or_404(Profile, user=user)
+    learner_journey = get_object_or_404(LearnerJourney, user=user)
     # Get current stage
-    stage = profile.stage
+    stage = learner_journey.stage
     
     return Response({
             "type": "text",
