@@ -2,6 +2,7 @@ import os
 import re
 import json
 import random
+import logging
 import tiktoken
 import numpy as np
 import openai
@@ -14,6 +15,8 @@ load_dotenv(override=True)
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
+
+logger = logging.getLogger(__name__)
 
 def get_prompt(prompt_file, prompt_dir="assets/prompts"):
     """Load a prompt from a file.
@@ -118,31 +121,42 @@ def make_function_call(func, messages=[], model='gpt-4o-mini',force=True, **kwar
 
 ### TODO: Create a separate function for making tool calls, with automatic tool choice and parallel execution
 
-# def make_tool_call(tools, messages, model='gpt-4o-mini', **kwargs):
-#     """Make a tool call with OpenAI API."""
-#     response = client.chat.completions.create(
-#         model=model,
-#         messages=messages,
-#         tools=[tool.openai_schema() for tool in tools],
-#         tool_choice="required",
-#         stream=False,
-#         **kwargs
-#     )
-#     tool_calls = response.choices[0].message.tool_calls
-#     tool_funcs = []
-#     for tool_call in tool_calls:
-#         try:
-#             tool_data = json.loads(tool_call.function.json())
-#             tool_args = json.loads(tool_data['arguments'])        
-#             tool_name = tool_data['name']
-#             tool_func = getattr(tools,tool_name)
-#             tool_func = tool_func.from_arguments(tool_args)
-#             tool_funcs.append(tool_func)
-#         except Exception as e:
-#             print(e)
-#             print(tool_args)
-#     return [tool.execute() for tool in tool_funcs]
-
+def force_tool_call(tools,
+                   messages, 
+                   model='gpt-4o-mini', 
+                   tool_choice='required', # NOTE: Forcing tool to be called here
+                   parallel_tool_calls=True,
+                   **kwargs
+                   ):
+    """
+    Make tool calls and return the parsed response.
+    # IMPORTANT: Always specify these kwargs: `tool_choice`, and `parallel_tool_calls`
+    """
+    response = client.chat.completions.create(
+        model=model,
+        messages=messages,
+        tools=[openai.pydantic_function_tool(t) for t in tools],
+        tool_choice=tool_choice,
+        parallel_tool_calls=parallel_tool_calls,
+        **kwargs
+    )    
+    message    = response.choices[0].message
+    tool_calls = response.choices[0].message.tool_calls
+    parsed_tools = []
+    for tool_call in tool_calls:
+        tool_call_func = tool_call.function
+        tool_name, tool_args = tool_call_func.name, tool_call_func.arguments
+        # Get the pydantic model from the tools list that has the name of the tool call
+        tool_model = next((tool for tool in tools if tool.__name__ == tool_name), None)
+        try:
+            parsed_tool = tool_model.model_validate_json(tool_args)
+            parsed_tools.append(parsed_tool)
+        except Exception as e:
+            logger.debug(f"Error parsing tool call: {e}")
+            # Log the error, but don't raise it
+    return parsed_tools
+        
+ 
 
 def make_structured_call(tool:BaseModel, messages, model='gpt-4o-mini', **kwargs):
     """Make a structured output call with OpenAI API, with pydantic models."""

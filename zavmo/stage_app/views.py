@@ -1,11 +1,8 @@
 """ 
 Contains views for the stage app.
-- create_org: Creates a new organization or returns an existing one.
-- sync_user: Synchronizes user data: creates a new user if not exists, or returns existing user data.
-- get_user_profile: Retrieves the user's complete profile data.
-- chat_view: Handles chat sessions between a user and the AI assistant.
-
 """
+
+import logging
 from rest_framework import status
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.permissions import IsAuthenticated
@@ -21,11 +18,39 @@ from .serializers import (
     DiscussStageSerializer, DeliverStageSerializer, DemonstrateStageSerializer
 )
 
-from helpers.functions import create_model_fields, create_pydantic_model
-import logging
+from helpers.chat import get_prompt
+from helpers.functions import create_model_fields, create_pydantic_model, get_fields
 
 
 logger = logging.getLogger(__name__)
+
+# Utility function to get stage data
+def add_stage_data(stage_name, user):
+    """
+    Helper function to add non-empty stage data for a specific stage and user.
+    """
+    stages = {
+        'profile': ProfileStageSerializer,
+        'discover': DiscoverStageSerializer,
+        'discuss': DiscussStageSerializer,
+        'deliver': DeliverStageSerializer,
+        'demonstrate': DemonstrateStageSerializer
+    }
+
+    if stage_name not in stages:
+        return None
+
+    serializer_class = stages[stage_name]
+    try:
+        stage_instance = getattr(user, f'{stage_name}_stage')
+        stage_serializer = serializer_class(stage_instance)
+        stage_data = stage_serializer.data
+        if stage_data:  # Only return if there's non-null data
+            return {f'{stage_name}_stage': stage_data}
+    except AttributeError:
+        pass
+
+    return None
 
 # Endpoint: /api/org/create/
 @api_view(['POST'])
@@ -140,29 +165,15 @@ def get_user_profile(request):
     API to retrieve the user's complete profile data.
     """
     user = request.user
-    learner_journey = user.learner_journey
+    learner_journey = request.learner_journey
     learner_journey_data = LearnerJourneySerializer(learner_journey).data
 
-    # Add stage data
+    # Get stage data for all stages
     stage_data = {}
-
-    # Helper function to add non-empty stage data
-    def add_stage_data(stage_name, serializer_class):
-        try:
-            stage_instance = getattr(user, f'{stage_name}_stage')
-            stage_serializer = serializer_class(stage_instance)
-            stage_data = stage_serializer.data
-            if stage_data:  # Only add if there's non-null data
-                stage_data[f'{stage_name}_stage'] = stage_data
-        except AttributeError:
-            pass
-
-    # Add data for each stage
-    add_stage_data('profile', ProfileStageSerializer)
-    add_stage_data('discover', DiscoverStageSerializer)
-    add_stage_data('discuss', DiscussStageSerializer)
-    add_stage_data('deliver', DeliverStageSerializer)
-    add_stage_data('demonstrate', DemonstrateStageSerializer)
+    for stage_name in ['profile', 'discover', 'discuss', 'deliver', 'demonstrate']:
+        stage_info = add_stage_data(stage_name, user)
+        if stage_info:
+            stage_data.update(stage_info)
 
     # Combine profile data with stage data
     response_data = {
@@ -181,17 +192,27 @@ def chat_view(request):
     handles chat sessions between a user and the AI assistant.
     """
     user = request.user
-    learner_journey = get_object_or_404(LearnerJourney, user=user)
+    learner_journey = request.learner_journey
     # Get current stage
     stage = learner_journey.stage
     
     # This can be used to get the correct directory for prompts, or for loading any other assets.
-    stage_name = learner_journey.get_stage_display()
+    stage_name = learner_journey.get_stage_display().lower()
     
+    xp = 10
+    #  Get stage data for the current stage
+    stage_data = add_stage_data(stage_name, user)
+    
+    fields          = get_fields(f"{stage_name}/extract")
+    required_fields = fields.get('required_fields', [])
+    missing_fields  = [f for f in required_fields if f['title'] not in stage_data]
+
 #    probe_system = get_prompt()
     
     return Response({
             "type": "text",
             "message": "test",
             "stage": stage,
+            "credits":xp,
+            "stage_data": stage_data
         }, status=status.HTTP_201_CREATED)
