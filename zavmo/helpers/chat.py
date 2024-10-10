@@ -1,10 +1,6 @@
 import os
-import re
-import json
-import random
 import logging
 import tiktoken
-import numpy as np
 import openai
 import anthropic
 from openai import OpenAI
@@ -96,29 +92,6 @@ def get_claude_response(sys_mssg,messages,model="claude-3-opus-20240229"):
     )
     return message.content[0].text
 
-def make_function_call(func, messages=[], model='gpt-4o-mini',force=True, **kwargs):
-    """    
-    Force function calling with openai.ChatCompletion.create()
-
-    Args:
-        - func (dict): function schema
-        - messages (list): list of messages to complete the chat with
-        - model (str): model to use for completion
-    """    
-    response = client.chat.completions.create(
-        model=model,
-        messages=messages,
-        tools=[func.openai_schema()],
-        tool_choice={
-            "type": "function",
-            "function":{ "name": func.openai_schema()['function']["name"]}
-            } if force else "auto",
-        stream=False,
-        **kwargs
-    )
-    result = func.from_response(response)
-    return result
-
 ### TODO: Create a separate function for making tool calls, with automatic tool choice and parallel execution
 
 def force_tool_call(tools,
@@ -178,83 +151,51 @@ def make_structured_call(tool:BaseModel, messages, model='gpt-4o-mini', **kwargs
         return None
 
 
-def split_text_into_sents(text):
-    """
-        Description: Split context into sentenences by splitting them only at - new lines/ stops/ question marks/ exclamation marks.
+# def format_previous_messages(messages):
+#     """
+#     Format previous messages for display
+#     """
+#     formatted_messages = []
+#     for message in messages:
+#         if message['role'] == 'user':
+#             formatted_messages.append(
+#                 {"role": "user", "content": f"Question: {extract_question(message['content'])}"})
+#         elif message['role'] == 'assistant':
+#             formatted_messages.append(
+#                 {"role": "assistant", "content": message['content']})
+#     return formatted_messages
 
-        Args:
-            text (str): Text to be split into sentences.
-        Returns: Array of sentences
-    """
-    splits = re.split(r'( *[\.\?!\n][\'"\)\]]* *)', text)
-    sents, seps = splits[0::2], splits[1::2]
-    ### IMPORTANT: Fix for sentences that do not end with a stop
-    if len(seps)==0:
-        seps = ['']
-    sentences = [sents[s] + seps[s] for s in range(len(seps))]
-    # There could be an empty sentence at the end
-    if sentences[-1] == '':
-        sentences = sentences[:-1]
-    return np.asarray(sentences)
 
-def get_text_windows(sentences, token_counts, window_size=384, overlap=128):
-    """
-    Description: Get sliding windows of text.
-
+def create_message_payload(user_message=None, system_message=None, messages=[], max_tokens=20000):  # IMPORTANT
+    """Create a message payload for the conversation.
+    
     Args:
-        sentences (list): List of sentences.
-        token_counts (list): List of token counts for each sentence.
-        window_size (int): Size of the window.
-        overlap (int): Overlap between windows.
-    Returns: Returns List of text windows.
+        user_message (dict, optional): user message {'role': 'user', 'content': 'message'}. Defaults to None.
+        system_message (dict): system message {'role': 'system', 'content': 'message'}
+        messages List[dict]: list of messages to add to the message history
+        max_tokens (int, optional): Maximum number of tokens to limit the message history to. Defaults to 20000.
+        
+    Returns:
+        List[dict]: message history
     """
-    # Initialize offset variable
-    offset = 0
-    L = len(sentences)
+    message_history = []
+    total_tokens = 0
+    system_token_count = count_tokens([system_message])
+    max_tokens -= system_token_count  # subtract the system prompt tokens
 
-    context_windows = []
+    if user_message and user_message.get('content'):
+        messages = messages + [user_message]
 
-    # Loop until offset reaches end of sentences
-    while offset < L:
-        # Get indices of sentences that fit in window_size
-        indices = np.argwhere(np.cumsum(token_counts[offset:]) <= window_size)[:, 0]
-        
-        # If indices array is empty, handle single sentence case
-        if len(indices) == 0:
-            indices = [0]
-        
-        # Get start and stop indices
-        start_idx, stop_idx = offset, indices[-1] + offset + 1
-
-        # Join sentences to form text window
-        text_window = " ".join(sentences[start_idx:stop_idx])
-        # Append text window to list
-        context_windows.append(text_window)
-        
-        # Update offset
-        token_indices = np.argwhere(np.cumsum(token_counts[offset:]) <= (window_size - overlap))
-        if len(token_indices) == 0:
-            offset = stop_idx
+    for message in reversed(messages):
+        message_tokens = count_tokens([message])
+        if total_tokens + message_tokens <= max_tokens:
+            total_tokens += message_tokens
+            # This inserts the message at the beginning of the list
+            message_history.insert(0, message)
         else:
-            offset += token_indices[-1, 0] + 1
-
-        # Break if stop index reaches or exceeds end of sentences
-        if stop_idx >= L:
             break
-
-    return context_windows
-
-def get_sliding_windows(text, window_size, overlap, model='cl100k_base'):
-    """
-        Description: Split context into sentenences and get sliding windows of text.
-
-        Args:
-            text (str): text
-            window_size (int): Size of the window.
-            overlap (int): Overlap between windows.
-        Returns: Returns List of text windows.
-    """
-    sentences    = split_text_into_sents(text)
-    token_counts = [count_tokens_str(s, model=model)  for s in sentences]
-    context_windows = get_text_windows(sentences, token_counts, window_size, overlap)
-    return context_windows
+    
+    if system_message:
+        message_history.insert(0, system_message)
+    
+    return message_history

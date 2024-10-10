@@ -1,6 +1,8 @@
 import os
 import ast
 import json
+import yaml  # Add this import at the top of the file
+import codecs
 from functools import wraps
 from pydantic import BaseModel, create_model, Field, validate_call
 from typing import Any, Callable, List, Type, Union, Dict, Optional, get_type_hints, Annotated
@@ -11,24 +13,93 @@ basic_types = {
     'Any': Any, 'Dict': Dict, 'List': List, 'Optional': Optional, 'Union':Union,
 }
 
-    
-def get_fields(json_path, json_dir="assets/fields"):
-    """Load a JSON file containing field data.
+
+
+def get_yaml_data(yaml_path, yaml_dir="assets/data"):
+    """Load a YAML file containing field data.
 
     Args:
-        json_path (str): Path to the JSON file.
-        json_dir (str, optional): Directory containing the JSON file. Defaults to 'assets/fields'.
+        yaml_path (str): Path to the YAML file.
+        yaml_dir (str, optional): Directory containing the YAML file. Defaults to 'assets/data'.
 
     Returns:
         dict: A dictionary of field data.
+
+    Raises:
+        UnicodeDecodeError: If there's an encoding issue with the file.
+        yaml.YAMLError: If there's an issue parsing the YAML content.
+        FileNotFoundError: If the specified file doesn't exist.
     """
-    # Check if json_path ends with .json
-    if not json_path.endswith('.json'):
-        json_path += '.json'
-    json_path = os.path.join(json_dir, json_path)
-    with open(json_path, 'r') as f:
-        return json.load(f)
+    # Check if yaml_path ends with .yaml or .yml
+    if not yaml_path.endswith(('.yaml', '.yml')):
+        yaml_path += '.yaml'
+    yaml_path = os.path.join(yaml_dir, yaml_path)
     
+    try:
+        with codecs.open(yaml_path, 'r', encoding='utf-8') as f:
+            return yaml.safe_load(f)
+    except UnicodeDecodeError as e:
+        print(f"Encoding error in file {yaml_path}: {e}")
+        print("Make sure the file is saved with UTF-8 encoding.")
+        raise
+    except yaml.YAMLError as e:
+        print(f"YAML parsing error in file {yaml_path}: {e}")
+        raise
+    except FileNotFoundError:
+        print(f"File not found: {yaml_path}")
+        raise
+
+
+def format_field_for_probe(field):
+    """
+    Create a markdown-formatted text for a given field.
+
+    Args:
+        field (dict): A dictionary containing field information.
+
+    Returns:
+        str: Markdown-formatted text for the field.
+    """
+    markdown = f"## to probe for `{field['title']}`:\n"
+    markdown += f"{field['description']}\n\n"
+
+    if 'user_examples' in field:
+        markdown += "- Examples of learner responses:\n"
+        for example in field['user_examples']:
+            markdown += f"- {example}\n"
+        markdown += "\n"
+
+    if 'probe_examples' in field:
+        markdown += "- Examples of Zavmo's responses:\n"
+        for example in field['probe_examples']:
+            markdown += f"- {example}\n"
+        markdown += "\n"
+
+    return markdown
+
+
+def format_field_for_extract(field):
+    """
+    Create a markdown-formatted text for a given field.
+
+    Args:
+        field (dict): A dictionary containing field information.
+
+    Returns:
+        str: Markdown-formatted text for the field.
+    """
+    markdown = f"## to extract `{field['title']}`\n\n"
+    markdown += f"{field['description']}\n\n"
+
+    if 'probe_examples' in field:
+        markdown += "- Examples of learner inputs:\n"
+        for example in field['user_examples']:
+            markdown += f"- {example}\n"
+        markdown += "\n"
+
+    return markdown        
+
+
 
 def eval_type_ast(node):
     """
@@ -79,7 +150,7 @@ def parse_type(type_str: str):
         raise ValueError(f"Error parsing type '{type_str}': {e}")        
     
     
-def create_model_fields(fields):
+def create_model_fields(fields, use_keys=['description']):
     """
     Dynamically creates fields for the model using Annotated and Field.
 
@@ -94,7 +165,7 @@ def create_model_fields(fields):
         field_name = field_data['title']
         annotation_str = field_data['annotation']  # Annotation is now required
         field_annotation = parse_type(annotation_str)
-        field = Field(**{k: v for k, v in field_data.items() if k not in ['title', 'annotation']})
+        field = Field(**{k: v for k, v in field_data.items() if k in use_keys})
         model_fields[field_name] = Annotated[field_annotation, field]
     return model_fields
 
@@ -120,3 +191,4 @@ def create_pydantic_model(name: str, fields: List[Dict[str, Any]], description: 
         model_attributes['__doc__'] = description
     
     return create_model(name, **model_fields, **model_attributes)
+

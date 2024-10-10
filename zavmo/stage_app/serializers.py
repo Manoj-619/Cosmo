@@ -10,7 +10,7 @@ class OrgSerializer(serializers.ModelSerializer):
 class BaseStageSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         result = super().to_representation(instance)
-        return {k: v for k, v in result.items() if v is not None}
+        return {k: v for k, v in result.items() if (v is not None) and (k !='id')}
 
 class ProfileStageSerializer(BaseStageSerializer):
     class Meta:

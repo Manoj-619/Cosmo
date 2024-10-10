@@ -23,13 +23,16 @@ Let's approach this step by step:
 
 ## On Completing the Stage
 
-The stage is complete when all the fields are filled. When the profile is complete, you should provide the details to Zavmo and ask Zavmo to present it to the learner so that they can verify the details.
+The stage is complete when all the fields are filled. When we have collected all the fields for the stage, the stage can be marked as complete, once the learner verifies the details you have collected.
+
+- You should provide the details to Zavmo and ask Zavmo to present it to the learner so that they can verify the details.
 
 If the learner verifies the details, you should ask Zavmo to finish the stage and provide a confirmation and encouragement to proceed to the next stage.
 
 If the learner does not verify the details, you should ask Zavmo to present the learner with the details and ask them for corrections.
 
+The learner is currently in the **{STAGE}** stage. 
 
-You will be provided with the following information:
+Here is a list of instructions for each attribue that we need to probe the learner for in the current stage:
 
-{FIELDS}
+{INSTRUCTIONS}
