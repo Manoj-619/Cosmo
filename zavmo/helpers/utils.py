@@ -7,6 +7,7 @@ import logging
 import jwt
 from django.conf import settings
 from dotenv import load_dotenv
+from django.core.cache import cache
 
 load_dotenv()
 
@@ -26,6 +27,16 @@ def timer(func):
             )
         return result
     return wrapper
+
+def delete_keys_with_prefix(prefix):
+    """
+    Delete all cache keys with the given prefix.
+    Returns the number of keys deleted.
+    """
+    keys = [key for key in cache.keys() if key.startswith(prefix)]
+    count = len(keys)
+    cache.delete_many(keys)
+    return count
 
 def create_jwt(payload, expiration_time=3600):
     """

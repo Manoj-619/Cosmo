@@ -12,6 +12,17 @@ class BaseStageSerializer(serializers.ModelSerializer):
         result = super().to_representation(instance)
         return {k: v for k, v in result.items() if (v is not None) and (k !='id')}
 
+    def get_markdown_summary(self, instance):
+        model_name = instance._meta.verbose_name.title()
+        summary = f"# {model_name}\n\n"
+        
+        for field_name, value in self.to_representation(instance).items():
+            field = instance._meta.get_field(field_name)
+            human_readable_name = field.verbose_name.title() if field.verbose_name != field_name else field_name.replace('_', ' ').title()
+            summary += f"**{human_readable_name}**: {value}\n"
+        
+        return summary.strip()
+
 class ProfileStageSerializer(BaseStageSerializer):
     class Meta:
         model = ProfileStage

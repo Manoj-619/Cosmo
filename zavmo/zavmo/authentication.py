@@ -23,11 +23,10 @@ class CustomJWTAuthentication(BaseAuthentication):
                 algorithms=[settings.JWT_ALGORITHM]
             )
             email = decoded_token.get('email')
-            org_id = decoded_token.get('org_id')  # Fetch org_id from the token
 
-            # Check if both email and org_id are present
-            if not email or not org_id:
-                raise exceptions.AuthenticationFailed('Email and org_id are required in token')
+            # Check if email is present
+            if not email:
+                raise exceptions.AuthenticationFailed('Email is required in token')
 
             try:
                 user = User.objects.get(email=email)

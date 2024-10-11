@@ -17,9 +17,9 @@ from .serializers import (
     UserSerializer, LearnerJourneySerializer, ProfileStageSerializer, DiscoverStageSerializer, 
     DiscussStageSerializer, DeliverStageSerializer, DemonstrateStageSerializer
 )
-
 from helpers.chat import get_prompt, force_tool_call, get_openai_completion, create_message_payload
 from helpers.functions import create_model_fields, create_pydantic_model, get_yaml_data, create_system_message
+from helpers.constants import PROBE_HISTORY_SUFFIX, USER_PROFILE_SUFFIX, EXTRACT_HISTORY_SUFFIX
 
 logger = logging.getLogger(__name__)
 
