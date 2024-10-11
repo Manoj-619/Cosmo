@@ -6,13 +6,33 @@ import anthropic
 from openai import OpenAI
 from dotenv import load_dotenv
 from pydantic import BaseModel
-
+from typing import Union, List
+import functools
 load_dotenv(override=True)
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 
 logger = logging.getLogger(__name__)
+
+
+def log_tokens(func):
+    """Log the token usage of the decorated function"""
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        result = func(*args, **kwargs)
+        if hasattr(result, 'usage'):
+            usage = result.usage.to_dict()
+            logger.info(f"Function {func.__name__} token usage:")
+            logger.info(f"  Completion tokens: {usage['completion_tokens']}")
+            logger.info(f"  Prompt tokens: {usage['prompt_tokens']}")
+            logger.info(f"  Total tokens: {usage['total_tokens']}")
+            if 'completion_tokens_details' in usage:
+                logger.info(f"  Reasoning tokens: {usage['completion_tokens_details'].get('reasoning_tokens', 'N/A')}")
+            if 'prompt_tokens_details' in usage:
+                logger.info(f"  Cached tokens: {usage['prompt_tokens_details'].get('cached_tokens', 'N/A')}")
+        return result
+    return wrapper
 
 def get_prompt(prompt_file, prompt_dir="assets/prompts"):
     """Load a prompt from a file.
@@ -94,7 +114,9 @@ def get_claude_response(sys_mssg,messages,model="claude-3-opus-20240229"):
 
 ### TODO: Create a separate function for making tool calls, with automatic tool choice and parallel execution
 
-def force_tool_call(tools,
+
+@log_tokens
+def force_tool_call(tools: Union[List[BaseModel], BaseModel],
                    messages, 
                    model='gpt-4o-mini', 
                    tool_choice='required', # NOTE: Forcing tool to be called here
@@ -105,10 +127,13 @@ def force_tool_call(tools,
     Make tool calls and return the parsed response.
     # IMPORTANT: Always specify these kwargs: `tool_choice`, and `parallel_tool_calls`
     """
+    is_single_tool = not isinstance(tools, list)
+    tools_list = [tools] if is_single_tool else tools
+
     response = client.chat.completions.create(
         model=model,
         messages=messages,
-        tools=[openai.pydantic_function_tool(t) for t in tools],
+        tools=[openai.pydantic_function_tool(t) for t in tools_list],
         tool_choice=tool_choice,
         parallel_tool_calls=parallel_tool_calls,
         **kwargs
@@ -120,14 +145,15 @@ def force_tool_call(tools,
         tool_call_func = tool_call.function
         tool_name, tool_args = tool_call_func.name, tool_call_func.arguments
         # Get the pydantic model from the tools list that has the name of the tool call
-        tool_model = next((tool for tool in tools if tool.__name__ == tool_name), None)
+        tool_model = next((tool for tool in tools_list if tool.__name__ == tool_name), None)
         try:
             parsed_tool = tool_model.model_validate_json(tool_args)
             parsed_tools.append(parsed_tool)
         except Exception as e:
             logger.debug(f"Error parsing tool call: {e}")
             # Log the error, but don't raise it
-    return parsed_tools
+    
+    return parsed_tools[0] if is_single_tool else parsed_tools
         
  
 
@@ -151,26 +177,12 @@ def make_structured_call(tool:BaseModel, messages, model='gpt-4o-mini', **kwargs
         return None
 
 
-# def format_previous_messages(messages):
-#     """
-#     Format previous messages for display
-#     """
-#     formatted_messages = []
-#     for message in messages:
-#         if message['role'] == 'user':
-#             formatted_messages.append(
-#                 {"role": "user", "content": f"Question: {extract_question(message['content'])}"})
-#         elif message['role'] == 'assistant':
-#             formatted_messages.append(
-#                 {"role": "assistant", "content": message['content']})
-#     return formatted_messages
 
-
-def create_message_payload(user_message=None, system_message=None, messages=[], max_tokens=20000):  # IMPORTANT
+def create_message_payload(user_content=None, system_message=None, messages=[], max_tokens=20000):  # IMPORTANT
     """Create a message payload for the conversation.
     
     Args:
-        user_message (dict, optional): user message {'role': 'user', 'content': 'message'}. Defaults to None.
+        user_content (str, optional): the user's message content. Defaults to None.
         system_message (dict): system message {'role': 'system', 'content': 'message'}
         messages List[dict]: list of messages to add to the message history
         max_tokens (int, optional): Maximum number of tokens to limit the message history to. Defaults to 20000.
@@ -183,8 +195,8 @@ def create_message_payload(user_message=None, system_message=None, messages=[], 
     system_token_count = count_tokens([system_message])
     max_tokens        -= system_token_count  # subtract the system prompt tokens
 
-    if user_message:
-        messages = messages + [user_message]
+    if user_content:
+        messages = messages + [{'role': 'user', 'content': user_content}]
 
     for message in reversed(messages):
         message_tokens = count_tokens([message])

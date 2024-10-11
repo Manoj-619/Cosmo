@@ -12,39 +12,19 @@ from zavmo.authentication import CustomJWTAuthentication
 from django.db import IntegrityError
 from django.core.cache import cache
 from django.contrib.auth.models import User
-from .models import Org, LearnerJourney, ProfileStage, DiscoverStage, DiscussStage, DeliverStage, DemonstrateStage
-from .serializers import (
-    UserSerializer, LearnerJourneySerializer, ProfileStageSerializer, DiscoverStageSerializer, 
+from stage_app.models import Org, LearnerJourney, ProfileStage, DiscoverStage, DiscussStage, DeliverStage, DemonstrateStage
+from stage_app.serializers import (
+    UserDetailSerializer, LearnerJourneySerializer, ProfileStageSerializer, DiscoverStageSerializer, 
     DiscussStageSerializer, DeliverStageSerializer, DemonstrateStageSerializer
 )
 from helpers.chat import get_prompt, force_tool_call, get_openai_completion, create_message_payload
 from helpers.functions import create_model_fields, create_pydantic_model, get_yaml_data, create_system_message
-from helpers.constants import PROBE_HISTORY_SUFFIX, USER_PROFILE_SUFFIX, EXTRACT_HISTORY_SUFFIX
+from helpers.constants import USER_PROFILE_SUFFIX, HISTORY_SUFFIX
+from helpers.utils import delete_keys_with_prefix, timer
+from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
-def get_stage_model(stage_name, user=None):
-    """
-    Get the stage model for a given stage name.
-    If a user is provided, return the user's instance of that stage model and its serialized data.
-    """
-    stage_models = {
-        'profile': (ProfileStage, ProfileStageSerializer),
-        'discover': (DiscoverStage, DiscoverStageSerializer),
-        'discuss': (DiscussStage, DiscussStageSerializer),
-        'deliver': (DeliverStage, DeliverStageSerializer),
-        'demonstrate': (DemonstrateStage, DemonstrateStageSerializer)
-    }
-    
-    model, serializer_class = stage_models.get(stage_name, (None, None))
-    
-    if user and model:
-        instance = model.objects.filter(user=user).first()
-        if instance:
-            serialized_data = serializer_class(instance).data
-            return instance, serialized_data
-    
-    return None, {}
 
 # Utility function to get stage data
 def add_stage_data(stage_name, user):
@@ -65,7 +45,7 @@ def add_stage_data(stage_name, user):
 
     serializer_class = stages[stage_name]
     try:
-        stage_instance = getattr(user, f'{stage_name}_stage')
+        stage_instance = getattr(user, f'{stage_name}')
         stage_serializer = serializer_class(stage_instance)
         stage_data = stage_serializer.data
         if any(stage_data.values()):  # Check if any field has a non-null value
@@ -74,6 +54,43 @@ def add_stage_data(stage_name, user):
         pass
 
     return {stage_name: {}}
+
+def get_user_profile_data(user):
+    """
+    Retrieve user profile data from cache if available, otherwise from the database.
+    """
+    cache_key = f"{user.email}_{USER_PROFILE_SUFFIX}"
+    
+    # Try to get data from cache
+    cached_data = cache.get(cache_key)
+    if cached_data:
+        return cached_data
+
+    # If not in cache, fetch from database
+    learner_journey = LearnerJourney.objects.filter(user=user).first()
+    if not learner_journey:
+        return None
+
+    learner_journey_data = LearnerJourneySerializer(learner_journey).data
+
+    # Get stage data for all stages
+    stage_data = {}
+    for stage_name in ['profile', 'discover', 'discuss', 'deliver', 'demonstrate']:
+        stage_info = add_stage_data(stage_name, user)
+        if stage_info:
+            stage_data.update(stage_info)
+    
+    # Combine profile data with stage data
+    profile_data = {
+        **learner_journey_data,
+        'stage_data': stage_data
+    }
+
+    # Cache the data without a timeout
+    cache.set(cache_key, profile_data)
+
+    return profile_data
+
 
 # Endpoint: /api/org/create/
 @api_view(['POST'])
@@ -110,9 +127,9 @@ def sync_user(request):
     Returns:
     Response: JSON object with user data, status message, or error messages.
     """
-    serializer = UserSerializer(data=request.data, context={'request': request})
+    serializer = UserDetailSerializer(data=request.data, context={'request': request})
     if serializer.is_valid():
-        email = serializer.validated_data['email']
+        email  = serializer.validated_data['email']
         org_id = request.data.get('org_id')
 
         # Validate org_id presence and existence
@@ -188,23 +205,12 @@ def get_user_profile(request):
     API to retrieve the user's complete profile data.
     """
     user = request.user
-    learner_journey = request.learner_journey
-    learner_journey_data = LearnerJourneySerializer(learner_journey).data
+    profile_data = get_user_profile_data(user)
+    
+    if profile_data is None:
+        return Response({"error": "User profile not found"}, status=status.HTTP_404_NOT_FOUND)
 
-    # Get stage data for all stages
-    stage_data = {}
-    for stage_name in ['profile', 'discover', 'discuss', 'deliver', 'demonstrate']:
-        stage_info = add_stage_data(stage_name, user)
-        if stage_info:
-            stage_data.update(stage_info)
-
-    # Combine profile data with stage data
-    response_data = {
-        **learner_journey_data,
-        'stage_data': stage_data
-    }
-
-    return Response(response_data)
+    return Response(profile_data)
 
 # Endpoint: /api/chat/
 @api_view(['POST'])
@@ -215,82 +221,42 @@ def chat_view(request):
     handles chat sessions between a user and the AI assistant.
     """
     user            = request.user    
-    learner_journey = request.learner_journey
-    stage           = learner_journey.stage
-    stage_name      = learner_journey.get_stage_display()
-    cache_key       = f"{user.email}_history"
-    user_input      = request.data.get('message', None)    
-    clear_history   = request.data.get('clear', False)
-    if clear_history:
-        cache.delete(cache_key)
-    
-    message_history = cache.get(cache_key, [])
-    
-    # This can be used to get the correct directory for prompts, or for loading any other assets.    
-    stage_model, stage_data = get_stage_model(stage_name, user)
-    logger.info(f"Stage data: {stage_data}")
+    profile_data    = get_user_profile_data(user) # Get user profile data either from cache or database
+    stage_data      = profile_data['stage_data']        
+    stage_name      = profile_data['stage_name']
+    message_key     = f"{user.email}_{stage_name}_{HISTORY_SUFFIX}"
+    message_history = cache.get_or_set(message_key, [])
+    user_input      = request.data.get('message', f'Send a personalized welcome message to the learner.')
     
     conf_data       = get_yaml_data(stage_name)
     required_fields = conf_data['required']
-    # available_fields is the data that has already been collected for the learner for the current stage.
-    available_fields = stage_data.keys()
-    missing_fields   = [field for field in required_fields if field not in available_fields]
-
-    p_model = conf_data['primary']
-    i_model = conf_data['identify']
     
-    identifier_model = create_pydantic_model(
-        name=i_model['title'],  description=i_model['description'], fields=i_model['fields'])
-
-    extract_system_message = create_system_message(stage_name, conf_data, mode='extract')
+    # available_fields is the data that has already been collected for the learner for the current stage.
+    available_fields = stage_data[stage_name].keys()
+    missing_fields   = [field for field in required_fields if field not in available_fields]
+    p_model          = conf_data['primary']
     probe_system_message   = create_system_message(stage_name, conf_data, mode='probe')
     
-    if user_input:
-        user_message     = {"role": "user", "content": user_input}
-        message_history.append(user_message)
-        extract_payload  = create_message_payload(user_message, extract_system_message, message_history, max_tokens=10000)
-        id_response = force_tool_call(tools=[identifier_model], messages=extract_payload,
-                                      model='gpt-4o-mini', tool_choice='required', parallel_tool_calls=False)[0]
-        new_attributes   = id_response.attributes
-        #  If new attributes were detected, parse the message and extract the new data.
-        if new_attributes:
-            extract_fields = [f for f in p_model['fields'] if f['title'] in new_attributes]
-            xp = max(10, len(extract_fields) * 100)
-            primary_model = create_pydantic_model(
-                name=p_model['title'],  
-                description=p_model['description'], 
-                fields=extract_fields
-            )
-            
-            extract_response = force_tool_call(tools=[primary_model], messages=extract_payload, model='gpt-4o-mini', tool_choice='required', parallel_tool_calls=False)[0]
-            new_stage_data   = extract_response.model_dump() # as json
-            if new_stage_data:
-                for field, value in new_stage_data.items():
-                    # Update stage model with new data
-                    setattr(stage_model, field, value)
-                stage_model.save()
-                
-                # Update available_fields and missing_fields
-                available_fields = list(stage_data.keys()) + list(new_stage_data.keys())
-                missing_fields = [field for field in required_fields if field not in available_fields]
-        else:
-            xp = 10 # Give 10 xp anyway for trying.                                                    
-        
-    else:
-        xp = 0
-        user_message = None
-        
-    probe_payload    = create_message_payload(user_message, probe_system_message, message_history, max_tokens=10000)
-    probe_response   = get_openai_completion(probe_payload, model='gpt-4o-mini')
-    message_history.append({'role':'assistant', 'content':probe_response})
-    cache.set(cache_key, message_history)
+    user_content     = f"""The learner is at the {stage_name} stage.
+    Learner's profile data: {stage_data[stage_name]}
+    
+    Learner's message: {user_input}
+    """
+    
+    message_payload = create_message_payload(user_content, probe_system_message, message_history, max_tokens=10000)
+    
+    
+    #probe_response   = get_openai_completion(probe_payload, model='gpt-4o-mini')
+    # message_history.append({'role':'assistant', 'content':probe_response})
+    #cache.set(cache_key, message_history)
         
     return Response({
             "type": "text",
-            "message": probe_response,
-            "stage": stage,
-            "credits":xp,
+            "message": '',
+            "stage": stage_name,
+            "credits":100,
             "stage_data": stage_data,
             "missing_fields": missing_fields,
             "available_fields": available_fields
         }, status=status.HTTP_201_CREATED)
+

@@ -7,6 +7,7 @@ from functools import wraps
 from pydantic import BaseModel, create_model, Field, validate_call
 from typing import Any, Callable, List, Type, Union, Dict, Optional, get_type_hints, Annotated
 from helpers.chat import get_prompt
+from enum import Enum
 
 # Mapping of basic type names to actual Python types
 basic_types = {
@@ -158,12 +159,13 @@ def parse_type(type_str: str):
         raise ValueError(f"Error parsing type '{type_str}': {e}")        
     
     
-def create_model_fields(fields, use_keys=['description']):
+def create_model_fields(fields, use_keys=['description', 'enum']):
     """
     Dynamically creates fields for the model using Annotated and Field.
 
     Args:
         fields (list): A list of dictionaries containing field data.
+        use_keys (list): Keys to include in the Field object. Defaults to ['description', 'enum'].
 
     Returns:
         dict: A dictionary of model fields.
@@ -171,10 +173,20 @@ def create_model_fields(fields, use_keys=['description']):
     model_fields = {}
     for field_data in fields:
         field_name = field_data['title']
-        annotation_str = field_data['annotation']  # Annotation is now required
-        field_annotation = parse_type(annotation_str)
-        field = Field(**{k: v for k, v in field_data.items() if k in use_keys})
+        annotation_str = field_data['annotation']
+        
+        if annotation_str == 'Enum' and 'enum' in field_data:
+            # Create a dynamic Enum class
+            enum_name = f"{field_name.capitalize()}Enum"
+            enum_class = Enum(enum_name, {v: v for v in field_data['enum']})
+            field_annotation = enum_class
+        else:
+            field_annotation = parse_type(annotation_str)
+        
+        field_kwargs = {k: v for k, v in field_data.items() if k in use_keys}
+        field = Field(**field_kwargs)
         model_fields[field_name] = Annotated[field_annotation, field]
+    
     return model_fields
 
 def create_pydantic_model(name: str, fields: List[Dict[str, Any]], description: str = None):

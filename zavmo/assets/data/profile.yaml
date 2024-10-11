@@ -4,6 +4,39 @@ required:
   - age
   - edu_level
   - current_role
+
+response:
+  title: Response
+  description: >
+    The action to take given the learner's response, and an engaging, personal message to the learner.
+    - If there are any missing attributes, **probe** the learner for more information.
+    - If we have all the attributes, **summarize** the information for them to review.
+  fields:  
+    - field: action
+      title: action
+      annotation: Enum
+      enum:
+        - probe
+        - summarize
+        - edit
+        - finish
+      description: >
+        An action to take, given the learner's response.
+        - **probe**: Probe for missing attributes by asking questions in a friendly and engaging manner.
+        - **summarize**: Summarize the information we have about the learner and present it to them to review.
+        - **edit**: Edit the profile information to correct any errors or omissions.
+        - **finish**: Finish the conversation and proceed to the next stage of the conversation.
+    - field: message
+      title: message
+      annotation: str
+      description: >
+        An engaging, personal message to the learner. 
+        - When probing, this message should acknowledge the learner's previous response, respond with encouragement, and ask a follow-up question that helps us identify unknown attributes about the learner.
+        - When summarizing, this message should be congratulatory on their completion of the profile, ask them if they would like to review their information, and if they would like to proceed.
+        - When editing, this message should ask which attribute they would like to edit, and request them to correct any errors, omissions, or ambiguities in the information they provided.
+        - When finishing, this message should thank them for completing their profile and express excitement for the personalized learning experience we will provide for them.
+
+
 primary:
   title: profile
   description: >

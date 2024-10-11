@@ -3,7 +3,6 @@
 
 # Cache suffixes
 
-PROBE_HISTORY_SUFFIX   = "_probe_history"
-EXTRACT_HISTORY_SUFFIX = "_extract_history"
+HISTORY_SUFFIX         = "_history"
 USER_PROFILE_SUFFIX    = "_user_profile"
 
