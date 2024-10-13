@@ -34,6 +34,9 @@ REDIS_DB  = config('REDIS_DB', 0)
 CELERY_BROKER_URL = f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"
 CELERY_RESULT_BACKEND = f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"
 
+# Set the default Django settings module for the 'celery' program.
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'zavmo.settings')
+
 app = Celery('zavmo',
              broker=CELERY_BROKER_URL,
              backend=CELERY_RESULT_BACKEND,

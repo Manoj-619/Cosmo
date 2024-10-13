@@ -266,7 +266,7 @@ def chat_view(request):
     message_history.append({'role':'assistant', 'content':zavmo_response})
     cache.set(message_key, message_history)
     # After this you should trigger an extraction process
-    manage_stage_data.delay(user.email, stage_name, response_tool.action.value)
+    manage_stage_data.apply_async(args=[user.email, stage_name, response_tool.action.value])
         
     return Response({
             "type": "text",
@@ -274,7 +274,7 @@ def chat_view(request):
             "stage": stage,
             "stage_name": stage_name,
             "credits":100,
-            #"stage_data": stage_data,
+            "stage_data": stage_data,
             "log_history": message_history,
             "log_action": response_tool.action.value,
             #"missing_fields": missing_fields,
