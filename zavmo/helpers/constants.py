@@ -3,8 +3,8 @@
 
 # Cache suffixes
 
-HISTORY_SUFFIX         = "_history"
-USER_PROFILE_SUFFIX    = "_user_profile"
+HISTORY_SUFFIX         = "history"
+USER_PROFILE_SUFFIX    = "profile"
 
 
 STAGE_ORDER = {

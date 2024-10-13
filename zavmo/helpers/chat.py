@@ -211,3 +211,25 @@ def create_message_payload(user_content=None, system_message=None, messages=[], 
         message_history.insert(0, system_message)
     
     return message_history
+
+
+def get_markdown_summary(profile_data, stage_name):
+    """
+    Get a markdown summary of the stage data.
+    """
+    summary = f"# {stage_name}\n\n"
+    stage_data = profile_data['stage_data'][stage_name]
+    for key, value in stage_data.items():
+        summary += f"**{key}**: {value}\n"
+    return summary.strip()
+
+
+def summarize_history(history):
+    """
+    Summarize the history of the conversation.
+    """
+    summary = f"# Conversation History\n\n"
+    for message in history:
+        role = 'Zavmo' if message['role'] == 'assistant' else 'Learner'
+        summary += f"**{role}**: {message['content']}\n"
+    return summary.strip()
