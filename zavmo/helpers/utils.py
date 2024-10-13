@@ -8,6 +8,9 @@ import jwt
 from django.conf import settings
 from dotenv import load_dotenv
 from django.core.cache import cache
+from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat.primitives import serialization
+from datetime import datetime, timedelta, UTC
 
 load_dotenv()
 
@@ -28,33 +31,29 @@ def timer(func):
         return result
     return wrapper
 
-def delete_cache_keys(prefix='', keys=[]):   
-    """
-    Delete all cache keys with the given prefix.
-    Returns the number of keys deleted.
-    """
-    keys = [prefix + key for key in keys]
-    cache.delete_many(keys)
 
 def create_jwt(payload, expiration_time=3600):
-    """
-    Create a JWT token from a given payload
-    
-    Args:
-        payload (dict): The payload to be encoded in the JWT.
-        expiration_time (int): Token expiration time in seconds (default: 1 hour).
-    
-    Returns:
-        str: The generated JWT token.
-    """
-    current_time = int(time.time())
-    payload['exp'] = current_time + expiration_time
-    payload['iat'] = current_time
+    # Prepare the payload
+    current_time = datetime.now(UTC)
+    payload.update({
+        "exp": current_time + timedelta(seconds=expiration_time),
+        "iat": current_time,
+    })
 
+    # Get the private key from environment variable
+    private_key = os.environ.get('JWT_PRIVATE_KEY')
+    if not private_key:
+        raise ValueError("JWT_PRIVATE_KEY not found in environment variables")
+
+    # Generate the JWT
     token = jwt.encode(
-        payload, 
-        key=os.getenv('JWT_PRIVATE_KEY'),
-        algorithm=os.getenv('JWT_ALGORITHM')
+        payload,
+        private_key,
+        algorithm=os.environ.get('JWT_ALGORITHM', 'RS256'),
+        headers={
+            "kid": os.environ.get('JWT_KEY_ID'),
+            "iss": os.environ.get('JWT_ISSUER')
+        }
     )
 
     return token

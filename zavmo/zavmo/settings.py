@@ -21,6 +21,8 @@ load_dotenv()
 JWT_PUBLIC_KEY = os.getenv('JWT_PUBLIC_KEY')
 JWT_ALGORITHM = os.getenv('JWT_ALGORITHM', 'HS256')
 JWT_PRIVATE_KEY = os.getenv('JWT_PRIVATE_KEY','secret')
+JWT_ISSUER = os.getenv('JWT_ISSUER', 'https://login.zavmo.ai/auth/realms/Zavmo')
+JWT_KEY_ID = os.getenv('JWT_KEY_ID', 'zavmo-key')
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent

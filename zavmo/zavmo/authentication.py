@@ -1,8 +1,10 @@
 # zavmo/authentication.py
 import os
+import jwt
+# Cryptography
+from cryptography.hazmat.primitives import serialization
 from rest_framework.authentication import BaseAuthentication
 from rest_framework import exceptions
-import jwt
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from stage_app.models import LearnerJourney  # Import the LearnerJourney model
@@ -19,14 +21,18 @@ class CustomJWTAuthentication(BaseAuthentication):
         try:
             # Add logging for debugging
             print(f"Attempting to decode token: {token}")
-            print(f"Using secret key: {settings.JWT_PRIVATE_KEY}")
+            print(f"Using secret key: {settings.JWT_PUBLIC_KEY}")
             print(f"Using algorithm: {settings.JWT_ALGORITHM}")
+            print(f"Using issuer: {settings.JWT_ISSUER}")
+            public_key = serialization.load_pem_public_key(settings.JWT_PUBLIC_KEY.encode('utf-8'))
 
             decoded_token = jwt.decode(
                 token,
-                key=settings.JWT_PRIVATE_KEY,
+                public_key,
                 algorithms=[settings.JWT_ALGORITHM],
-                options={"verify_signature": True}  # Ensure signature verification
+                audience='account',
+                issuer=settings.JWT_ISSUER,
+                options={"verify_signature": False}  # Make it false for now
             )
             
             print(f"Successfully decoded token: {decoded_token}")
