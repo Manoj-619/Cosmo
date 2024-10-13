@@ -90,14 +90,10 @@ def manage_stage_data(self, user_email, stage_name='profile', action=None):
             
             # Extract the finish data
             pass
-        
-        elif action == 'edit':
-            logger.info("Executing 'edit' action")
-            pass
-            
-        elif action == 'summarize':
-            logger.info("Executing 'summarize' action")
-            # Extract the summarize data
+                    
+        elif action == 'review':
+            logger.info("Executing 'review' action")
+            # Extract the review data
             pass
         
         else:
@@ -155,50 +151,34 @@ def extract_stage_data(self, user_email, stage_name, attributes):
     
 def save_stage_data(user_email, stage_name):
     profile_data = cache.get(f"{user_email}_{USER_PROFILE_SUFFIX}")
-    stage_data   = profile_data['stage_data'][stage_name]
+    stage_data = profile_data['stage_data'][stage_name]
+    
+    stage_models = {
+        'profile': ProfileStage,
+        'discover': DiscoverStage,
+        'discuss': DiscussStage,
+        'deliver': DeliverStage,
+        'demonstrate': DemonstrateStage
+    }
     
     # Get learner journey
     learner_journey = LearnerJourney.objects.get(user_id=user_email)
     
-    if stage_name == 'profile':
-        # Update the profile stage
-        profile_stage = ProfileStage.objects.get_or_create(user_id=user_email)
-        for field, value in stage_data.items():
-            setattr(profile_stage, field, value)
-        profile_stage.save()
-        # also increment the stage
-        
-    elif stage_name == 'discover':
-        # Update the discover stage
-        discover_stage = DiscoverStage.objects.get_or_create(user_id=user_email)        
-        
-        for field, value in stage_data.items():
-            setattr(discover_stage, field, value)
-        discover_stage.save()
-        
-    elif stage_name == 'discuss':
-        # Update the discuss stage
-        discuss_stage = DiscussStage.objects.get_or_create(user_id=user_email)
-        for field, value in stage_data.items():
-            setattr(discuss_stage, field, value)
-        discuss_stage.save()
-        
-    elif stage_name == 'deliver':
-        # Update the deliver stage
-        deliver_stage = DeliverStage.objects.get_or_create(user_id=user_email)
-        for field, value in stage_data.items():
-            setattr(deliver_stage, field, value)
-        deliver_stage.save()
-
-    elif stage_name == 'demonstrate':
-        # Update the demonstrate stage
-        demonstrate_stage = DemonstrateStage.objects.get_or_create(user_id=user_email)
-        for field, value in stage_data.items():
-            setattr(demonstrate_stage, field, value)
-        demonstrate_stage.save()
-        
-    learner_journey.increment_stage()
+    # Get the appropriate stage model
+    StageModel = stage_models.get(stage_name)
+    if not StageModel:
+        return {'status': 'error', 'message': f"Invalid stage name: {stage_name}"}
     
+    # Update or create the stage instance
+    stage_instance, created = StageModel.objects.get_or_create(user_id=user_email)
+    
+    # Update fields
+    for field, value in stage_data.items():
+        setattr(stage_instance, field, value)
+    stage_instance.save()
+    
+    # Increment the stage
+    learner_journey.increment_stage()
     
     # Delete the cache data
     delete_keys_with_prefix(user_email)

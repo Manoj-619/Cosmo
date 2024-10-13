@@ -52,61 +52,38 @@ def get_yaml_data(yaml_path, yaml_dir="assets/data"):
         raise
 
 
-def format_field(field, mode='probe'):
+def format_field(field):
     """
     Create a markdown-formatted text for a given field.
 
     Args:
         field (dict): A dictionary containing field information.
-        mode (str): Either 'probe' or 'extract'. Defaults to 'probe'.
 
     Returns:
         str: Markdown-formatted text for the field.
     """
-    markdown = f"## to {'probe for' if mode == 'probe' else 'extract'} `{field['title']}`:\n"
+    markdown = f"**{field['title']}**\n\n"
     markdown += f"{field['description']}\n\n"
 
-    if mode == 'probe' and 'user_examples' in field:
-        markdown += "- Examples of learner responses:\n"
-        for example in field['user_examples']:
+    if 'probe_questions' in field:
+        markdown += "> Questions to probe for this attribute:\n"
+        for question in field['probe_questions']:
+            markdown += f"- {question}\n"
+        markdown += "\n"
+
+    if 'user_responses' in field:
+        markdown += "> Examples of learner responses:\n"
+        for example in field['user_responses']:
             markdown += f"- {example}\n"
         markdown += "\n"
 
-    if mode == 'probe' and 'probe_examples' in field:
-        markdown += "- Examples of Zavmo's responses:\n"
-        for example in field['probe_examples']:
-            markdown += f"- {example}\n"
-        markdown += "\n"
-
-    if mode == 'extract' and 'user_examples' in field:
-        markdown += "- Examples of learner inputs:\n"
-        for example in field['user_examples']:
-            markdown += f"- {example}\n"
+    if 'probe_responses' in field:
+        markdown += "> Examples of Zavmo's responses:\n"
+        for response in field['probe_responses']:
+            markdown += f"- {response}\n"
         markdown += "\n"
 
     return markdown
-
-
-def format_field_for_extract(field):
-    """
-    Create a markdown-formatted text for a given field.
-
-    Args:
-        field (dict): A dictionary containing field information.
-
-    Returns:
-        str: Markdown-formatted text for the field.
-    """
-    markdown = f"## to extract `{field['title']}`\n\n"
-    markdown += f"{field['description']}\n\n"
-
-    if 'probe_examples' in field:
-        markdown += "- Examples of learner inputs:\n"
-        for example in field['user_examples']:
-            markdown += f"- {example}\n"
-        markdown += "\n"
-
-    return markdown        
 
 
 
@@ -225,8 +202,10 @@ def create_system_message(stage_name, conf_data, mode='probe'):
     Returns:
         dict: A system message for the specified mode.
     """
-    p_model = conf_data['primary']
-    instructions = '\n\n'.join([format_field(f, mode) for f in p_model['fields']])
-    system_content = get_prompt(f"{stage_name}/{mode}").format(STAGE=stage_name.title(), INSTRUCTIONS=instructions)
+    fields = conf_data['fields']
+    instructions = '\n\n'.join([format_field(f) for f in fields])
+    system_content = get_prompt(f"{mode}").format(STAGE=stage_name.title(),
+                                                  INSTRUCTIONS=instructions
+                                                  )
     return {"role": "system", "content": system_content}
 

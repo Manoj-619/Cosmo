@@ -1,9 +1,132 @@
-required:
-  - first_name
-  - last_name
-  - age
-  - edu_level
-  - current_role
+fields:
+  - field: first_name
+    title: first_name
+    annotation: str
+    description: The first name of the user, often used to address them directly,
+      e.g., 'Diana' or 'John'.
+    probe_questions:
+      - Hi, I'm Zavmo 😊, what's your name?
+    user_responses:
+      - My name is John
+      - I'm Sarah
+      - You can call me Alex
+      - Diana
+    probe_responses:
+      - It's wonderful to meet you, [first_name]! 🎉 You've just earned your
+        first [X] XP. How about your last name? 😄
+      - Nice to meet you, [first_name]! You've unlocked a new learning journey.
+        🚀 Now, could you share your last name with me too?
+  - field: last_name
+    title: last_name
+    annotation: str
+    description: The last name of the user, used to address them more formally or as part of their full name.
+    probe_questions:
+      - How about your last name? This will help me keep things formal when
+        needed!
+      - Thank you for sharing your name, [first_name]! Can you share your last
+        name as well?
+      - What's your last name, [first_name]? I promise no formal emails, just
+        fun! 😄
+      - Can you share your last name too? It'll help me keep track of your
+        awesome progress! 📚
+    user_responses:
+      - Smith
+      - My last name is Johnson
+      - It's Lee
+      - Garcia is my last name
+    probe_responses:
+      - Thanks, [first_name] [last_name]! You're on a roll with another [X] XP. 🚀 Let's move on—how old are you?
+      - Great, [first_name]! Now I can cheer you on with your full
+        name—[first_name] [last_name]. 🎉 How about your age, if you don't mind
+        sharing?
+      - Fantastic, [first_name]! We're all set. Let's dive into learning! 📖✨
+        Just one more thing—what's your age?
+      - Perfect, [first_name] [last_name]! You've just leveled up. 🌟 Now, how
+        old are you? This helps me create the best learning experience for you!
+  - field: age
+    title: age
+    annotation: int
+    description: The age of the user.
+    probe_questions:
+      - If you don't mind sharing, how old are you? This helps me tailor content
+        for your stage in life.
+      - To get things just right for you, what's your age? 🎂
+      - Age is just a number, but it helps me customize your experience. How old
+        are you? 😊
+      - I've got content for all ages! How old are you, [first_name]?
+    user_responses:
+      - I'm 25
+      - 32 years old
+      - 18
+      - My age is 40
+    probe_responses:
+      - Got it! Thanks for sharing, [first_name]. Age is just a number, and
+        you've earned [X] XP for that! 🎉 What's your highest education level?
+      - Thanks, [first_name]! You've unlocked more personalized content. 🧠 Now,
+        can you tell me what level of education you've completed?
+      - Awesome, [first_name]! Now I can gear up the perfect experience for you.
+        🚀 What's your highest education level so far?
+      - Fantastic! Learning knows no age limits—let's start your journey! 📚✨ By
+        the way, what's your education level? I can tailor content just for you.
+  - field: edu_level
+    title: edu_level
+    annotation: int
+    description: >
+      The education level of the user, represented by a number  (1 for
+      Primary School, 2 for Middle School, 3 for High School,  4 for Associate
+      Degree, 5 for Bachelor's Degree, 6 for Master's Degree, 7 for PhD).
+    probe_questions:
+      - What is your highest level of education? 1) Primary School 2) Middle
+        School 3) High School 4) Associate Degree 5) Bachelor's Degree 6)
+        Master's Degree 7) PhD
+      - Which education level have you completed? 🎓 (1 for Primary School, 7
+        for PhD!)
+      - I'd love to know—what's your highest level of education so far? 🏫
+      - From school to PhD, where are you on your learning path? 🛤️
+    user_responses:
+      - I have a Bachelor's Degree
+      - 5
+      - High school graduate
+      - I'm currently working on my Master's
+    probe_responses:
+      - Thanks, [first_name]! Education is an important part of learning. You've
+        just earned [X] XP! 🎓✨ Now, what's your current role or occupation?
+      - Perfect, [first_name]! Let's continue growing your knowledge at your
+        pace. 📖🚀 What do you do currently? (Your job or role!)
+      - Nice! Your education level is noted. Let's get some new skills under
+        your belt! 💡 What's your current occupation or role?
+      - Fantastic! Let's unlock more learning based on your education
+        background. 🔓📚 Now, tell me about your current role or occupation!
+  - field: current_role
+    title: current_role
+    annotation: str
+    description: >
+      The current occupation or role of the user, indicating their
+      professional or educational status,  e.g., 'Engineer', 'Teacher',
+      'Student', 'Doctor', 'Lawyer', 'Businessman', 'Artist',
+      'Musician',  'Writer', 'Scientist', 'Politician', 'Other'
+    probe_questions:
+      - What is your current role or occupation? I'd love to understand what you
+        do!
+      - What's your current job or role? 🛠️ I'd love to tailor your experience!
+      - Can you share what you do? Whether it's work or study, I'm curious! 🎓💼
+      - What's your role? It helps me recommend content that matches your
+        journey! 💡
+    user_responses:
+      - I'm a software engineer
+      - Currently working as a teacher
+      - I'm a full-time student
+      - I run my own business
+    probe_responses:
+      - Fascinating! I'd love to hear more about your learning interests related
+        to your career as a [role]. 🌟 You're all set to explore Zavmo now!
+      - Great, [first_name]! Being a [role] sounds exciting! Let's build skills
+        for it. 🚀 Ready to dive into some cool learning content?
+      - Awesome! Let's discover more fun ways to learn based on your role as a
+        [role]! 🎯 You're ready to start exploring now!
+      - Cool! Being a [role] sounds like an adventure! I'm excited to help you
+        grow. 🎉 Now, let's jump into your personalized learning experience!
+
 identify:
   title: identify_missing_fields
   description: >
@@ -35,14 +158,12 @@ response:
       annotation: Enum
       enum:
         - probe
-        - summarize
-        - edit
+        - review
         - finish
       description: >
         An action to take, given the learner's response.
         - **probe**: Probe for missing attributes by asking questions in a friendly and engaging manner.
-        - **summarize**: Summarize the information we have about the learner and present it to them to review.
-        - **edit**: Edit the profile information to correct any errors or omissions.
+        - **review**: Summarize the information we have about the learner and present it to them to review.
         - **finish**: Finish the conversation and proceed to the next stage of the conversation.
     - field: message
       title: message
@@ -50,123 +171,13 @@ response:
       description: >
         An engaging, personal message to the learner. 
         - When probing, this message should acknowledge the learner's previous response, respond with encouragement, and ask a follow-up question that helps us identify unknown attributes about the learner.
-        - When summarizing, this message should be congratulatory on their completion of the profile, ask them if they would like to review their information, and if they would like to proceed.
-        - When editing, this message should ask which attribute they would like to edit, and request them to correct any errors, omissions, or ambiguities in the information they provided.
+        - When reviewing, this message should be congratulatory on their completion of the profile, summarize the information we have about them, and ask them if they would like to edit any information.
         - When finishing, this message should thank them for completing their profile and express excitement for the personalized learning experience we will provide for them.
-primary:
-  title: profile
+
+extract:
+  title: extract_profile_attributes
   description: >
     Attributes of the user's profile, including their name (first and last), age, education level, and current role.
-  fields:
-  - field: first_name
-    title: first_name
-    annotation: str
-    description: The first name of the user, often used to address them directly,
-      e.g., 'Diana' or 'John'.
-    user_examples:
-      - Hi, I'm Zavmo 😊, what's your name?
-      - Welcome to Zavmo, I'm Zavmo 😊, what's your name?
-      - What should I call you? Your first name would be awesome to know!
-      - Let's get to know each other! What's your first name? 🌟
-    probe_examples:
-      - It's wonderful to meet you, [first_name]! 🎉 You've just earned your
-        first [X] XP. How about your last name? 😄
-      - Nice to meet you, [first_name]! You've unlocked a new learning journey.
-        🚀 Now, could you share your last name with me too?
-      - Cool name, [first_name]! Let's get started with some fun. 🎯 Oh, and
-        what's your last name so I can address you properly when needed?
-      - Yay, [first_name]! You're on board. Time to learn and have fun. 💡🎉 But
-        before we dive in, what's your last name?
-  - field: last_name
-    title: last_name
-    annotation: str
-    description: The last name of the user, used to address them more formally or as part of their full name.
-    user_examples:
-      - How about your last name? This will help me keep things formal when
-        needed!
-      - Thank you for sharing your name, [first_name]! Can you share your last
-        name as well?
-      - What's your last name, [first_name]? I promise no formal emails, just
-        fun! 😄
-      - Can you share your last name too? It'll help me keep track of your
-        awesome progress! 📚
-    probe_examples:
-      - Thanks, [first_name] [last_name]! You're on a roll with another [X] XP. 🚀 Let's move on—how old are you?
-      - Great, [first_name]! Now I can cheer you on with your full
-        name—[first_name] [last_name]. 🎉 How about your age, if you don't mind
-        sharing?
-      - Fantastic, [first_name]! We're all set. Let's dive into learning! 📖✨
-        Just one more thing—what's your age?
-      - Perfect, [first_name] [last_name]! You've just leveled up. 🌟 Now, how
-        old are you? This helps me create the best learning experience for you!
-  - field: age
-    title: age
-    annotation: int
-    description: The age of the user.
-    user_examples:
-      - If you don't mind sharing, how old are you? This helps me tailor content
-        for your stage in life.
-      - To get things just right for you, what's your age? 🎂
-      - Age is just a number, but it helps me customize your experience. How old
-        are you? 😊
-      - I've got content for all ages! How old are you, [first_name]?
-    probe_examples:
-      - Got it! Thanks for sharing, [first_name]. Age is just a number, and
-        you've earned [X] XP for that! 🎉 What's your highest education level?
-      - Thanks, [first_name]! You've unlocked more personalized content. 🧠 Now,
-        can you tell me what level of education you've completed?
-      - Awesome, [first_name]! Now I can gear up the perfect experience for you.
-        🚀 What's your highest education level so far?
-      - Fantastic! Learning knows no age limits—let's start your journey! 📚✨ By
-        the way, what's your education level? I can tailor content just for you.
-  - field: edu_level
-    title: edu_level
-    annotation: int
-    description: >
-      The education level of the user, represented by a number  (1 for
-      Primary School, 2 for Middle School, 3 for High School,  4 for Associate
-      Degree, 5 for Bachelor's Degree, 6 for Master's Degree, 7 for PhD).
-    user_examples:
-      - What is your highest level of education? 1) Primary School 2) Middle
-        School 3) High School 4) Associate Degree 5) Bachelor's Degree 6)
-        Master's Degree 7) PhD
-      - Which education level have you completed? 🎓 (1 for Primary School, 7
-        for PhD!)
-      - I'd love to know—what's your highest level of education so far? 🏫
-      - From school to PhD, where are you on your learning path? 🛤️
-    probe_examples:
-      - Thanks, [first_name]! Education is an important part of learning. You've
-        just earned [X] XP! 🎓✨ Now, what's your current role or occupation?
-      - Perfect, [first_name]! Let's continue growing your knowledge at your
-        pace. 📖🚀 What do you do currently? (Your job or role!)
-      - Nice! Your education level is noted. Let's get some new skills under
-        your belt! 💡 What's your current occupation or role?
-      - Fantastic! Let's unlock more learning based on your education
-        background. 🔓📚 Now, tell me about your current role or occupation!
-  - field: current_role
-    title: current_role
-    annotation: str
-    description: >
-      The current occupation or role of the user, indicating their
-      professional or educational status,  e.g., 'Engineer', 'Teacher',
-      'Student', 'Doctor', 'Lawyer', 'Businessman', 'Artist',
-      'Musician',  'Writer', 'Scientist', 'Politician', 'Other'
-    user_examples:
-      - What is your current role or occupation? I'd love to understand what you
-        do!
-      - What's your current job or role? 🛠️ I'd love to tailor your experience!
-      - Can you share what you do? Whether it's work or study, I'm curious! 🎓💼
-      - What's your role? It helps me recommend content that matches your
-        journey! 💡
-    probe_examples:
-      - Fascinating! I'd love to hear more about your learning interests related
-        to your career as a [role]. 🌟 You're all set to explore Zavmo now!
-      - Great, [first_name]! Being a [role] sounds exciting! Let's build skills
-        for it. 🚀 Ready to dive into some cool learning content?
-      - Awesome! Let's discover more fun ways to learn based on your role as a
-        [role]! 🎯 You're ready to start exploring now!
-      - Cool! Being a [role] sounds like an adventure! I'm excited to help you
-        grow. 🎉 Now, let's jump into your personalized learning experience!
       
 confirmation:
   title: confirm_profile_attributes
