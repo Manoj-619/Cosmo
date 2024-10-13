@@ -24,11 +24,6 @@ class LearnerJourney(models.Model):
     org = models.ForeignKey(Org, on_delete=models.SET_NULL,
                             null=True, blank=True, related_name='learner_journeys')
 
-    def increment_stage(self):
-        """Increment the current stage to the next stage in the sequence."""
-        if self.stage < max(self.Stage.values):
-            self.stage += 1
-            self.save()
 
     def __str__(self):
         return f"{self.user.username} - Stage: {self.get_stage_display()}"

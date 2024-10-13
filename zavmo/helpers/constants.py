@@ -6,3 +6,11 @@
 HISTORY_SUFFIX         = "_history"
 USER_PROFILE_SUFFIX    = "_user_profile"
 
+
+STAGE_ORDER = {
+    "profile": 1,
+    "discover": 2,
+    "discuss": 3,
+    "deliver": 4,
+    "demonstrate": 5
+}

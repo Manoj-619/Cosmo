@@ -20,7 +20,7 @@ from stage_app.serializers import (
 from helpers.chat import get_prompt, force_tool_call, get_openai_completion, create_message_payload
 from helpers.functions import create_model_fields, create_pydantic_model, get_yaml_data, create_system_message
 from helpers.constants import USER_PROFILE_SUFFIX, HISTORY_SUFFIX
-from helpers.utils import delete_keys_with_prefix, timer
+from helpers.utils import timer
 from django.conf import settings
 from stage_app.tasks.extraction import manage_stage_data
 
@@ -57,16 +57,17 @@ def add_stage_data(stage_name, user):
 
     return {stage_name: {}}
 
-def get_user_profile_data(user):
+def get_user_profile_data(user, use_cache=True):
     """
     Retrieve user profile data from cache if available, otherwise from the database.
     """
     cache_key = f"{user.email}_{USER_PROFILE_SUFFIX}"
     
     # Try to get data from cache
-    cached_data = cache.get(cache_key)
-    if cached_data:
-        return cached_data
+    if use_cache:
+        cached_data = cache.get(cache_key)
+        if cached_data:
+            return cached_data
 
     # If not in cache, fetch from database
     learner_journey = LearnerJourney.objects.filter(user=user).first()
@@ -207,7 +208,8 @@ def get_user_profile(request):
     API to retrieve the user's complete profile data.
     """
     user = request.user
-    profile_data = get_user_profile_data(user)
+    use_cache = request.GET.get('use_cache', 'true').lower() == 'true'
+    profile_data = get_user_profile_data(user, use_cache=use_cache)
     
     if profile_data is None:
         return Response({"error": "User profile not found"}, status=status.HTTP_404_NOT_FOUND)
@@ -231,7 +233,7 @@ def chat_view(request):
     message_history = cache.get_or_set(message_key, [])
     user_input      = request.data.get('message', f'Send a personalized welcome message to the learner.')    
     stage_config    = get_yaml_data(stage_name)
-    required_fields = stage_config['required']
+    required_fields = [f['title'] for f in stage_config['fields']]
     
     # available_fields is the data that has already been collected for the learner for the current stage.
     available_fields = stage_data[stage_name].keys()

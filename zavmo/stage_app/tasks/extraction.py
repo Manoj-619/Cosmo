@@ -1,18 +1,18 @@
 # Import Cache, celery
 from django.core.cache import cache
 from celery import shared_task
+from sqlalchemy import desc
 from zavmo.celery import app as celery_app
 # Import models
 from stage_app.models import LearnerJourney, ProfileStage, DiscoverStage, DiscussStage, DeliverStage, DemonstrateStage
-# Import utils
-from helpers.utils import delete_keys_with_prefix
 # Import constants
-from helpers.constants import USER_PROFILE_SUFFIX, HISTORY_SUFFIX
+from helpers.constants import USER_PROFILE_SUFFIX, HISTORY_SUFFIX, STAGE_ORDER
 from helpers.chat import get_prompt, force_tool_call, get_openai_completion, create_message_payload
 from helpers.functions import create_model_fields, create_pydantic_model, get_yaml_data, create_system_message
 from helpers.utils import timer, get_logger
 
 logger = get_logger(__name__)
+
 
 @celery_app.task(bind=True, name='manage_stage_data')
 def manage_stage_data(self, user_email, stage_name='profile', action=None):
@@ -39,7 +39,7 @@ def manage_stage_data(self, user_email, stage_name='profile', action=None):
         logger.debug(f"Stage config: {stage_config}")
         
         identify_config  = stage_config['identify']
-        required_fields  = stage_config['required']
+        required_fields  = [f['title'] for f in stage_config['fields']]
         available_fields = list(stage_data.keys())
         missing_fields = [field for field in required_fields if field not in stage_data.keys()]
         logger.info(f"Missing fields: {missing_fields}")
@@ -86,7 +86,7 @@ def manage_stage_data(self, user_email, stage_name='profile', action=None):
         
         elif action == 'finish':
             logger.info("Executing 'finish' action")
-            save_stage_data(user_email, stage_name)
+            save_stage_data.delay(user_email, stage_name)
             
             # Extract the finish data
             pass
@@ -108,12 +108,12 @@ def manage_stage_data(self, user_email, stage_name='profile', action=None):
 @celery_app.task(bind=True, name='extract_stage_data')
 def extract_stage_data(self, user_email, stage_name, attributes):
     stage_config      = get_yaml_data(stage_name)
-    primary_config    = stage_config['primary']
-    identified_fields = [f for f in primary_config['fields'] if f['title'] in attributes]
-    primary_model     = create_pydantic_model(name=primary_config['title'],
-                                              description=primary_config['description'],
+    
+    identified_fields = [f for f in stage_config['fields'] if f['title'] in attributes]
+    primary_model     = create_pydantic_model(name=stage_config['extract']['title'],
+                                              description=stage_config['extract']['description'],
                                               fields=identified_fields
-                                               )
+                                              )
     
     history_key     = f"{user_email}_{stage_name}_{HISTORY_SUFFIX}"
     history_data    = cache.get(history_key)
@@ -148,8 +148,8 @@ def extract_stage_data(self, user_email, stage_name, attributes):
     return {'status': 'success', 'message': f"Extracted data for {stage_name}"}
     
     
-    
-def save_stage_data(user_email, stage_name):
+@celery_app.task(bind=True, name='save_stage_data')
+def save_stage_data(self, user_email, stage_name):
     profile_data = cache.get(f"{user_email}_{USER_PROFILE_SUFFIX}")
     stage_data = profile_data['stage_data'][stage_name]
     
@@ -161,8 +161,9 @@ def save_stage_data(user_email, stage_name):
         'demonstrate': DemonstrateStage
     }
     
-    # Get learner journey
-    learner_journey = LearnerJourney.objects.get(user_id=user_email)
+    # Get learner journey and user
+    learner_journey = LearnerJourney.objects.get(user__email=user_email)
+    user = learner_journey.user
     
     # Get the appropriate stage model
     StageModel = stage_models.get(stage_name)
@@ -170,7 +171,7 @@ def save_stage_data(user_email, stage_name):
         return {'status': 'error', 'message': f"Invalid stage name: {stage_name}"}
     
     # Update or create the stage instance
-    stage_instance, created = StageModel.objects.get_or_create(user_id=user_email)
+    stage_instance, created = StageModel.objects.get_or_create(user=user)
     
     # Update fields
     for field, value in stage_data.items():
@@ -178,10 +179,11 @@ def save_stage_data(user_email, stage_name):
     stage_instance.save()
     
     # Increment the stage
-    learner_journey.increment_stage()
+    learner_journey.stage = STAGE_ORDER[stage_name] + 1
+    learner_journey.save()
     
-    # Delete the cache data
-    delete_keys_with_prefix(user_email)
-    
+    # Delete the cache data1
+    cache.delete_many([f"{user_email}_{stage_name}_{USER_PROFILE_SUFFIX}",
+                       f"{user_email}_{stage_name}_{HISTORY_SUFFIX}"])
     # Send response to the client
     return {'status': 'success', 'message': f"Saved stage data for {stage_name}"}

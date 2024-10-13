@@ -28,15 +28,13 @@ def timer(func):
         return result
     return wrapper
 
-def delete_keys_with_prefix(prefix):
+def delete_cache_keys(prefix='', keys=[]):   
     """
     Delete all cache keys with the given prefix.
     Returns the number of keys deleted.
     """
-    keys = [key for key in cache.keys() if key.startswith(prefix)]
-    count = len(keys)
+    keys = [prefix + key for key in keys]
     cache.delete_many(keys)
-    return count
 
 def create_jwt(payload, expiration_time=3600):
     """
