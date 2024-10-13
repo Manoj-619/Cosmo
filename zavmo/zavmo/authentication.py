@@ -17,11 +17,20 @@ class CustomJWTAuthentication(BaseAuthentication):
 
         token = auth_header.split(' ')[1]
         try:
+            # Add logging for debugging
+            print(f"Attempting to decode token: {token}")
+            print(f"Using secret key: {settings.JWT_PRIVATE_KEY}")
+            print(f"Using algorithm: {settings.JWT_ALGORITHM}")
+
             decoded_token = jwt.decode(
                 token,
                 key=settings.JWT_PRIVATE_KEY,
-                algorithms=[settings.JWT_ALGORITHM]
+                algorithms=[settings.JWT_ALGORITHM],
+                options={"verify_signature": True}  # Ensure signature verification
             )
+            
+            print(f"Successfully decoded token: {decoded_token}")
+
             email = decoded_token.get('email')
 
             # Check if email is present
@@ -45,5 +54,10 @@ class CustomJWTAuthentication(BaseAuthentication):
         except jwt.ExpiredSignatureError:
             raise exceptions.AuthenticationFailed('Token has expired')
         
-        except jwt.InvalidTokenError:
-            raise exceptions.AuthenticationFailed('Invalid token')
+        except jwt.InvalidTokenError as e:
+            print(f"Invalid token error: {str(e)}")
+            raise exceptions.AuthenticationFailed(f'Invalid token: {str(e)}')
+        
+        except Exception as e:
+            print(f"Unexpected error during token verification: {str(e)}")
+            raise exceptions.AuthenticationFailed(f'Token verification failed: {str(e)}')

@@ -4,7 +4,25 @@ required:
   - age
   - edu_level
   - current_role
-
+identify:
+  title: identify_missing_fields
+  description: >
+    A list of specific attributes that can be extracted from the user's profile based on their current responses. 
+    Only fields for which we do not already have information should be included.role'. 
+    The system should attempt to capture these fields if they can be definitively identified from the user's input during the conversation. 
+    This ensures the system dynamically fills in any missing details without repeatedly asking for the same information, 
+    creating a smoother and more seamless user experience.    
+  fields:
+  - field: attributes
+    title: attributes
+    annotation: List[str]
+    description: >
+      A list of specific attributes that can be extracted from the user'sprofile based on their current responses. 
+      Only fields for which we do not already have information should be included.
+      The system should attempt to capture these fields if they can be definitively identified from the user's input during the conversation. 
+      This ensures the system dynamically fills in any missing details without repeatedly asking for the same information, 
+      creating a smoother and more seamless user experience.
+      If the user has not provided any information, the system should respond w with 'none'.
 response:
   title: Response
   description: >
@@ -35,8 +53,6 @@ response:
         - When summarizing, this message should be congratulatory on their completion of the profile, ask them if they would like to review their information, and if they would like to proceed.
         - When editing, this message should ask which attribute they would like to edit, and request them to correct any errors, omissions, or ambiguities in the information they provided.
         - When finishing, this message should thank them for completing their profile and express excitement for the personalized learning experience we will provide for them.
-
-
 primary:
   title: profile
   description: >
@@ -151,26 +167,7 @@ primary:
         [role]! 🎯 You're ready to start exploring now!
       - Cool! Being a [role] sounds like an adventure! I'm excited to help you
         grow. 🎉 Now, let's jump into your personalized learning experience!
-identify:
-  title: identify_profile_attributes
-  description: >
-    A list of specific attributes that can be extracted from the user's profile based on their current responses. 
-    Only fields for which we do not already have information should be included. These attributes are key pieces of 
-    information like 'first_name', 'last_name', 'age', 'edu_level', and 'current_role'. 
-    The system should attempt to capture these fields if they can be definitively identified from the user's input during the conversation. 
-    This ensures the system dynamically fills in any missing details without repeatedly asking for the same information, 
-    creating a smoother and more seamless user experience.    
-  fields:
-  - field: attributes
-    title: attributes
-    annotation: List[str]
-    description: >
-      A list of specific attributes that can be extracted from the user's profile based on their current responses. 
-      Only fields for which we do not already have information should be included. These attributes are key pieces of 
-      information like 'first_name', 'last_name', 'age', 'edu_level', and 'current_role'. 
-      The system should attempt to capture these fields if they can be definitively identified from the user's input during the conversation. 
-      This ensures the system dynamically fills in any missing details without repeatedly asking for the same information, 
-      creating a smoother and more seamless user experience.
+      
 confirmation:
   title: confirm_profile_attributes
   description: >

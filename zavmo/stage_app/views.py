@@ -22,6 +22,8 @@ from helpers.functions import create_model_fields, create_pydantic_model, get_ya
 from helpers.constants import USER_PROFILE_SUFFIX, HISTORY_SUFFIX
 from helpers.utils import delete_keys_with_prefix, timer
 from django.conf import settings
+from stage_app.tasks.extraction import manage_stage_data
+
 
 logger = logging.getLogger(__name__)
 
@@ -217,41 +219,37 @@ def get_user_profile(request):
 @authentication_classes([CustomJWTAuthentication])
 @permission_classes([IsAuthenticated])
 def chat_view(request):
-    """
-    handles chat sessions between a user and the AI assistant.
-    """
-    user            = request.user    
+    """Handles chat sessions between a user and the AI assistant."""
+    user            = request.user
     profile_data    = get_user_profile_data(user) # Get user profile data either from cache or database
     # Get stage data and stage name from profile data
-    stage           = profile_data['stage']
     stage_name      = profile_data['stage_name']
+    stage           = profile_data['stage']
     stage_data      = profile_data['stage_data'] # All stage data
     
     message_key     = f"{user.email}_{stage_name}_{HISTORY_SUFFIX}"
     message_history = cache.get_or_set(message_key, [])
-    user_input      = request.data.get('message', f'Send a personalized welcome message to the learner.')
-    
+    user_input      = request.data.get('message', f'Send a personalized welcome message to the learner.')    
     stage_config    = get_yaml_data(stage_name)
     required_fields = stage_config['required']
     
     # available_fields is the data that has already been collected for the learner for the current stage.
     available_fields = stage_data[stage_name].keys()
 
-
     # TODO: Will implement this when we have an async extraction process
     missing_fields   = [field for field in required_fields if field not in available_fields]
     resp_schema = stage_config['response']
-    resp_model = create_pydantic_model(name=resp_schema['title'],
+    resp_model  = create_pydantic_model(name=resp_schema['title'],
                                        description=resp_schema['description'],
-                                       fields=resp_schema['fields'])
+                                       fields=resp_schema['fields']
+                                       )
     
     probe_system_message   = create_system_message(stage_name, stage_config, mode='probe')
     
-    user_content     = f"""The learner is at the {stage_name} stage.
+    user_content           = f"""The learner is at the {stage_name} stage.
     We need to probe the learner for the following fields: {required_fields}
     Learner's profile data: {stage_data[stage_name]}
-    Learner's message: {user_input}
-    """
+    Learner's message: {user_input}"""
     message_history.append({'role':'user', 'content':user_content})
     message_payload = create_message_payload(user_content, 
                                              probe_system_message, 
@@ -261,14 +259,14 @@ def chat_view(request):
     
     response_tool = force_tool_call(resp_model, 
                                     message_payload, 
-                                    model='gpt-4o-mini', 
+                                    model='gpt-4o-mini',
+                                    tool_choice='required',
                                     parallel_tool_calls=False)
     zavmo_response = response_tool.message
     message_history.append({'role':'assistant', 'content':zavmo_response})
-    # probe_response   = get_openai_completion(probe_payload, model='gpt-4o-mini')
-    # message_history.append({'role':'assistant', 'content':probe_response})
     cache.set(message_key, message_history)
     # After this you should trigger an extraction process
+    manage_stage_data.delay(user.email, stage_name, response_tool.action.value)
         
     return Response({
             "type": "text",
@@ -276,10 +274,12 @@ def chat_view(request):
             "stage": stage,
             "stage_name": stage_name,
             "credits":100,
-            "stage_data": stage_data,
+            #"stage_data": stage_data,
             "log_history": message_history,
             "log_action": response_tool.action.value,
             #"missing_fields": missing_fields,
             "available_fields": available_fields
-        }, status=status.HTTP_201_CREATED)
+        }, 
+                    status=status.HTTP_201_CREATED
+                    )
 
