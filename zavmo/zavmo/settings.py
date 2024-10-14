@@ -168,9 +168,10 @@ STATIC_URL = 'static/'
 MEDIA_URL  = '/media/'
 os.makedirs(os.path.join(BASE_DIR, "media"), exist_ok=True)
 
-STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, "static"),
-]
+# Remove or comment out STATICFILES_DIRS
+# STATICFILES_DIRS = [
+#     os.path.join(BASE_DIR, "static"),
+# ]
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
@@ -180,4 +181,4 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Add these settings at the end of the file
 CSRF_COOKIE_SECURE = False
 CSRF_COOKIE_HTTPONLY = False
-CSRF_TRUSTED_ORIGINS = ['*']
+CSRF_TRUSTED_ORIGINS = ['http://*', 'https://*']
