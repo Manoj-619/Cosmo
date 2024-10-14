@@ -31,8 +31,8 @@ REDIS_HOST = config('REDIS_HOST', 'localhost')
 REDIS_PORT = config('REDIS_PORT', 6379)
 REDIS_DB  = config('REDIS_DB', 0)
 
-CELERY_BROKER_URL = f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"
-CELERY_RESULT_BACKEND = f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"
+CELERY_BROKER_URL = f"rediss://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}?ssl_cert_reqs=none"
+CELERY_RESULT_BACKEND = f"rediss://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}?ssl_cert_reqs=none"
 
 # Set the default Django settings module for the 'celery' program.
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'zavmo.settings')
