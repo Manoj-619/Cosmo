@@ -239,7 +239,7 @@ def reset_all(request):
     
 
 # Endpoint: /api/chat/
-@api_view(['POST'])
+@api_view(['POST','OPTIONS'])
 @authentication_classes([CustomJWTAuthentication])
 #@permission_classes([IsAuthenticated])
 def chat_view(request):
