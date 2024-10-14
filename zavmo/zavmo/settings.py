@@ -120,10 +120,7 @@ DATABASES = {
 CACHES = {
     'default': {
         "BACKEND": "django.core.cache.backends.redis.RedisCache",
-        'LOCATION': f'rediss://{config("REDIS_HOST")}:{config("REDIS_PORT")}',  # Redis server address with TLS
-        'OPTIONS': {
-            'ssl_cert_reqs': None  # You can configure SSL certificate verification based on your setup
-        },
+        'LOCATION': f'redis://{config("REDIS_HOST")}:{config("REDIS_PORT")}',
         'KEY_PREFIX': 'zavmo-',  # Prefix for all cache keys
     }
 }
