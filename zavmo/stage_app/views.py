@@ -17,7 +17,7 @@ from stage_app.serializers import (
     UserDetailSerializer, LearnerJourneySerializer, ProfileStageSerializer, DiscoverStageSerializer, 
     DiscussStageSerializer, DeliverStageSerializer, DemonstrateStageSerializer
 )
-from helpers.chat import force_tool_call, create_message_payload, get_markdown_summary
+from helpers.chat import force_tool_call, create_message_payload, summarize_history, summarize_stage_data, summarize_profile
 from helpers.functions import create_model_fields, create_pydantic_model, get_yaml_data, create_system_message
 from helpers.constants import USER_PROFILE_SUFFIX, HISTORY_SUFFIX
 from stage_app.tasks.extraction import manage_stage_data
@@ -214,6 +214,30 @@ def get_user_profile(request):
 
     return Response(profile_data)
 
+
+@api_view(['POST'])
+@authentication_classes([CustomJWTAuthentication])
+@permission_classes([IsAuthenticated])
+def reset_all(request):
+    """Delet all cache, and reset learner journey"""
+    user = request.user
+    cache.delete_many([f"{user.email}_{USER_PROFILE_SUFFIX}",
+                      f"{user.email}_{HISTORY_SUFFIX}"])
+    # reset learner journey to 1st stage
+    learner_journey = LearnerJourney.objects.filter(user=user).first()
+    learner_journey.stage = 1
+    learner_journey.save()
+    
+    stage_models = [ProfileStage, DiscoverStage, DiscussStage, DeliverStage, DemonstrateStage]  
+    for stage_model in stage_models:
+        stage   = stage_model.objects.filter(user=user).first()
+        if stage:
+            stage.reset()
+    
+    return Response({"message": "All cache and learner journey reset successfully"}, status=status.HTTP_200_OK)
+    
+    
+
 # Endpoint: /api/chat/
 @api_view(['POST'])
 @authentication_classes([CustomJWTAuthentication])
@@ -225,8 +249,7 @@ def chat_view(request):
     # Get stage data and stage name from profile data
     stage_name      = profile_data['stage_name']
     stage           = profile_data['stage']
-    stage_data      = profile_data['stage_data'] # All stage data
-    stage_summary   = get_markdown_summary(profile_data, stage_name)
+    stage_data      = profile_data['stage_data'] # All stage data    
     
     message_key     = f"{user.email}_{stage_name}_{HISTORY_SUFFIX}"
     message_history = cache.get_or_set(message_key, [])
@@ -234,18 +257,21 @@ def chat_view(request):
     stage_config    = get_yaml_data(stage_name)
     required_fields = [f['title'] for f in stage_config['fields']]
     # TODO: Will implement this when we have an async extraction process
-    resp_schema = stage_config['response']
-    resp_model  = create_pydantic_model(name=resp_schema['title'],
+    profile_summary = summarize_profile(profile_data)
+    stage_summary   = summarize_stage_data(stage_data[stage_name], stage_name)
+    resp_schema     = get_yaml_data('common')['response']
+    resp_model    = create_pydantic_model(name=resp_schema['title'],
                                        description=resp_schema['description'],
                                        fields=resp_schema['fields']
                                        )
     
-    probe_system_message   = create_system_message(stage_name, stage_config, mode='probe')
+    probe_system_message = create_system_message(stage_name, stage_config, mode='probe')
     
-    user_content           = f"""The learner is at the **{stage_name}** stage.
+    user_content           = f"""
+    Here is what we know about the learner:
+        {profile_summary}
+           
     We need to probe the learner for the following fields: {required_fields}
-    This is what we know about the learner at this stage:
-    {stage_summary}
     
     Learner's message: {user_input}
     """
@@ -257,27 +283,30 @@ def chat_view(request):
     
     response_tool = force_tool_call(resp_model, 
                                     message_payload, 
-                                    model='gpt-4o-mini',
+                                    model='gpt-4o',
                                     tool_choice='required',
-                                    parallel_tool_calls=False)
-    zavmo_response = response_tool.message
+                                    )
+    zavmo_response  = response_tool.message
+    zavmo_action    = response_tool.action.value
+    zavmo_credits   = response_tool.credits
     
     message_history.append({'role':'user', 'content':user_input})
     message_history.append({'role':'assistant', 'content':zavmo_response})
     cache.set(message_key, message_history)
     # After this you should trigger an extraction process
-    manage_stage_data.apply_async(args=[user.email, stage_name, response_tool.action.value])
+    manage_stage_data.apply_async(args=[user.email, stage_name, zavmo_action])
         
     return Response({
             "type": "text",
             "message": zavmo_response,
             "stage": stage,
             "stage_name": stage_name,
-            "credits":100,
+            "credits":zavmo_credits,
             "stage_data": stage_data,
-            #"log_history": message_history,
-            "log_action": response_tool.action.value,
-            #"missing_fields": missing_fields,
+            "action": response_tool.action.value,
+            #"log_history_summary": summarize_history(message_history),
+            #"log_profile_summary": profile_summary,
+            #"log_stage_summary": stage_summary
         }, 
                     status=status.HTTP_201_CREATED
                     )

@@ -1,3 +1,9 @@
+stage_name: profile
+description: >
+  The profile stage is the first stage of the learner's journey. It is used to gather information about the learner's name, age, education level, and current role.
+next_stage: discover
+next_stage_description: >
+  The discover stage is the second stage of the learner's journey. It is used to gather information about the learner's interests, goals, and learning style.
 fields:
   - field: first_name
     title: first_name
@@ -16,6 +22,11 @@ fields:
         first [X] XP. How about your last name? 😄
       - Nice to meet you, [first_name]! You've unlocked a new learning journey.
         🚀 Now, could you share your last name with me too?
+    extract_examples:
+      - My last name is John Smith > first_name=John, last_name=Smith
+      - It's Sarah > first_name=Sarah
+      - My name is Alex > first_name=Alex
+      - I'm Diana > first_name=Diana
   - field: last_name
     title: last_name
     annotation: str
@@ -34,6 +45,11 @@ fields:
       - My last name is Johnson
       - It's Lee
       - Garcia is my last name
+    extract_examples:
+      - I'm John Smith > last_name=Smith
+      - It's Sarah Lee > last_name=Lee
+      - My name is Alex Johnson > last_name=Johnson
+      - I'm Diana Garcia > last_name=Garcia
     probe_responses:
       - Thanks, [first_name] [last_name]! You're on a roll with another [X] XP. 🚀 Let's move on—how old are you?
       - Great, [first_name]! Now I can cheer you on with your full
@@ -53,12 +69,17 @@ fields:
       - To get things just right for you, what's your age? 🎂
       - Age is just a number, but it helps me customize your experience. How old
         are you? 😊
-      - I've got content for all ages! How old are you, [first_name]?
+      - I've got content for all ages! How old are you, [first_name]?    
     user_responses:
       - I'm 25
       - 32 years old
       - 18
       - My age is 40
+    extract_examples:
+      - I'm 25 > age=25
+      - 32 years old > age=32
+      - 18 > age=18
+      - My age is 40 > age=40
     probe_responses:
       - Got it! Thanks for sharing, [first_name]. Age is just a number, and
         you've earned [X] XP for that! 🎉 What's your highest education level?
@@ -88,6 +109,14 @@ fields:
       - 5
       - High school graduate
       - I'm currently working on my Master's
+    extract_examples:
+      - I have a Bachelor's Degree > edu_level=5
+      - High school graduate > edu_level=3
+      - I'm currently working on my Master's > edu_level=6
+      - I have a PhD > edu_level=7
+      - I'm a high school graduate > edu_level=3
+      - I have only completed middle school > edu_level=2
+      - I'm a primary school graduate > edu_level=1      
     probe_responses:
       - Thanks, [first_name]! Education is an important part of learning. You've
         just earned [X] XP! 🎓✨ Now, what's your current role or occupation?
@@ -104,7 +133,7 @@ fields:
       The current occupation or role of the user, indicating their
       professional or educational status,  e.g., 'Engineer', 'Teacher',
       'Student', 'Doctor', 'Lawyer', 'Businessman', 'Artist',
-      'Musician',  'Writer', 'Scientist', 'Politician', 'Other'
+      'Musician',  'Writer', 'Scientist', 'Politicin', 'Other'
     probe_questions:
       - What is your current role or occupation? I'd love to understand what you
         do!
@@ -112,6 +141,18 @@ fields:
       - Can you share what you do? Whether it's work or study, I'm curious! 🎓💼
       - What's your role? It helps me recommend content that matches your
         journey! 💡
+    extract_examples:
+      - I'm a software engineer > current_role=Software Engineer
+      - Currently working as a teacher > current_role=Teacher
+      - I'm a full-time student > current_role=Student
+      - I run my own business > current_role=Businessman
+      - I'm the CEO of a startup > current_role=CEO
+      - I'm between jobs > current_role=Unemployed
+      - I'm a stay-at-home parent > current_role=Stay-at-home parent
+      - I'm a scientist > current_role=Scientist
+      - I'm a musician > current_role=Musician
+      - I'm a writer > current_role=Writer
+      - I'm a geologist > current_role=Geologist
     user_responses:
       - I'm a software engineer
       - Currently working as a teacher
@@ -126,65 +167,3 @@ fields:
         [role]! 🎯 You're ready to start exploring now!
       - Cool! Being a [role] sounds like an adventure! I'm excited to help you
         grow. 🎉 Now, let's jump into your personalized learning experience!
-
-identify:
-  title: identify_missing_fields
-  description: >
-    A list of specific attributes that can be extracted from the user's profile based on their current responses. 
-    Only fields for which we do not already have information should be included.role'. 
-    The system should attempt to capture these fields if they can be definitively identified from the user's input during the conversation. 
-    This ensures the system dynamically fills in any missing details without repeatedly asking for the same information, 
-    creating a smoother and more seamless user experience.    
-  fields:
-  - field: attributes
-    title: attributes
-    annotation: List[str]
-    description: >
-      A list of specific attributes that can be extracted from the user'sprofile based on their current responses. 
-      Only fields for which we do not already have information should be included.
-      The system should attempt to capture these fields if they can be definitively identified from the user's input during the conversation. 
-      This ensures the system dynamically fills in any missing details without repeatedly asking for the same information, 
-      creating a smoother and more seamless user experience.
-      If the user has not provided any information, the system should respond w with 'none'.
-response:
-  title: Response
-  description: >
-    The action to take given the learner's response, and an engaging, personal message to the learner.
-    - If there are any missing attributes, **probe** the learner for more information.
-    - If we have all the attributes, **summarize** the information for them to review.
-  fields:  
-    - field: action
-      title: action
-      annotation: Enum
-      enum:
-        - probe
-        - review
-        - finish
-      description: >
-        An action to take, given the learner's response.
-        - **probe**: Probe for missing attributes by asking questions in a friendly and engaging manner.
-        - **review**: Summarize the information we have about the learner and present it to them to review.
-        - **finish**: Finish the conversation and proceed to the next stage of the conversation.
-    - field: message
-      title: message
-      annotation: str
-      description: >
-        An engaging, personal message to the learner. 
-        - When probing, this message should acknowledge the learner's previous response, respond with encouragement, and ask a follow-up question that helps us identify unknown attributes about the learner.
-        - When reviewing, this message should be congratulatory on their completion of the profile, summarize the information we have about them, and ask them if they would like to edit any information.
-        - When finishing, this message should thank them for completing their profile and express excitement for the personalized learning experience we will provide for them.
-
-extract:
-  title: extract_profile_attributes
-  description: >
-    Attributes of the user's profile, including their name (first and last), age, education level, and current role.
-      
-confirmation:
-  title: confirm_profile_attributes
-  description: >
-    When the user has completed providing their profile information, and there are no remaining fields to be identified, the system should present a summary of the profile information and confirm with the user that the information is correct. If the user confirms that the information is correct, the system should mark confirmed as true. If the user requests changes, the system should mark confirmed as false.
-  fields:
-  - field: profile_confirmed
-    title: profile_confirmed
-    annotation: bool
-    description: True if the learner confirms that the profile information is correct.

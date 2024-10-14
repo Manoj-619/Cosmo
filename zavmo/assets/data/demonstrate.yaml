@@ -1,0 +1,86 @@
+stage_name: demonstrate
+description: >
+  The demonstrate stage is the fifth stage of the learner's journey. It is used to assess the learner's understanding of the material and provide feedback. 
+  In this stage, the learner answers 1-3 questions to demonstrate their understanding of the material.
+  Finally, the learner provides a self-assessment of their understanding level and feedback on the learning experience.  
+
+
+next_stage: complete
+next_stage_description: >
+  You have successfully completed your learning journey! 🎉
+
+fields:
+  - field: topics
+    title: topics
+    annotation: str
+    description: >
+      The main topics covered in the learner's demonstration of knowledge.
+    probe_questions:
+      - What were the main topics you covered in your learning journey? 📚
+      - Can you list the key areas you've studied? 🔑
+    user_responses:
+      - The main topics I covered were 'insert topics here'
+      - I studied 'insert topics here'
+    extract_examples:
+      - "The main topics I covered were 'insert topics here' > topics='insert topics here'"
+      - "I studied 'insert topics here' > topics='insert topics here'"
+    probe_responses:
+      - Great! Those are important areas. Let's dive deeper into your understanding. 🧐
+      - Excellent summary of your topics! Now, let's see how well you've grasped them. 👍
+
+  - field: summary
+    title: summary
+    annotation: str
+    description: >
+      A brief summary of the learner's demonstration of knowledge and understanding.
+    probe_questions:
+      - Can you provide a brief summary of what you've learned? 📝
+      - In a few sentences, how would you summarize your understanding of the material? 🤔
+    user_responses:
+      - Here's a summary of what I've learned: 'insert summary here'
+      - To summarize my understanding: 'insert summary here'
+    extract_examples:
+      - "Here's a summary of what I've learned: 'insert summary here' > summary='insert summary here'"
+      - "To summarize my understanding: 'insert summary here' > summary='insert summary here'"
+    probe_responses:
+      - Thank you for that comprehensive summary! It shows a good grasp of the material. 👏
+      - Your summary is well-structured. It's clear you've put thought into your learning. 🌟
+
+  - field: understanding_level
+    title: understanding_level
+    annotation: int
+    description: >
+      The evaluated understanding level of the learner based on their responses (1 for Beginner, 2 for Intermediate, 3 for Advanced, 4 for Expert).
+    probe_questions:
+      - Based on your assessment responses, how would you rate your understanding? (1- Beginner to 4 - Expert) 🧠  
+      - After completing the assessment, on a scale of 1 to 4, how confident do you feel about the material? 🌟
+    user_responses:
+      - I think I'm at an intermediate level.
+      - I'd rate my understanding as a 4.
+      - I'm still a beginner.
+    extract_examples:
+      - "I think I'm at an intermediate level > understanding_level=2"
+      - "I'd rate my understanding as a 4 > understanding_level=4"
+      - "I'm still a beginner > understanding_level=1"
+    probe_responses:
+      - Thank you for sharing! We'll tailor future content accordingly. 😊
+      - Great insight! This helps us support you better. 🙌
+
+  - field: feedback
+    title: feedback
+    annotation: str
+    description: >
+      The learner's feedback on the assessment or the overall learning experience.
+    probe_questions:
+      - How did you find the assessment? Any feedback? 📝
+      - We'd love to hear your thoughts on the learning experience. Any suggestions? 💡
+    user_responses:
+      - The assessment was challenging but fair.
+      - I enjoyed the learning process.
+      - Some questions were tough; I'd like more practice.
+    extract_examples:
+      - "The assessment was challenging but fair > feedback='Assessment challenging but fair'"
+      - "Some questions were tough; I'd like more practice > feedback='Needs more practice materials'"
+    probe_responses:
+      - Thank you for your feedback! We'll take it into account. 🌟
+      - We appreciate your input! It helps us improve. 😊

@@ -213,23 +213,36 @@ def create_message_payload(user_content=None, system_message=None, messages=[], 
     return message_history
 
 
-def get_markdown_summary(profile_data, stage_name):
+
+def summarize_stage_data(stage_data, stage_name):
     """
     Get a markdown summary of the stage data.
     """
-    summary = f"# {stage_name}\n\n"
-    stage_data = profile_data['stage_data'][stage_name]
-    for key, value in stage_data.items():
-        summary += f"**{key}**: {value}\n"
+    summary = f"**{stage_name.title()}**\n\n"# if empty, say so 
+    if not stage_data:
+        summary += f"No data available for {stage_name} yet."
+    else:
+        for key, value in stage_data.items():
+            summary += f"**{key}**: {value}\n"
     return summary.strip()
 
+def summarize_profile(profile_data):
+    """
+    Get a markdown summary of the profile data.
+    """
+    summary = f"**Learner's Profile**\n\n"
+    summary += f"The learner is at the **{profile_data['stage_name']}** stage.\n\n"
+    stage_names = profile_data['stage_data'].keys()
+    for stage_name in stage_names:
+        summary  += summarize_stage_data(profile_data['stage_data'][stage_name], stage_name)
+    return summary.strip()
 
 def summarize_history(history):
     """
     Summarize the history of the conversation.
     """
-    summary = f"# Conversation History\n\n"
+    summary = f"**Conversation History**\n\n"
     for message in history:
         role = 'Zavmo' if message['role'] == 'assistant' else 'Learner'
-        summary += f"**{role}**: {message['content']}\n"
+        summary += f"**{role}**: {message['content']}\n\n"
     return summary.strip()

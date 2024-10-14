@@ -4,7 +4,7 @@
 # Cache suffixes
 
 HISTORY_SUFFIX         = "history"
-USER_PROFILE_SUFFIX    = "profile"
+USER_PROFILE_SUFFIX    = "data"
 
 
 STAGE_ORDER = {

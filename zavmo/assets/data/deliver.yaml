@@ -1,0 +1,66 @@
+stage_name: deliver
+description: >
+  The deliver stage is the fourth stage of the learner's journey. It is used to provide the learner with learning materials and resources tailored to their needs.
+
+next_stage: complete
+next_stage_description: >
+  You have successfully completed a learning cycle! 🎉 Start your journey again.
+
+fields:
+  - field: modules
+    title: modules
+    annotation: str
+    description: >
+      A list of modules or topics that will be included in the learner's personalized learning plan.
+    probe_questions:
+      - Based on our discussion, here are the modules we've prepared for you > [list of modules]. What do you think? 📚
+      - We've selected some modules that align with your goals. Would you like to review them? 🧐
+    user_responses:
+      - This looks perfect!
+      - Can we add more about data visualization?
+      - I'd prefer to focus more on advanced topics.
+    extract_examples:
+      - "Can we add more about data visualization? > modules='Include data visualization module'"
+      - "I'd prefer to focus more on advanced topics > modules='Emphasize advanced modules'"
+    probe_responses:
+      - Absolutely! We'll adjust the modules accordingly. 🛠️
+      - Noted! We'll make sure to include those topics. 🎯
+
+  - field: timeline
+    title: timeline
+    annotation: str
+    description: >
+      The proposed timeline for completing the learning plan.
+    probe_questions:
+      - We recommend completing this plan over [X weeks/months]. Does this timeline suit you? ⏰
+      - How quickly would you like to progress through the material? 🚀
+    user_responses:
+      - That timeline works for me.
+      - Can we make it shorter?
+      - I'd like a more extended timeline.
+    extract_examples:
+      - "Can we make it shorter? > timeline='Shorter timeline preferred'"
+      - "I'd like a more extended timeline > timeline='Longer timeline preferred'"
+    probe_responses:
+      - Sure, we can adjust the timeline. ⚙️
+      - Absolutely, we'll modify it to fit your schedule. 📅
+
+  - field: resources
+    title: resources
+    annotation: str
+    description: >
+      Additional resources that will support your learning journey.
+    probe_questions:
+      - We've gathered some resources to help you. Would you like to see them? 💡
+      - Are there any specific resources you'd like us to include? 🔍
+    user_responses:
+      - Yes, please share them.
+      - Can you include some video tutorials?
+      - I'd like resources on practical applications.
+    extract_examples:
+      - "Can you include some video tutorials? > resources='Include video tutorials'"
+      - "I'd like resources on practical applications > resources='Add practical application materials'"
+    probe_responses:
+      - Great! We'll include those resources. 🎥
+      - Understood! We'll add them to your plan. 🛠️
+

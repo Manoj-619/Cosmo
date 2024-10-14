@@ -1,0 +1,77 @@
+stage_name: discuss
+description: >
+  The discuss stage is the third stage of the learner's journey. It is used to define specific learning objectives based on the information gathered in the discover stage. Propose a lesson plan and gather the learner's feedback.
+
+next_stage: deliver
+next_stage_description: >
+  The deliver stage is the fourth stage of the learner's journey. It is used to provide the learner with learning materials and resources tailored to their needs.
+
+fields:
+  - field: lesson_plan
+    title: lesson_plan
+    annotation: str
+    description: A proposed lesson plan outlining the topics to be covered with the learner.
+    probe_questions:
+      - Based on your learning goals, here's a proposed lesson plan. What do you think? 📖 ['Proposed lesson plan']
+      - I've drafted a lesson plan for you. Does this align with your expectations? 📝 ['Proposed lesson plan']
+    user_responses:
+      - That looks great!
+      - Can we add more about Python basics?
+      - I'd like to focus more on data analysis.
+    extract_examples:
+      - "Can we add more about Python basics? > lesson_plan='Include more Python basics'"
+      - "I'd like to focus more on data analysis > lesson_plan='Emphasize data analysis topics'"
+    probe_responses:
+      - Fantastic! 🚀 We'll adjust the plan accordingly.
+      - Noted! 📝 I'll make sure to update the lesson plan.
+
+  - field: interest_areas
+    title: interest_areas
+    annotation: str
+    description: Specific areas of interest the learner wants to focus on.
+    probe_questions:
+      - Are there any particular areas you're interested in exploring? 🎯
+      - What topics excite you the most in this field? 🌟
+    user_responses:
+      - I'm particularly interested in data visualization.
+      - Machine learning fascinates me.
+    extract_examples:
+      - "I'm particularly interested in data visualization > interest_areas='Data visualization'"
+      - "Machine learning fascinates me > interest_areas='Machine learning'"
+    probe_responses:
+      - Awesome choice! 🖼️ We'll include more on data visualization.
+      - Great! 🤖 Let's dive into machine learning.
+
+  - field: learning_style
+    title: learning_style
+    annotation: str
+    description: The preferred learning style of the learner (e.g., visual, auditory, kinesthetic).
+    probe_questions:
+      - How do you prefer to learn? (e.g., videos, reading, hands-on activities) 🎬📚🛠️
+      - What's your preferred learning style? 🎯
+    user_responses:
+      - I learn best through hands-on projects.
+      - Watching videos helps me understand better.
+    extract_examples:
+      - "I learn best through hands-on projects > learning_style='Kinesthetic'"
+      - "Watching videos helps me understand better > learning_style='Visual'"
+    probe_responses:
+      - Great! 🛠️ We'll include more hands-on activities.
+      - Understood! 🎥 We'll incorporate video content.
+
+  - field: goals_alignment
+    title: goals_alignment
+    annotation: str
+    description: Confirmation that the proposed plan aligns with the learner's goals.
+    probe_questions:
+      - Do you feel this plan aligns with your goals? 🎯
+      - Is there anything you'd like to change to better meet your objectives? ✨
+    user_responses:
+      - Yes, this is perfect.
+      - I'd like to spend less time on theory.
+    extract_examples:
+      - "I'd like to spend less time on theory > goals_alignment='Reduce emphasis on theory'"
+    probe_responses:
+      - Noted! 📝 We'll adjust accordingly.
+      - Glad to hear that! 🌟 We're excited to proceed.
+

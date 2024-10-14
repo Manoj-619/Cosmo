@@ -49,11 +49,19 @@ class ProfileStage(models.Model):
         verbose_name="Education Level"
     )
     current_role = models.CharField(max_length=100, blank=True, null=True, verbose_name="Current Role")
+    
+    def reset(self):
+        self.first_name = ''
+        self.last_name = ''
+        self.age = None
+        self.edu_level = None
+        self.current_role = ''
+        self.save()
 
 # Stage 2 or (1st D)
 class DiscoverStage(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='discover_stage', verbose_name="User")
-    learning_goals = models.JSONField(default=list, verbose_name="Learning Goals")  # List of dicts: {'topic': 'string', 'reason': 'string'}
+    learning_goals = models.TextField(blank=True, null=True, verbose_name="Learning Goals")
     learning_goal_rationale = models.TextField(blank=True, null=True, verbose_name="Learning Goal Rationale")
     knowledge_level = models.PositiveSmallIntegerField(
         choices=[
@@ -66,21 +74,63 @@ class DiscoverStage(models.Model):
         verbose_name="Knowledge Level"
     )    
     application_area = models.TextField(blank=True, null=True, verbose_name="Application Area")
+    
+    def reset(self):
+        self.learning_goals = ''
+        self.learning_goal_rationale = ''
+        self.knowledge_level = None
+        self.application_area = ''
+        self.save()
 
 # Stage 3 or (2nd D)
 class DiscussStage(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='discuss_stage', verbose_name="User")
-    learning_objective = models.TextField(blank=True, null=True, verbose_name="Learning Objective")
+    lesson_plan = models.TextField(blank=True, null=True, verbose_name="Lesson Plan")
+    interest_areas = models.TextField(blank=True, null=True, verbose_name="Interest Areas") 
+    learning_style = models.TextField(blank=True, null=True, verbose_name="Learning Style")
+    goals_alignment = models.TextField(blank=True, null=True, verbose_name="Goals Alignment")
+    
+    def reset(self):
+        self.lesson_plan = ''
+        self.interest_areas = ''
+        self.learning_style = ''
+        self.goals_alignment = ''
+        self.save()
 
 # Stage 4 or (3rd D)
 class DeliverStage(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='deliver_stage', verbose_name="User")
-    modules = models.JSONField(default=list, verbose_name="Modules")
-    timeline = models.TextField(blank=True, null=True, verbose_name="Timeline")
+    user      = models.OneToOneField(User, on_delete=models.CASCADE, related_name='deliver_stage', verbose_name="User")
+    modules   = models.TextField(blank=True, null=True, verbose_name="Modules")
+    timeline  = models.TextField(blank=True, null=True, verbose_name="Timeline")
+    resources = models.TextField(blank=True, null=True, verbose_name="Resources")
+    
+    def reset(self):
+        self.modules = ''
+        self.timeline = ''
+        self.resources = ''
+        self.save()
 
 # Stage 5 or (4th D)
 class DemonstrateStage(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='demonstrate_stage', verbose_name="User")
-    current_module = models.CharField(max_length=200, blank=True, null=True, verbose_name="Current Module")
-    completed_modules = models.JSONField(default=list, verbose_name="Completed Modules")  # List of strings
-    understanding_level = models.CharField(max_length=200, blank=True, null=True, verbose_name="Understanding Level")
+    user                = models.OneToOneField(User, on_delete=models.CASCADE, related_name='demonstrate_stage', verbose_name="User")
+    topics              = models.TextField(blank=True, null=True, verbose_name="Topics")
+    summary             = models.TextField(blank=True, null=True, verbose_name="Summary")
+    understanding_levels = models.PositiveSmallIntegerField(
+        choices=[
+            (1, 'Beginner'),
+            (2, 'Intermediate'),
+            (3, 'Advanced'),
+            (4, 'Expert')
+        ],
+        blank=True, null=True,
+        verbose_name="Understanding Level"
+    )
+    feedback            = models.TextField(blank=True, null=True, verbose_name="Feedback")
+
+    def reset(self):
+        self.topics = ''
+        self.summary = ''
+        self.understanding_levels = None
+        self.feedback = ''
+        self.save()
+

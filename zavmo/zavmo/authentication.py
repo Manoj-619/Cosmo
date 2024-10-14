@@ -19,11 +19,7 @@ class CustomJWTAuthentication(BaseAuthentication):
 
         token = auth_header.split(' ')[1]
         try:
-            # Add logging for debugging
-            print(f"Attempting to decode token: {token}")
-            print(f"Using secret key: {settings.JWT_PUBLIC_KEY}")
-            print(f"Using algorithm: {settings.JWT_ALGORITHM}")
-            print(f"Using issuer: {settings.JWT_ISSUER}")
+
             public_key = serialization.load_pem_public_key(settings.JWT_PUBLIC_KEY.encode('utf-8'))
 
             decoded_token = jwt.decode(

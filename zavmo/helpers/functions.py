@@ -52,7 +52,7 @@ def get_yaml_data(yaml_path, yaml_dir="assets/data"):
         raise
 
 
-def format_field(field):
+def format_field(field, mode='probe'):
     """
     Create a markdown-formatted text for a given field.
 
@@ -65,23 +65,30 @@ def format_field(field):
     markdown = f"**{field['title']}**\n\n"
     markdown += f"{field['description']}\n\n"
 
-    if 'probe_questions' in field:
-        markdown += "> Questions to probe for this attribute:\n"
-        for question in field['probe_questions']:
-            markdown += f"- {question}\n"
-        markdown += "\n"
+    if mode == 'probe':
+        if 'probe_questions' in field:
+            markdown += "> Questions to probe for this attribute:\n"
+            for question in field['probe_questions']:
+                markdown += f"- {question}\n"
+            markdown += "\n"
+        
+        if 'user_responses' in field:
+            markdown += "> Examples of learner responses:\n"
+            for example in field['user_responses']:
+                markdown += f"- {example}\n"
+            markdown += "\n"
 
-    if 'user_responses' in field:
-        markdown += "> Examples of learner responses:\n"
-        for example in field['user_responses']:
-            markdown += f"- {example}\n"
-        markdown += "\n"
-
-    if 'probe_responses' in field:
-        markdown += "> Examples of Zavmo's responses:\n"
-        for response in field['probe_responses']:
-            markdown += f"- {response}\n"
-        markdown += "\n"
+        if 'probe_responses' in field:
+            markdown += "> Examples of Zavmo's responses:\n"
+            for response in field['probe_responses']:
+                markdown += f"- {response}\n"
+            markdown += "\n"
+    else:
+        if 'extract_examples' in field:
+            markdown += "> Examples of learner responses and what we are extracting:\n"
+            for example in field['extract_examples']:
+                markdown += f"- {example}\n"
+            markdown += "\n"
 
     return markdown
 
@@ -202,10 +209,13 @@ def create_system_message(stage_name, conf_data, mode='probe'):
     Returns:
         dict: A system message for the specified mode.
     """
-    fields = conf_data['fields']
-    instructions = '\n\n'.join([format_field(f) for f in fields])
+    fields         = conf_data['fields']
+    instructions   = '\n\n'.join([format_field(f, mode) for f in fields])
     system_content = get_prompt(f"{mode}").format(STAGE=stage_name.title(),
-                                                  INSTRUCTIONS=instructions
+                                                  DESCRIPTION=conf_data['description'],
+                                                  INSTRUCTIONS=instructions,
+                                                  NEXT_STAGE=conf_data['next_stage'],
+                                                  NEXT_STAGE_DESCRIPTION=conf_data['next_stage_description']
                                                   )
     return {"role": "system", "content": system_content}
 
