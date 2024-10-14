@@ -9,5 +9,25 @@ services:
       - "5555"
     volumes:
       - .:/app
+    depends_on:
+      - redis          
+    env_file:
+      - .env
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+    expose:
+      - "6379"services:
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+      - "5555:5555"
+    expose:
+      - "8000"
+      - "5555"
+    volumes:
+      - .:/app
     env_file:
       - .env      
