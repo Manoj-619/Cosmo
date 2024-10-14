@@ -53,20 +53,17 @@ INSTALLED_APPS = [
     'rest_framework',  # Required for Django REST framework if you're using it
     'stage_app',    
 ]
+CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_CREDENTIALS = True
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
-    # 'corsheaders.middleware.CorsMiddleware',  # Disabling CORS middleware for now
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-
-     # NOTE: Using django-rest-framework-simplejwt and creating a custom authentication permission class
-     # instead of using a middleware
-    # 'zavmo.middleware.CustomJWTMiddleware', 
 ]
 
 ROOT_URLCONF = 'zavmo.urls'
@@ -171,7 +168,16 @@ STATIC_URL = 'static/'
 MEDIA_URL  = '/media/'
 os.makedirs(os.path.join(BASE_DIR, "media"), exist_ok=True)
 
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, "static"),
+]
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Add these settings at the end of the file
+CSRF_COOKIE_SECURE = False
+CSRF_COOKIE_HTTPONLY = False
+CSRF_TRUSTED_ORIGINS = ['*']
