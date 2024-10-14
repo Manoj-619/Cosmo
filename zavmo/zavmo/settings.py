@@ -162,17 +162,17 @@ REST_FRAMEWORK = {
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 STATIC_ROOT = os.path.join(BASE_DIR, "static")
+STATIC_URL  = "/static/"
 os.makedirs(os.path.join(BASE_DIR, "static"), exist_ok=True)
-STATIC_URL = 'static/'
-
+# static dir for css, js, images
 MEDIA_URL  = '/media/'
 os.makedirs(os.path.join(BASE_DIR, "media"), exist_ok=True)
+# Default primary key field type
 
 # Remove or comment out STATICFILES_DIRS
 # STATICFILES_DIRS = [
 #     os.path.join(BASE_DIR, "static"),
 # ]
-
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
