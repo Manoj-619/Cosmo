@@ -1,9 +1,8 @@
 stage_name: demonstrate
 description: >
-  The demonstrate stage is the fifth stage of the learner's journey. It is used to assess the learner's understanding of the material and provide feedback. 
+  The demonstrate stage is the fifth stage of the learner's journey. It is used to assess the learner's understanding of the material and provide feedback.
   In this stage, the learner answers 1-3 questions to demonstrate their understanding of the material.
-  Finally, the learner provides a self-assessment of their understanding level and feedback on the learning experience.  
-
+  Additionally, the learner takes a quiz and provides a self-assessment of their understanding level and feedback on the learning experience.
 
 next_stage: complete
 next_stage_description: >
@@ -11,7 +10,7 @@ next_stage_description: >
 
 fields:
   - field: topics
-    title: topics
+    title: Topics
     annotation: str
     description: >
       The main topics covered in the learner's demonstration of knowledge.
@@ -29,7 +28,7 @@ fields:
       - Excellent summary of your topics! Now, let's see how well you've grasped them. 👍
 
   - field: summary
-    title: summary
+    title: Summary
     annotation: str
     description: >
       A brief summary of the learner's demonstration of knowledge and understanding.
@@ -46,28 +45,47 @@ fields:
       - Thank you for that comprehensive summary! It shows a good grasp of the material. 👏
       - Your summary is well-structured. It's clear you've put thought into your learning. 🌟
 
-  - field: understanding_level
-    title: understanding_level
-    annotation: int
+  - field: quiz_activity
+    title: Quiz Activity
+    annotation: list
     description: >
-      The evaluated understanding level of the learner based on their responses (1 for Beginner, 2 for Intermediate, 3 for Advanced, 4 for Expert).
+      A quiz activity consisting of 1-3 questions based on the key concepts discussed.
     probe_questions:
-      - Based on your assessment responses, how would you rate your understanding? (1- Beginner to 4 - Expert) 🧠  
-      - After completing the assessment, on a scale of 1 to 4, how confident do you feel about the material? 🌟
+      - Let's test your knowledge with a quick quiz based on what we've covered. Ready? 🎯
+      - Here are 3 questions to check your understanding of the key concepts. Let's see how you do! 📋
     user_responses:
-      - I think I'm at an intermediate level.
-      - I'd rate my understanding as a 4.
-      - I'm still a beginner.
+      - I got all the questions correct!
+      - I struggled with a couple of questions.
+      - I think I need to review the material again.
     extract_examples:
-      - "I think I'm at an intermediate level > understanding_level=2"
-      - "I'd rate my understanding as a 4 > understanding_level=4"
-      - "I'm still a beginner > understanding_level=1"
+      - "I got all the questions correct! > quiz_activity='Learner performed well on the quiz'"
+      - "I struggled with a couple of questions > quiz_activity='Learner faced difficulties with some quiz questions'"
     probe_responses:
-      - Thank you for sharing! We'll tailor future content accordingly. 😊
-      - Great insight! This helps us support you better. 🙌
+      - Great job! Your quiz results show a strong understanding of the material. 🎉
+      - No problem! We can review the areas you found challenging. 🛠️
 
+  - field: assessment_methods
+    title: Assessment Methods
+    annotation: list
+    description: >
+      The different methods used to assess the learner’s knowledge and understanding.
+    probe_questions:
+      - What type of assessment would you prefer to demonstrate your knowledge? ✏️
+      - Based on the content, do you think a written exam or a case study would be more suitable? 📋
+    user_responses:
+      - I prefer a written examination.
+      - A case study analysis would be ideal.
+      - I feel more comfortable with a research project.
+    extract_examples:
+      - "I prefer a written examination > assessment_methods='Written examination'"
+      - "A case study analysis would be ideal > assessment_methods='Case study analysis'"
+      - "I feel more comfortable with a research project > assessment_methods='Research project'"
+    probe_responses:
+      - A written exam it is! Let’s proceed with that method. ✍️
+      - Great! We'll prepare a case study analysis for your assessment. 📑
+    
   - field: feedback
-    title: feedback
+    title: Feedback
     annotation: str
     description: >
       The learner's feedback on the assessment or the overall learning experience.
