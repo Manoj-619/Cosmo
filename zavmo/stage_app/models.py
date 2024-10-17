@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
+from .utils import parse_curriculum
 
 class Org(models.Model):
     org_id   = models.CharField(max_length=50, primary_key=True)
@@ -89,6 +90,7 @@ class DiscussStage(models.Model):
     interest_areas = models.TextField(blank=True, null=True, verbose_name="Interest Areas") 
     learning_style = models.TextField(blank=True, null=True, verbose_name="Learning Style")
     goals_alignment = models.TextField(blank=True, null=True, verbose_name="Goals Alignment")
+    curriculum_data = models.JSONField(blank=True, null=True, verbose_name="Parsed Curriculum Data")
     
     def reset(self):
         self.lesson_plan = ''
@@ -96,6 +98,17 @@ class DiscussStage(models.Model):
         self.learning_style = ''
         self.goals_alignment = ''
         self.save()
+    
+    def generate_lesson_plan(self, curriculum_json): 
+        parsed_curriculum = parse_curriculum(curriculum_json)
+        
+        if parsed_curriculum is None:
+            raise ValueError("Failed to parse curriculum data.")
+        
+        self.curriculum_data = parsed_curriculum
+        self.lesson_plan = f"Generated lesson plan for {parsed_curriculum['title']}"
+        self.save()
+
 
 # Stage 4 or (3rd D)
 class DeliverStage(models.Model):
