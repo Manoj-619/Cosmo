@@ -1,66 +1,127 @@
 stage_name: deliver
 description: >
-  The deliver stage is the fourth stage of the learner's journey. It is used to provide the learner with learning materials and resources tailored to their needs.
-
+  The deliver stage is the fourth stage of the learner's journey. It is designed to share key learning materials and resources, guiding the learner through concepts while allowing them to clarify any doubts.
+  
 next_stage: complete
 next_stage_description: >
-  You have successfully completed a learning cycle! 🎉 Start your journey again.
+  Congratulations! You have completed the deliver stage. 🎉 Prepare for the next steps in your learning journey.
 
 fields:
-  - field: modules
-    title: modules
+  - field: key_concepts
+    title: Key Concepts
     annotation: str
     description: >
-      A list of modules or topics that will be included in the learner's personalized learning plan.
+      A list of important concepts or topics that will be presented to the learner in this stage.
     probe_questions:
-      - Based on our discussion, here are the modules we've prepared for you > [list of modules]. What do you think? 📚
-      - We've selected some modules that align with your goals. Would you like to review them? 🧐
+      - Here are some key concepts from this module: [list of concepts]. Do you feel confident with these, or do you need any clarifications? 🧠
+      - We've covered several important points. Is there anything you'd like more explanation on? 🤔
     user_responses:
-      - This looks perfect!
-      - Can we add more about data visualization?
-      - I'd prefer to focus more on advanced topics.
+      - I'm clear on everything, thanks!
+      - Can we go over [specific concept] again?
+      - I need more detail on how [concept] applies in real-world scenarios.
     extract_examples:
-      - "Can we add more about data visualization? > modules='Include data visualization module'"
-      - "I'd prefer to focus more on advanced topics > modules='Emphasize advanced modules'"
+      - "Can we go over [specific concept] again? > key_concepts='Revisit [specific concept]'"
+      - "I need more detail on how [concept] applies in real-world scenarios > key_concepts='Provide real-world application for [concept]'"
     probe_responses:
-      - Absolutely! We'll adjust the modules accordingly. 🛠️
-      - Noted! We'll make sure to include those topics. 🎯
+      - Of course! Let's go over that concept in more detail. 🔍
+      - Absolutely! I'll provide additional real-world examples. 🌍
 
-  - field: timeline
-    title: timeline
+  - field: doubts
+    title: Clarifications
     annotation: str
     description: >
-      The proposed timeline for completing the learning plan.
+      Any doubts or questions the learner might have during or after the key concepts are shared.
     probe_questions:
-      - We recommend completing this plan over [X weeks/months]. Does this timeline suit you? ⏰
-      - How quickly would you like to progress through the material? 🚀
+      - Are there any concepts that you're unsure about and would like more clarification on? 🤔
+      - Do you have any lingering doubts after our discussion? Let me know if you need more information. 💬
     user_responses:
-      - That timeline works for me.
-      - Can we make it shorter?
-      - I'd like a more extended timeline.
+      - Yes, I have a question about [concept].
+      - I'm good for now, thank you!
+      - Can you clarify how this relates to [another topic]?
     extract_examples:
-      - "Can we make it shorter? > timeline='Shorter timeline preferred'"
-      - "I'd like a more extended timeline > timeline='Longer timeline preferred'"
+      - "Yes, I have a question about [concept] > doubts='Clarify [concept]'"
+      - "Can you clarify how this relates to [another topic] > doubts='Relate [concept] to [another topic]'"
     probe_responses:
-      - Sure, we can adjust the timeline. ⚙️
-      - Absolutely, we'll modify it to fit your schedule. 📅
+      - I'll be happy to clarify that for you! 🛠️
+      - Let's connect those dots. I'll explain the relationship between the two concepts. 🌐
 
-  - field: resources
-    title: resources
+  - field: engagement_and_resources
+    title: Engagement and Resources
     annotation: str
     description: >
-      Additional resources that will support your learning journey.
+      This field assesses the learner's engagement with the material and offers supplemental resources or adjustments based on their needs.
     probe_questions:
-      - We've gathered some resources to help you. Would you like to see them? 💡
-      - Are there any specific resources you'd like us to include? 🔍
+      - How are you feeling about the learning material so far? Are you finding it engaging? 📊
+      - Would you like some additional resources to help you with these concepts? 📚
+      - Do you need more examples or materials for further study, or would you prefer adjusting the pace? 💡
     user_responses:
-      - Yes, please share them.
-      - Can you include some video tutorials?
-      - I'd like resources on practical applications.
+      - I'm really enjoying this!
+      - It's a bit overwhelming.
+      - Can we slow down the pace a little?
+      - Yes, that would be helpful.
+      - Can you include case studies or examples?
+      - I'm interested in video materials to explain these concepts further.
     extract_examples:
-      - "Can you include some video tutorials? > resources='Include video tutorials'"
-      - "I'd like resources on practical applications > resources='Add practical application materials'"
+      - "It's a bit overwhelming > engagement_and_resources='Learner feeling overwhelmed, adjust pace'"
+      - "Can we slow down the pace a little? > engagement_and_resources='Reduce speed of delivery'"
+      - "Can you include case studies or examples? > engagement_and_resources='Add case studies or examples'"
+      - "I'm interested in video materials > engagement_and_resources='Provide video materials'"
     probe_responses:
-      - Great! We'll include those resources. 🎥
-      - Understood! We'll add them to your plan. 🛠️
+      - Thank you for your feedback! We can adjust the pace and focus on your comfort. 🛠️
+      - Great! We'll continue at this pace. 👍
+      - Sure! I'll add those resources to help deepen your understanding. 🎥
+      - I'll make sure you have case studies to explore the concepts further. 📄
 
+  - field: progress_update
+    title: Progress Update
+    annotation: str
+    description: >
+      A status update on the learner's progress, helping track their understanding and areas where additional focus may be required.
+    probe_questions:
+      - How confident are you in your understanding of the material so far? 📈
+      - Is there any area you'd like more practice or focus on? 🎯
+    user_responses:
+      - I'm feeling confident!
+      - I think I need more help with [concept].
+      - I could use more practice with [topic].
+    extract_examples:
+      - "I need more help with [concept] > progress_update='Additional focus required on [concept]'"
+      - "I could use more practice with [topic] > progress_update='Practice material needed for [topic]'"
+    probe_responses:
+      - That's great! We can move forward with more advanced material. 📚
+      - No worries! We'll focus on [concept] to ensure you're comfortable with it. 📖
+
+  - field: practice_test
+    title: Practice Test
+    annotation: dict
+    description: >
+      A test to evaluate the learner’s understanding of the key concepts and modules shared in the delivery stage.
+    probe_questions:
+      - It's time to test your understanding of the key concepts. Ready to take a short practice test? 📝
+      - Let's check your knowledge with a quick practice test. Are you ready? 🚀
+    user_responses:
+      - Yes, I'm ready!
+      - Can we review the concepts once more before starting the test?
+      - I'm not sure I'm ready yet.
+    extract_examples:
+      - "Can we review the concepts once more before starting the test? > practice_test='Review concepts before test'"
+      - "I'm not sure I'm ready yet > practice_test='Learner not ready for test'"
+    probe_responses:
+      - Absolutely! Let's review the concepts before we start. 🔄
+      - No worries! We can take our time and come back to the test later. ⏳
+    test_examples:
+      - question: "What is the primary purpose of [concept]?"
+        options:
+          - "To provide theoretical knowledge"
+          - "To develop practical skills"
+          - "To enhance critical thinking"
+        correct_answer: "To develop practical skills"
+      - question: "Which of the following best describes [concept]?"
+        options:
+          - "An example of practical application"
+          - "A theory used in business analysis"
+          - "A method for data collection"
+        correct_answer: "A method for data collection"
+    test_results_responses:
+      - "Great job! You answered [X] out of [Y] questions correctly! 🎉"
+      - "You did well, but there's room for improvement. Let's revisit some concepts before moving forward. 💡"
