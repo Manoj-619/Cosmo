@@ -7,24 +7,6 @@ next_stage_description: >
   The deliver stage is the fourth stage of the learner's journey. It is used to provide the learner with learning materials and resources tailored to their needs.
 
 fields:
-  - field: lesson_plan
-    title: lesson_plan
-    annotation: str
-    description: A proposed lesson plan outlining the topics to be covered with the learner.
-    probe_questions:
-      - Based on your learning goals, here's a proposed lesson plan. What do you think? 📖 ['Proposed lesson plan']
-      - I've drafted a lesson plan for you. Does this align with your expectations? 📝 ['Proposed lesson plan']
-    user_responses:
-      - That looks great!
-      - Can we add more about Python basics?
-      - I'd like to focus more on data analysis.
-    extract_examples:
-      - "Can we add more about Python basics? > lesson_plan='Include more Python basics'"
-      - "I'd like to focus more on data analysis > lesson_plan='Emphasize data analysis topics'"
-    probe_responses:
-      - Fantastic! 🚀 We'll adjust the plan accordingly.
-      - Noted! 📝 I'll make sure to update the lesson plan.
-
   - field: interest_areas
     title: interest_areas
     annotation: str
@@ -59,6 +41,67 @@ fields:
       - Great! 🛠️ We'll include more hands-on activities.
       - Understood! 🎥 We'll incorporate video content.
 
+  - field: curriculum
+    title: Curriculum
+    annotation: object
+    description: >
+      A list of modules or topics designed for the learner's curriculum plan, detailing the focus areas and learning outcomes, 
+      including the main subject and title.
+    properties:
+      - field: subject
+        title: Subject
+        annotation: str  # Specify as string type
+        description: The main subject area for the curriculum.
+
+      - field: title
+        title: Title
+        annotation: str  # Specify as string type
+        description: The title of the curriculum module.
+
+      - field: modules
+        title: Modules
+        annotation: List[str]  # Specify as a list of strings for module names or topics
+        description: A list of module names or topics within the curriculum.
+        items:
+          annotation: str  # Each module item is a string representing a topic or module name
+
+    probe_questions:
+      - "Here are the modules we've prepared for you. Do they align with your learning goals? 📚"
+      - "Would you like to discuss any specific modules in more detail? 🧐"
+
+    user_responses:
+      - "These modules look great!"
+      - "Can we add more on data visualization?"
+      - "I'd prefer to focus more on advanced machine learning topics."
+
+    extract_examples:
+      - "Can we add more on data visualization? > modules='Include data visualization module'"
+      - "I'd prefer to focus more on advanced machine learning topics > modules='Emphasize advanced machine learning modules'"
+
+    probe_responses:
+      - "Absolutely! We'll adjust the modules accordingly. 🛠️"
+      - "Noted! We'll ensure those topics are included. 🎯"
+
+
+  - field: timeline
+    title: timeline
+    annotation: str
+    description: >
+      Propose a timeline for completing the learning plan.
+    probe_questions:
+      - We recommend completing this plan over [Weeks/Months]. Does this timeline suit you? ⏰
+      - How quickly would you like to progress through the material? 🚀
+    user_responses:
+      - That timeline works for me.
+      - Can we make it shorter?
+      - I'd like a more extended timeline.
+    extract_examples:
+      - "Can we make it shorter? > timeline='Shorter timeline preferred'"
+      - "I'd like a more extended timeline > timeline='Longer timeline preferred'"
+    probe_responses:
+      - Sure, we can adjust the timeline. ⚙️
+      - Absolutely, we'll modify it to fit your schedule. 📅
+
   - field: goals_alignment
     title: goals_alignment
     annotation: str
@@ -74,4 +117,3 @@ fields:
     probe_responses:
       - Noted! 📝 We'll adjust accordingly.
       - Glad to hear that! 🌟 We're excited to proceed.
-

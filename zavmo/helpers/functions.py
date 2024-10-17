@@ -140,9 +140,9 @@ def parse_type(type_str: str):
         # Recursively evaluate the AST node to get the type
         return eval_type_ast(type_ast)
     except Exception as e:
-        raise ValueError(f"Error parsing type '{type_str}': {e}")        
+        raise ValueError(f"Error parsing type '{type_str}': {e}")    
     
-    
+
 def create_model_fields(fields, use_keys=['description', 'enum']):
     """
     Dynamically creates fields for the model using Annotated and Field.
@@ -157,20 +157,32 @@ def create_model_fields(fields, use_keys=['description', 'enum']):
     model_fields = {}
     for field_data in fields:
         field_name = field_data['title']
-        annotation_str = field_data['annotation']
+        annotation_str = field_data.get('annotation')
         
-        if annotation_str == 'Enum' and 'enum' in field_data:
+        # Check if annotation_str is None and handle it
+        if annotation_str is None:
+            # Set a default annotation type or raise an informative error
+            print(f"Warning: Field '{field_name}' is missing an annotation. Defaulting to 'Any'.")
+            field_annotation = Any
+        elif annotation_str == 'Enum' and 'enum' in field_data:
             # Create a dynamic Enum class
             enum_name = f"{field_name.capitalize()}Enum"
             enum_class = Enum(enum_name, {v: v for v in field_data['enum']})
             field_annotation = enum_class
+        elif annotation_str == 'object' and 'properties' in field_data:
+            # Nested object case, create a nested Pydantic model
+            nested_fields = create_model_fields(field_data['properties'])
+            nested_model = create_model(field_name.capitalize(), **nested_fields)
+            field_annotation = nested_model
         else:
+            # Parse the field's annotation as a basic type
             field_annotation = parse_type(annotation_str)
-        
+
+        # Add Field kwargs for description, enums, etc.
         field_kwargs = {k: v for k, v in field_data.items() if k in use_keys}
         field = Field(**field_kwargs)
         model_fields[field_name] = Annotated[field_annotation, field]
-    
+
     return model_fields
 
 def create_pydantic_model(name: str, fields: List[Dict[str, Any]], description: str = None):
@@ -195,6 +207,7 @@ def create_pydantic_model(name: str, fields: List[Dict[str, Any]], description: 
         model_attributes['__doc__'] = description
     
     return create_model(name, **model_fields, **model_attributes)
+
 
 
 def create_system_message(stage_name, conf_data, mode='probe'):
