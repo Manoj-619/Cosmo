@@ -86,28 +86,30 @@ class DiscoverStage(models.Model):
 # Stage 3 or (2nd D)
 class DiscussStage(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='discuss_stage', verbose_name="User")
-    lesson_plan = models.TextField(blank=True, null=True, verbose_name="Lesson Plan")
     interest_areas = models.TextField(blank=True, null=True, verbose_name="Interest Areas") 
     learning_style = models.TextField(blank=True, null=True, verbose_name="Learning Style")
+    curriculum = models.JSONField(blank=True, null=True, verbose_name="Curriculum Plan")
+    timeline  = models.TextField(blank=True, null=True, verbose_name="Timeline")
     goals_alignment = models.TextField(blank=True, null=True, verbose_name="Goals Alignment")
-    curriculum_data = models.JSONField(blank=True, null=True, verbose_name="Parsed Curriculum Data")
+    
     
     def reset(self):
-        self.lesson_plan = ''
         self.interest_areas = ''
         self.learning_style = ''
+        self.curriculum = ''
+        self.timeline=''
         self.goals_alignment = ''
         self.save()
     
-    def generate_lesson_plan(self, curriculum_json): 
-        parsed_curriculum = parse_curriculum(curriculum_json)
+    # def generate_lesson_plan(self, curriculum_json): 
+    #     parsed_curriculum = parse_curriculum(curriculum_json)
         
-        if parsed_curriculum is None:
-            raise ValueError("Failed to parse curriculum data.")
+    #     if parsed_curriculum is None:
+    #         raise ValueError("Failed to parse curriculum data.")
         
-        self.curriculum_data = parsed_curriculum
-        self.lesson_plan = f"Generated lesson plan for {parsed_curriculum['title']}"
-        self.save()
+    #     self.curriculum_data = parsed_curriculum
+    #     self.lesson_plan = f"Generated lesson plan for {parsed_curriculum['title']}"
+    #     self.save()
 
 
 # Stage 4 or (3rd D)
