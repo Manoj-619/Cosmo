@@ -168,14 +168,12 @@ class Swarm:
         max_turns: int = float("inf"),
         execute_tools: bool = True,
     ) -> Response:
-        # Initialize the conversation
         active_agent = agent
         context = copy.deepcopy(context)
         history = copy.deepcopy(messages)
         init_len = len(messages)
 
         while len(history) - init_len < max_turns and active_agent:
-            # Get completion with current history and agent
             completion = self.get_chat_completion(
                 agent=active_agent,
                 history=history,
@@ -187,24 +185,35 @@ class Swarm:
             message.sender = active_agent.name
             history.append(
                 json.loads(message.model_dump_json())
-            )  # Convert OpenAI types to standard Python types
+            )
 
-            # Check if there are tool calls to execute
             if not message.tool_calls or not execute_tools:
                 debug_print(debug, "Ending turn.")
                 break
             
-            # Handle function calls, update context, and switch agents if necessary
             partial_response = self.handle_tool_calls(message.tool_calls, active_agent.functions, context, debug)
-            history.extend(partial_response.messages)
+            
+            # Ensure all tool calls have corresponding responses
+            for tool_call, tool_response in zip(message.tool_calls, partial_response.messages):
+                if tool_response["tool_call_id"] != tool_call.id:
+                    debug_print(debug, f"Missing response for tool call {tool_call.id}")
+                    # Add a placeholder response if missing
+                    history.append({
+                        "role": "tool",
+                        "tool_call_id": tool_call.id,
+                        "tool_name": tool_call.function.name,
+                        "content": "Error: No response received for this tool call."
+                    })
+                else:
+                    history.append(tool_response)
+            
             context.update(partial_response.context)
             
-            # Switch to the new agent if necessary
-            if partial_response.agent:
+            if partial_response.agent and partial_response.agent != active_agent:
                 active_agent = partial_response.agent
                 debug_print(debug, f"Switching to new agent: {active_agent.name}")
+                # The new agent's introduction will be handled in the next iteration
 
-        # Return the final response
         return Response(
             messages=history[init_len:],
             agent=active_agent,

@@ -1,127 +1,59 @@
-stage_name: deliver
+name: Delivery
+stage: 3
 description: >
-  The deliver stage is the fourth stage of the learner's journey. It is designed to share key learning materials and resources, guiding the learner through concepts while allowing them to clarify any doubts.
-  
-next_stage: complete
+  The delivery stage is the third stage of the 4-D Learning Journey.
+  It is designed to patiently deliver key lessons and learning materials to the learner, guiding them through each concept step-by-step, allowing for clarifications and deeper exploration as needed. The agent consults a Content Specialist to ensure the most relevant materials are provided.
+instructions: >
+  1. Consult the Content Specialist agent to gather the necessary learning materials and lessons based on the learner's curriculum.
+  2. Present each lesson to the learner, covering one lesson at a time with fun, engaging descriptions that make learning enjoyable.
+  3. Encourage interactivity—use questions, examples, and role-playing scenarios to ensure the learner is actively involved in the lesson.
+  4. Allow time for questions or clarification after each lesson, providing real-world examples from the Content Specialist when needed.
+  5. Ensure the learner fully understands each module before moving to the next, reinforcing with practical or creative exercises.
+  6. Once the learner confirms they have understood all lessons in their curriculum, transfer them to the Demonstration stage for evaluation.
+examples: >
+  "Alright! Let's get started with **Module 4: Introduction to Artificial Intelligence**.
+
+  **Lesson 1: Understanding Neural Networks**  
+  - By the end of this lesson, you'll know the basics of neural networks and how they mimic the human brain 🧠
+  - Imagine your brain is a supercomputer, with thousands of neurons firing to help you make decisions. Neural networks work similarly! Let's dive into how they learn and predict. ✨  
+  What do you think—are you ready to build your own virtual brain by the end of this module?
+
+  Imagine you're teaching a robot to recognize cats from dogs. What kind of 'decisions' would you teach the robot to make? Let's walk through this fun example together! 🐱🤖🐶"
+
+  "Let's jump into **Module 5: Creative Writing**.
+
+  **Lesson 2: Crafting Dynamic Characters**  
+  - After this lesson, you'll be able to create characters that leap off the page 🎭
+  - Ever wondered what makes your favorite book characters so unforgettable? Let's dig into their secret sauce! Think of a character you love—what makes them tick? 🎭  
+  Let's play a quick game! Imagine your character is trapped in a haunted house. How do they react? Brave? Scared? Let's shape their personality together! 👻🏠"
+
+  "Next up is **Module 6: Introduction to Coding**.
+
+  **Lesson 3: Loops and Conditionals**  
+  - By the end of this lesson, you'll be able to use loops and conditionals to solve basic programming problems 💻
+  - Loops are like superpowers that help you repeat tasks in your code. Ready to become a code superhero? 🦸‍♂️  
+  Picture this: You need your robot assistant to vacuum the house—but only the living room and kitchen. How can we write the code for that? Let's walk through it step-by-step.
+
+  Let's say we're baking cookies, but only if it's raining outside. How would we tell the computer to 'check the weather' and 'bake the cookies'? 🍪🌧️ Time to code this tasty solution!"
+
+  "Now we're moving into **Module 7: Public Speaking**.
+
+  **Lesson 4: Overcoming Stage Fright**  
+  - After this lesson, you'll gain tips and techniques to feel confident in front of an audience. 🎤
+  - Stage fright happens to everyone—but we're going to turn that nervous energy into pure excitement! Imagine you're on stage about to give a TED Talk. What's the first thing you say? 🌟  
+  Let's roleplay a scenario: You're speaking at an event, and you suddenly forget your lines. What's your plan? Let's think on our feet and work through this together! 💡"
+
+  "Lastly, let's explore **Module 8: Environmental Science**.
+
+  **Lesson 5: Ecosystems and Biodiversity**  
+  - By the end of this  lesson, you'll understand how ecosystems function and why biodiversity is important 🌱
+  - Ecosystems are like nature's machines, each part playing a vital role! Imagine you're designing a brand-new planet—what species would you include to keep everything in balance? 🦁🌳🌍  
+  Let's pretend we're creating an imaginary rainforest. What kinds of animals, plants, and weather patterns should we include? Let's make sure our ecosystem is as diverse and sustainable as possible! 🌿🐸☔"
+completion_condition: >
+  Once we have gone through all the lessons in the curriculum, we will check in with the learner to see if they have any questions or need further clarification on any of the topics.
+  If they do, go back and assist them to review the relevant lessons again.
+  If they don't, congratulate them on completing the curriculum and transfer them to the Demonstration stage for evaluation.
+next_stage: Demonstration
 next_stage_description: >
-  Congratulations! You have completed the deliver stage. 🎉 Prepare for the next steps in your learning journey.
-
-fields:
-  - field: key_concepts
-    title: Key Concepts
-    annotation: str
-    description: >
-      A list of important concepts or topics that will be presented to the learner in this stage.
-    probe_questions:
-      - Here are some key concepts from this module: [list of concepts]. Do you feel confident with these, or do you need any clarifications? 🧠
-      - We've covered several important points. Is there anything you'd like more explanation on? 🤔
-    user_responses:
-      - I'm clear on everything, thanks!
-      - Can we go over [specific concept] again?
-      - I need more detail on how [concept] applies in real-world scenarios.
-    extract_examples:
-      - "Can we go over [specific concept] again? > key_concepts='Revisit [specific concept]'"
-      - "I need more detail on how [concept] applies in real-world scenarios > key_concepts='Provide real-world application for [concept]'"
-    probe_responses:
-      - Of course! Let's go over that concept in more detail. 🔍
-      - Absolutely! I'll provide additional real-world examples. 🌍
-
-  - field: doubts
-    title: Clarifications
-    annotation: str
-    description: >
-      Any doubts or questions the learner might have during or after the key concepts are shared.
-    probe_questions:
-      - Are there any concepts that you're unsure about and would like more clarification on? 🤔
-      - Do you have any lingering doubts after our discussion? Let me know if you need more information. 💬
-    user_responses:
-      - Yes, I have a question about [concept].
-      - I'm good for now, thank you!
-      - Can you clarify how this relates to [another topic]?
-    extract_examples:
-      - "Yes, I have a question about [concept] > doubts='Clarify [concept]'"
-      - "Can you clarify how this relates to [another topic] > doubts='Relate [concept] to [another topic]'"
-    probe_responses:
-      - I'll be happy to clarify that for you! 🛠️
-      - Let's connect those dots. I'll explain the relationship between the two concepts. 🌐
-
-  - field: engagement_and_resources
-    title: Engagement and Resources
-    annotation: str
-    description: >
-      This field assesses the learner's engagement with the material and offers supplemental resources or adjustments based on their needs.
-    probe_questions:
-      - How are you feeling about the learning material so far? Are you finding it engaging? 📊
-      - Would you like some additional resources to help you with these concepts? 📚
-      - Do you need more examples or materials for further study, or would you prefer adjusting the pace? 💡
-    user_responses:
-      - I'm really enjoying this!
-      - It's a bit overwhelming.
-      - Can we slow down the pace a little?
-      - Yes, that would be helpful.
-      - Can you include case studies or examples?
-      - I'm interested in video materials to explain these concepts further.
-    extract_examples:
-      - "It's a bit overwhelming > engagement_and_resources='Learner feeling overwhelmed, adjust pace'"
-      - "Can we slow down the pace a little? > engagement_and_resources='Reduce speed of delivery'"
-      - "Can you include case studies or examples? > engagement_and_resources='Add case studies or examples'"
-      - "I'm interested in video materials > engagement_and_resources='Provide video materials'"
-    probe_responses:
-      - Thank you for your feedback! We can adjust the pace and focus on your comfort. 🛠️
-      - Great! We'll continue at this pace. 👍
-      - Sure! I'll add those resources to help deepen your understanding. 🎥
-      - I'll make sure you have case studies to explore the concepts further. 📄
-
-  - field: progress_update
-    title: Progress Update
-    annotation: str
-    description: >
-      A status update on the learner's progress, helping track their understanding and areas where additional focus may be required.
-    probe_questions:
-      - How confident are you in your understanding of the material so far? 📈
-      - Is there any area you'd like more practice or focus on? 🎯
-    user_responses:
-      - I'm feeling confident!
-      - I think I need more help with [concept].
-      - I could use more practice with [topic].
-    extract_examples:
-      - "I need more help with [concept] > progress_update='Additional focus required on [concept]'"
-      - "I could use more practice with [topic] > progress_update='Practice material needed for [topic]'"
-    probe_responses:
-      - That's great! We can move forward with more advanced material. 📚
-      - No worries! We'll focus on [concept] to ensure you're comfortable with it. 📖
-
-  - field: practice_test
-    title: Practice Test
-    annotation: dict
-    description: >
-      A test to evaluate the learner’s understanding of the key concepts and modules shared in the delivery stage.
-    probe_questions:
-      - It's time to test your understanding of the key concepts. Ready to take a short practice test? 📝
-      - Let's check your knowledge with a quick practice test. Are you ready? 🚀
-    user_responses:
-      - Yes, I'm ready!
-      - Can we review the concepts once more before starting the test?
-      - I'm not sure I'm ready yet.
-    extract_examples:
-      - "Can we review the concepts once more before starting the test? > practice_test='Review concepts before test'"
-      - "I'm not sure I'm ready yet > practice_test='Learner not ready for test'"
-    probe_responses:
-      - Absolutely! Let's review the concepts before we start. 🔄
-      - No worries! We can take our time and come back to the test later. ⏳
-    test_examples:
-      - question: "What is the primary purpose of [concept]?"
-        options:
-          - "To provide theoretical knowledge"
-          - "To develop practical skills"
-          - "To enhance critical thinking"
-        correct_answer: "To develop practical skills"
-      - question: "Which of the following best describes [concept]?"
-        options:
-          - "An example of practical application"
-          - "A theory used in business analysis"
-          - "A method for data collection"
-        correct_answer: "A method for data collection"
-    test_results_responses:
-      - "Great job! You answered [X] out of [Y] questions correctly! 🎉"
-      - "You did well, but there's room for improvement. Let's revisit some concepts before moving forward. 💡"
+  The demonstration stage is the fourth stage of the 4-D Learning Journey.
+  In this stage, the learner will be evaluated through short tests based on the lessons covered in the delivery stage. These evaluations will assess their understanding and retention of the key concepts.

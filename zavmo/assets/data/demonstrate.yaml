@@ -1,104 +1,45 @@
-stage_name: demonstrate
+name: Demonstration
+stage: 4
 description: >
-  The demonstrate stage is the fifth stage of the learner's journey. It is used to assess the learner's understanding of the material and provide feedback.
-  In this stage, the learner answers 1-3 questions to demonstrate their understanding of the material.
-  Additionally, the learner takes a quiz and provides a self-assessment of their understanding level and feedback on the learning experience.
+  The Demonstration stage is the fourth stage of the 4-D Learning Journey.
+  In this stage, the agent assesses the learner's understanding of all the material covered during the Delivery stage.
+  The agent consults an Assessment Consultant to prepare appropriate evaluation questions for each lesson in the curriculum.
+  The learner answers questions to demonstrate their understanding, and the agent provides feedback on their responses.
+  At the end of the assessment, the learner provides a self-assessment and feedback on the learning experience.
 
-next_stage: complete
+instructions: >
+  1. Request the Assessment Consultant agent to gather an appropriate evaluation question for each lesson in the curriculum.
+  2. Present each question to the learner and allow them to respond.
+  3. Evaluate the learner's response, providing feedback on whether they were correct, incorrect, or close.
+  4. Briefly explain the correct answer if the learner's response was incorrect or partially correct.
+  5. Repeat steps 1-4 for each lesson in the curriculum.
+  6. After completing all assessments, congratulate the learner on finishing the assessment.
+  7. Ask the learner to provide a self-assessment of their learning experience.
+  8. Request feedback from the learner on the test and overall learning journey.
+  9. Update the demonstration data with the learner's performance, self-assessment, and feedback.
+
+examples: >
+  "Great! Let's begin the assessment for the module 'Introduction to Programming'. Here's a question about variables and data types:
+
+  What is the difference between an integer and a float in Python? Provide an example of when you might use each.
+
+  Take your time to think about it and provide your answer when you're ready."
+
+  "Thank you for your response. You're on the right track! An integer is indeed a whole number, and a float does involve decimal points. To clarify further, an integer is a whole number without a decimal point, while a float is a number with a decimal point. 
+
+  For example, you might use an integer to count the number of items in a list (e.g., 5 apples), and a float to represent a measurement with decimal precision (e.g., 3.14 meters).
+
+  Let's move on to the next question."
+
+  "Congratulations on completing the assessment! You've done an excellent job demonstrating your understanding of the material we've covered.
+
+  Now, I'd like to ask you for a self-assessment of your learning experience. How do you feel about your progress and understanding of the topics we've covered? Please share your thoughts."
+
+  "Thank you for your self-assessment. Lastly, I'd love to hear your feedback on the test and the overall learning journey. Was there anything particularly helpful or challenging? Do you have any suggestions for improvement? Your input is valuable in helping us enhance the learning experience for future learners."
+
+completion_condition: >
+  The learner has completed all assessments, provided a self-assessment, and given feedback on the learning experience.
+
+next_stage: Completion
 next_stage_description: >
-  You have successfully completed your learning journey! 🎉
-
-fields:
-  - field: topics
-    title: Topics
-    annotation: str
-    description: >
-      The main topics covered in the learner's demonstration of knowledge.
-    probe_questions:
-      - What were the main topics you covered in your learning journey? 📚
-      - Can you list the key areas you've studied? 🔑
-    user_responses:
-      - The main topics I covered were 'insert topics here'
-      - I studied 'insert topics here'
-    extract_examples:
-      - "The main topics I covered were 'insert topics here' > topics='insert topics here'"
-      - "I studied 'insert topics here' > topics='insert topics here'"
-    probe_responses:
-      - Great! Those are important areas. Let's dive deeper into your understanding. 🧐
-      - Excellent summary of your topics! Now, let's see how well you've grasped them. 👍
-
-  - field: summary
-    title: Summary
-    annotation: str
-    description: >
-      A brief summary of the learner's demonstration of knowledge and understanding.
-    probe_questions:
-      - Can you provide a brief summary of what you've learned? 📝
-      - In a few sentences, how would you summarize your understanding of the material? 🤔
-    user_responses:
-      - Here's a summary of what I've learned: 'insert summary here'
-      - To summarize my understanding: 'insert summary here'
-    extract_examples:
-      - "Here's a summary of what I've learned: 'insert summary here' > summary='insert summary here'"
-      - "To summarize my understanding: 'insert summary here' > summary='insert summary here'"
-    probe_responses:
-      - Thank you for that comprehensive summary! It shows a good grasp of the material. 👏
-      - Your summary is well-structured. It's clear you've put thought into your learning. 🌟
-
-  - field: quiz_activity
-    title: Quiz Activity
-    annotation: list
-    description: >
-      A quiz activity consisting of 1-3 questions based on the key concepts discussed.
-    probe_questions:
-      - Let's test your knowledge with a quick quiz based on what we've covered. Ready? 🎯
-      - Here are 3 questions to check your understanding of the key concepts. Let's see how you do! 📋
-    user_responses:
-      - I got all the questions correct!
-      - I struggled with a couple of questions.
-      - I think I need to review the material again.
-    extract_examples:
-      - "I got all the questions correct! > quiz_activity='Learner performed well on the quiz'"
-      - "I struggled with a couple of questions > quiz_activity='Learner faced difficulties with some quiz questions'"
-    probe_responses:
-      - Great job! Your quiz results show a strong understanding of the material. 🎉
-      - No problem! We can review the areas you found challenging. 🛠️
-
-  - field: assessment_methods
-    title: Assessment Methods
-    annotation: list
-    description: >
-      The different methods used to assess the learner’s knowledge and understanding.
-    probe_questions:
-      - What type of assessment would you prefer to demonstrate your knowledge? ✏️
-      - Based on the content, do you think a written exam or a case study would be more suitable? 📋
-    user_responses:
-      - I prefer a written examination.
-      - A case study analysis would be ideal.
-      - I feel more comfortable with a research project.
-    extract_examples:
-      - "I prefer a written examination > assessment_methods='Written examination'"
-      - "A case study analysis would be ideal > assessment_methods='Case study analysis'"
-      - "I feel more comfortable with a research project > assessment_methods='Research project'"
-    probe_responses:
-      - A written exam it is! Let’s proceed with that method. ✍️
-      - Great! We'll prepare a case study analysis for your assessment. 📑
-    
-  - field: feedback
-    title: Feedback
-    annotation: str
-    description: >
-      The learner's feedback on the assessment or the overall learning experience.
-    probe_questions:
-      - How did you find the assessment? Any feedback? 📝
-      - We'd love to hear your thoughts on the learning experience. Any suggestions? 💡
-    user_responses:
-      - The assessment was challenging but fair.
-      - I enjoyed the learning process.
-      - Some questions were tough; I'd like more practice.
-    extract_examples:
-      - "The assessment was challenging but fair > feedback='Assessment challenging but fair'"
-      - "Some questions were tough; I'd like more practice > feedback='Needs more practice materials'"
-    probe_responses:
-      - Thank you for your feedback! We'll take it into account. 🌟
-      - We appreciate your input! It helps us improve. 😊
+  You have successfully completed your learning journey! Thank you for your dedication and hard work. We hope you found this experience valuable and that you'll apply your new knowledge and skills in your future endeavors.

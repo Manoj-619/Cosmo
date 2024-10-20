@@ -12,22 +12,18 @@ from pydantic import BaseModel, Field
 from typing import Literal, List, Optional, Dict
 from _types import Agent, Response, Result
 # Handoff Agent for the next stage
-from .discuss import discuss_agent
-from .util import get_agent_instructions
+from .b_discuss import discuss_agent
+from .common import get_agent_instructions
 
 ### For handoff
 def transfer_to_discussion_agent():
-    """
-    Transfer to the Discussion Agent when the learner is satisfied with the summary of the information gathered.
-    """
+    """Transfer to the Discussion Agent when the learner is satisfied with the summary of the information gathered."""
     print("Transferring to Discussion Agent...")
     return discuss_agent
 
 ### For updating the data
-class update_discover_data(BaseModel):
-    """
-    Update the learner's information gathered during the Discovery stage.
-    """
+class UpdateDiscoverData(BaseModel):
+    """Update the learner's information gathered during the Discovery stage."""
     learning_goals: Optional[str] = Field(description="The learner's learning goals.")
     learning_goal_rationale: Optional[str] = Field(description="The learner's rationale for their learning goals.")
     knowledge_level: Optional[Literal['Beginner', 'Intermediate', 'Advanced', 'Expert']] = Field(description="The learner's self-assessed knowledge level in their chosen area of study.")
@@ -44,10 +40,12 @@ class update_discover_data(BaseModel):
 #### For responding / handoff
 discover_agent = Agent(
     name="Discover",
+    model="gpt-4o-mini",
     instructions=get_agent_instructions('discover'),
     functions=[
-        update_discover_data,
+        UpdateDiscoverData,
         transfer_to_discussion_agent
-    ]
+    ],
+    tool_choice="auto",
+    parallel_tool_calls=True
 )
-
