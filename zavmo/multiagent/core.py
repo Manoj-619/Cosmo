@@ -14,10 +14,12 @@ from util import function_to_json, debug_print
 import os
 import copy
 import json
+import openai
 from collections import defaultdict
 from typing import List, Callable, Union
 from openai import OpenAI
 from dotenv import load_dotenv
+from pydantic import BaseModel
 
 load_dotenv()
 
@@ -49,7 +51,9 @@ class Swarm:
 
         # Prepare the tools (functions) for the agent
         tools = [function_to_json(f) for f in agent.functions]
+        
         # Hide context variables from the model
+        # IMPORTANT: Why?
         for tool in tools:
             params = tool["function"]["parameters"]
             params["properties"].pop(__CTX_VARS_NAME__, None)
@@ -62,7 +66,6 @@ class Swarm:
             "messages": messages,
             "tools": tools or None,
             "tool_choice": agent.tool_choice,
-            "stream": False,  # Streaming is not needed for this implementation
         }
 
         if tools:
@@ -76,14 +79,23 @@ class Swarm:
         match result:
             case Result() as result:
                 return result
+            case BaseModel() as model:
+                return Result(
+                    value=str(model), # IMPORTANT: Wherever we have to, customize the __str__ method.
+                    agent=None,
+                    context={},
+                    tool_calls=[],
+                )
             case Agent() as agent:
                 # If the result is an Agent, create a Result object for agent handoff
                 return Result(
                     value=json.dumps({"assistant": agent.name}),
                     agent=agent,
+                    context={},
                 )
             case _:
-                # For other types, attempt to convert to string
+                # For other types, attempt to convert to string. 
+                # # IMPORTANT: Always add the __str__ method to the Any pydantic models.
                 try:
                     return Result(value=str(result))
                 except Exception as e:
@@ -98,14 +110,11 @@ class Swarm:
         context: dict,
         debug: bool,
     ) -> Response:
-        # Create a mapping of function names to functions
         function_map = {f.__name__: f for f in functions}
-        partial_response = Response(
-            messages=[], agent=None, context={})
+        partial_response = Response(messages=[], agent=None, context={})
 
         for tool_call in tool_calls:
             name = tool_call.function.name
-            # Handle missing tool case, skip to next tool
             if name not in function_map:
                 debug_print(debug, f"Tool {name} not found in function map.")
                 partial_response.messages.append(
@@ -118,16 +127,21 @@ class Swarm:
                 )
                 continue
             args = json.loads(tool_call.function.arguments)
-            debug_print(
-                debug, f"Processing tool call: {name} with arguments {args}")
+            debug_print(debug, f"Processing tool call: {name} with arguments {args}")
 
             func = function_map[name]
-            # Pass context variables to agent functions if needed
-            if __CTX_VARS_NAME__ in func.__code__.co_varnames:
-                args[__CTX_VARS_NAME__] = context
-            raw_result = function_map[name](**args)
+            
+            # Check if func is a Pydantic model or a callable function
+            if isinstance(func, type) and issubclass(func, BaseModel):
+                # If it's a Pydantic model, create an instance with the arguments
+                raw_result = func(**args)
+            else:
+                # If it's a callable function, check for context variables
+                if hasattr(func, '__code__') and __CTX_VARS_NAME__ in func.__code__.co_varnames:
+                    args[__CTX_VARS_NAME__] = context
+                # Run the function with the arguments and return the result
+                raw_result = func(**args)
 
-            # Process the result of the function call
             result: Result = self.handle_function_result(raw_result, debug)
             partial_response.messages.append(
                 {
@@ -177,13 +191,14 @@ class Swarm:
             if not message.tool_calls or not execute_tools:
                 debug_print(debug, "Ending turn.")
                 break
-
+            # NOTE: Instead of this, we will terminate the connection only once demonstration is complete.
+            
             # Handle function calls, update context, and switch agents if necessary
-            partial_response = self.handle_tool_calls(
-                message.tool_calls, active_agent.functions, context, debug
-            )
+            partial_response = self.handle_tool_calls(message.tool_calls, active_agent.functions, context, debug)
             history.extend(partial_response.messages)
             context.update(partial_response.context)
+            
+            # Switch to the new agent if necessary
             if partial_response.agent:
                 active_agent = partial_response.agent
 

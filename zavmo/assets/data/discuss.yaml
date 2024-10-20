@@ -1,96 +1,41 @@
-stage_name: discuss
+name: Discussion
+stage: 2
 description: >
-  The discuss stage is the third stage of the learner's journey. It is used to define specific learning objectives based on the information gathered in the discover stage. Propose a lesson plan and gather the learner's feedback.
-
-next_stage: deliver
+  The discussion stage is the second stage of the 4-D Learning Journey.
+  It is used to define specific learning objectives based on the information gathered in the discover stage.
+  Propose a lesson plan and gather the learner's feedback.
+instructions: >
+  1. Patiently interact with the learner to gather information about their interests, learning style, and goals.
+  2. Based on the information gathered, use the curriculum-creation tool to propose a lesson plan.
+  3. The curriculum-creation tool will use learning objectives and interest areas to propose a personalized curriculum.
+  4. Propose a suitable timeline for completing the learning plan.
+  5. Review the proposed plan, timeline, and goals alignment with the learner.
+  6. If the learner is satisfied, confirm the plan, timeline, and goals alignment.
+  7. If the learner is not satisfied, go back and refine the plan, timeline, and goals alignment.
+  8. Repeat the above steps until the learner is satisfied with the plan, timeline, and goals alignment.
+examples: >
+  "Let's talk about your interests {learner_name} 🌟. What interests you the most in this field? 🎯"  
+  "Can you tell me a bit more about your past learning experiences, {learner_name}? What worked well for you? 📚🔍"
+  "How do you prefer to learn? (e.g., videos, reading, hands-on activities, or any other) 🎬📚🛠️"  
+  "I've outlined a few key topics that align with your goals. Which ones would you prioritize? 🎯"  
+  "Based on our discussion, here are the modules we've prepared for you > [list of modules]. What do you think? 📚"  
+  "We recommend completing this plan over [Days/Weeks]. Does this timeline suit you? ⏰"  
+  "This is the timeline I suggest based on your availability. How flexible is your schedule for this plan? 📆"
+  "If you had to choose between mastering a single topic or getting a broad overview of several, which would it be? 🌍💡"  
+  "Do you prefer learning in a structured format or with more flexibility to explore at your own pace? 🕒🛠️"  
+  "Absolutely! We'll adjust the modules accordingly. 🛠️"  
+  "Noted! We'll make sure to include those topics. 🎯"  
+  "Do you feel this plan aligns with your goals? 🎯"  
+  "Here is a summary of what we've discussed so far: {summary} 📝 Does this look good to you?"  
+  "Amazing! 🌟 Are you ready to move on to the next stage? 🚀"  
+  "In the next stage, Zavmo will deliver the learning materials and resources personalized to your needs. Are you excited? 🎉"  
+  "No problem! 🌟 Let's go over the plan again and make any necessary adjustments. 📝 I'm here to help you every step of the way. 🚀"  
+  "Great choice! 🌟 We're excited to help you achieve your goals. 🎯 Let's get started. 🚀"  
+  "What would you like to change about the plan? 📝 Let's make it perfect for you. 🚀"  
+completion_condition: >
+  learner approves the details of their areas of interest, learning style, curriculum plan, timeline, and goals alignment
+next_stage: Delivery
 next_stage_description: >
-  The deliver stage is the fourth stage of the learner's journey. It is used to provide the learner with learning materials and resources tailored to their needs.
-
-fields:
-  - field: interest_areas
-    title: interest_areas
-    annotation: str
-    description: Specific areas of interest the learner wants to focus on.
-    probe_questions:
-      - Are there any particular areas you're interested in exploring? 🎯
-      - What topics excite you the most in this field? 🌟
-    user_responses:
-      - I'm particularly interested in data visualization.
-      - Machine learning fascinates me.
-    extract_examples:
-      - "I'm particularly interested in data visualization > interest_areas='Data visualization'"
-      - "Machine learning fascinates me > interest_areas='Machine learning'"
-    probe_responses:
-      - Awesome choice! 🖼️ We'll include more on data visualization.
-      - Great! 🤖 Let's dive into machine learning.
-
-  - field: learning_style
-    title: learning_style
-    annotation: str
-    description: The preferred learning style of the learner (e.g., visual, auditory, kinesthetic).
-    probe_questions:
-      - How do you prefer to learn? (e.g., videos, reading, hands-on activities) 🎬📚🛠️
-      - What's your preferred learning style? 🎯
-    user_responses:
-      - I learn best through hands-on projects.
-      - Watching videos helps me understand better.
-    extract_examples:
-      - "I learn best through hands-on projects > learning_style='Kinesthetic'"
-      - "Watching videos helps me understand better > learning_style='Visual'"
-    probe_responses:
-      - Great! 🛠️ We'll include more hands-on activities.
-      - Understood! 🎥 We'll incorporate video content.
-
-  - field: modules
-    title: modules
-    annotation: str
-    description: >
-      A list of modules or topics that will be included in the learner's personalized learning plan.
-    probe_questions:
-      - Based on our discussion, here are the modules we've prepared for you > [list of modules]. What do you think? 📚
-      - We've selected some modules that align with your goals. Would you like to review them? 🧐
-    user_responses:
-      - This looks perfect!
-      - Can we add more about data visualization?
-      - I'd prefer to focus more on advanced topics.
-    extract_examples:
-      - "Can we add more about data visualization? > modules='Include data visualization module'"
-      - "I'd prefer to focus more on advanced topics > modules='Emphasize advanced modules'"
-    probe_responses:
-      - Absolutely! We'll adjust the modules accordingly. 🛠️
-      - Noted! We'll make sure to include those topics. 🎯
-
-  - field: timeline
-    title: timeline
-    annotation: str
-    description: >
-      Propose a timeline for completing the learning plan.
-    probe_questions:
-      - We recommend completing this plan over [Weeks/Months]. Does this timeline suit you? ⏰
-      - How quickly would you like to progress through the material? 🚀
-    user_responses:
-      - That timeline works for me.
-      - Can we make it shorter?
-      - I'd like a more extended timeline.
-    extract_examples:
-      - "Can we make it shorter? > timeline='Shorter timeline preferred'"
-      - "I'd like a more extended timeline > timeline='Longer timeline preferred'"
-    probe_responses:
-      - Sure, we can adjust the timeline. ⚙️
-      - Absolutely, we'll modify it to fit your schedule. 📅
-
-  - field: goals_alignment
-    title: goals_alignment
-    annotation: str
-    description: Confirmation that the proposed plan aligns with the learner's goals.
-    probe_questions:
-      - Do you feel this plan aligns with your goals? 🎯
-      - Is there anything you'd like to change to better meet your objectives? ✨
-    user_responses:
-      - Yes, this is perfect.
-      - I'd like to spend less time on theory.
-    extract_examples:
-      - "I'd like to spend less time on theory > goals_alignment='Reduce emphasis on theory'"
-    probe_responses:
-      - Noted! 📝 We'll adjust accordingly.
-      - Glad to hear that! 🌟 We're excited to proceed.
+  The Delivery stage is the third stage of the 4-D Learning Journey.
+  The Agent in this stage will provide the learner with learning materials and resources tailored to their needs.
+  The Delivery agent will personalize each lesson based on the curriculum, timeline, and modules discussed in the discussion stage as well as the interest areas and learning style.

@@ -47,7 +47,7 @@ class UserProfile(models.Model):
 
 # Stage 1
 class DiscoverStage(models.Model):
-    sequence = models.OneToOneField('FourDSequence', on_delete=models.CASCADE, related_name='discover_stage')
+    sequence       = models.OneToOneField('FourDSequence', on_delete=models.CASCADE, related_name='discover_stage')
     learning_goals = models.TextField(blank=True, null=True, verbose_name="Learning Goals")
     learning_goal_rationale = models.TextField(blank=True, null=True, verbose_name="Learning Goal Rationale")
     knowledge_level = models.PositiveSmallIntegerField(

@@ -8,12 +8,14 @@ from openai.types.chat.chat_completion_message_tool_call import (
     ChatCompletionMessageToolCall,
     Function,
 )
-from typing import List, Callable, Union, Optional
+from typing import List, Callable, Union, Optional, Type
 # Third-party imports
 from pydantic import BaseModel
 
-AgentFunction = Callable[[], Union[str, "Agent", dict]]
-
+AgentFunction = Union[
+    Callable[..., Union[str, "Agent", dict, BaseModel]],
+    Type[BaseModel]
+]
 
 class Agent(BaseModel):
     name: str = "Agent"
@@ -27,6 +29,7 @@ class Agent(BaseModel):
 class Response(BaseModel):
     messages: List = []
     agent: Optional[Agent] = None
+    tool_calls: List[ChatCompletionMessageToolCall] = []
     context: dict = {}
 
 

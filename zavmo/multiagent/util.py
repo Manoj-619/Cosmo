@@ -1,6 +1,11 @@
 import inspect
+import os
+import codecs
+import yaml
 from datetime import datetime
-
+from typing import Union, Callable
+from pydantic import BaseModel
+import openai
 
 def debug_print(debug: bool, *args: str) -> None:
     if not debug:
@@ -8,7 +13,6 @@ def debug_print(debug: bool, *args: str) -> None:
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     message = " ".join(map(str, args))
     print(f"\033[97m[\033[90m{timestamp}\033[97m]\033[90m {message}\033[0m")
-
 
 def merge_fields(target, source):
     for key, value in source.items():
@@ -28,60 +32,69 @@ def merge_chunk(final_response: dict, delta: dict) -> None:
         merge_fields(final_response["tool_calls"][index], tool_calls[0])
 
 
-def function_to_json(func) -> dict:
+
+
+def function_to_json(func_or_model: Union[Callable, BaseModel]) -> dict:
     """
-    Converts a Python function into a JSON-serializable dictionary
-    that describes the function's signature, including its name,
-    description, and parameters.
+    Converts a Python function or Pydantic BaseModel into a JSON-serializable dictionary
+    that describes the function's signature or model's schema.
 
     Args:
-        func: The function to be converted.
+        func_or_model: The function or Pydantic BaseModel to be converted.
 
     Returns:
-        A dictionary representing the function's signature in JSON format.
+        A dictionary representing the function's signature or model's schema in JSON format.
     """
-    type_map = {
-        str: "string",
-        int: "integer",
-        float: "number",
-        bool: "boolean",
-        list: "array",
-        dict: "object",
-        type(None): "null",
-    }
+    # IMPORTANT: Extended to support pydantic models.
+    if isinstance(func_or_model, type) and issubclass(func_or_model, BaseModel):
+        return openai.pydantic_function_tool(func_or_model)
+    
+    elif callable(func_or_model):
+        type_map = {
+            str: "string",
+            int: "integer",
+            float: "number",
+            bool: "boolean",
+            list: "array",
+            dict: "object",
+            type(None): "null",
+        }
 
-    try:
-        signature = inspect.signature(func)
-    except ValueError as e:
-        raise ValueError(
-            f"Failed to get signature for function {func.__name__}: {str(e)}"
-        )
-
-    parameters = {}
-    for param in signature.parameters.values():
         try:
-            param_type = type_map.get(param.annotation, "string")
-        except KeyError as e:
-            raise KeyError(
-                f"Unknown type annotation {param.annotation} for parameter {param.name}: {str(e)}"
+            signature = inspect.signature(func_or_model)
+        except ValueError as e:
+            raise ValueError(
+                f"Failed to get signature for function {func_or_model.__name__}: {str(e)}"
             )
-        parameters[param.name] = {"type": param_type}
 
-    required = [
-        param.name
-        for param in signature.parameters.values()
-        if param.default == inspect._empty
-    ]
+        parameters = {}
+        for param in signature.parameters.values():
+            try:
+                param_type = type_map.get(param.annotation, "string")
+            except KeyError as e:
+                raise KeyError(
+                    f"Unknown type annotation {param.annotation} for parameter {param.name}: {str(e)}"
+                )
+            parameters[param.name] = {"type": param_type}
 
-    return {
-        "type": "function",
-        "function": {
-            "name": func.__name__,
-            "description": func.__doc__ or "",
-            "parameters": {
-                "type": "object",
-                "properties": parameters,
-                "required": required,
+        required = [
+            param.name
+            for param in signature.parameters.values()
+            if param.default == inspect._empty
+        ]
+
+        return {
+            "type": "function",
+            "function": {
+                "name": func_or_model.__name__,
+                "description": func_or_model.__doc__ or "",
+                "parameters": {
+                    "type": "object",
+                    "properties": parameters,
+                    "required": required,
+                },
             },
-        },
-    }
+        }
+    
+    else:
+        raise ValueError("Input must be either a callable function or a Pydantic BaseModel")

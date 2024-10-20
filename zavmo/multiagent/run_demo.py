@@ -1,10 +1,10 @@
 from core import Swarm
-from agents import discover_agent
+from agents.discover import discover_agent
 
 
 def main():
-    swarm = Swarm()
-    agent = discover_agent
+    swarm    = Swarm()
+    agent    = discover_agent
     messages = []
 
     print("Welcome to the 4D Learning System!")
@@ -17,19 +17,18 @@ def main():
             agent=agent,
             messages=messages,
             context={},
-            debug=False,
-            max_turns=1,
+            debug=True,
+            max_turns=2,
         )
 
         messages.extend(response.messages)
+        # If response contains an agent, switch to it else keep the same agent
         agent = response.agent or agent
 
         for msg in response.messages:
             if msg["role"] == "assistant":
                 print(f"{agent.name}: {msg['content']}")
 
-        if input("Continue? (y/n): ").lower() != 'y':
-            break
 
 
 if __name__ == "__main__":

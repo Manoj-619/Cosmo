@@ -1,94 +1,26 @@
-stage_name: discover
+name: Discovery
+stage: 1
 description: >
-  The discover stage is the second stage of the learner's journey. It is used to gather information about the learner's interests, goals, learning style, and current knowledge level in their chosen area of study.
-next_stage: discuss
+  The Discovery stage is the first stage of the 4-D Learning Journey. It is designed to gather information about the learner’s interests, goals, learning style, and current knowledge level to set the foundation for their personalized learning path.
+instructions: >
+  1. Interact with the learner to gather information on their interests, goals, and learning preferences.
+  2. Ask probing questions to understand their current knowledge level and what they aim to achieve.
+  3. Identify areas where the learner plans to apply their new skills.
+  4. Record the learner's responses to tailor their learning experience.
+  5. Summarize the information gathered to the learner and ask for confirmation.
+  6. If the learner is satisfied, confirm the information and transfer to the Discussion Agent.
+  7. If the learner is not satisfied, repeat the above steps until the learner is satisfied with the summary.
+examples: >
+  "What specific topics would you like to learn about, {learner_name}? 🎯"  
+  "Can you share your top learning goals with me? 📚"  
+  "How would you rate your current knowledge level in these areas? (1: Beginner to 4: Expert) 📊"
+  "In what areas of your life or work do you plan to apply your new knowledge? 🌍"
+  "What motivated you to choose these learning objectives? 🌱"
+  "Can you give me an example of a real-world situation where you'd apply what you learn? 🛠️"
+  "Based on your goals, we will create a tailored plan for you in the next stage. Does that sound good? 🚀"
+completion_condition: >
+  Learner provides information about their interests, learning goals, current knowledge level, and application areas.
+next_stage: Discussion
 next_stage_description: >
-  The discuss stage is the third stage of the learner's journey. It is used to define specific learning objectives based on the information gathered in the discover stage.
-fields:
-  - field: learning_goals
-    title: learning_goals
-    annotation: str
-    description: A list of learning goals, each containing a topic and a reason.
-    probe_questions:
-      - What specific topics would you like to learn about? 🎯
-      - Can you share your top learning goals with me? 📚
-      - What areas are you most excited to explore and why? 🌟
-      - What skills or knowledge do you want to gain from this journey? 🚀
-    user_responses:
-      - I want to learn Python programming to automate my work tasks
-      - My goal is to understand machine learning basics for data analysis
-      - I'd like to improve my public speaking skills for presentations
-    extract_examples:
-      - 'I want to learn Python programming to automate my work tasks > learning_goals="Python programming"'
-      - 'My goal is to understand machine learning basics for data analysis > learning_goals="Machine learning basics"'
-      - 'I''d like to improve my public speaking skills for presentations > learning_goals="Public speaking"'
-    probe_responses:
-      - Great goals, [first_name]! 🌟 Your ambition is inspiring. Can you tell me more about why these goals are important to you?
-      - Excellent choices! 🚀 These goals will definitely enhance your skills. How do you think achieving these goals will impact your career or personal life?
-      - Fantastic learning objectives! 📚 I'm excited to help you reach them. Is there anything specific within these topics you're particularly interested in?
-
-  - field: learning_goal_rationale
-    title: learning_goal_rationale
-    annotation: str
-    description: The learner's explanation of why their learning goals are important to them.
-    probe_questions:
-      - Why are these learning goals important to you? 🤔
-      - How do you think achieving these goals will benefit you? 💡
-      - What motivated you to choose these particular learning objectives? 🌱
-      - How do these goals align with your personal or professional aspirations? 🎯
-    user_responses:
-      - These skills will help me advance in my career and take on more responsibilities
-      - I'm passionate about technology and want to stay up-to-date with the latest trends
-      - Improving these areas will boost my confidence and open up new opportunities
-    extract_examples:
-      - These skills will help me advance in my career and take on more responsibilities > learning_goal_rationale="Career advancement and increased responsibilities"
-      - I'm passionate about technology and want to stay up-to-date with the latest trends > learning_goal_rationale="Passion for technology and staying current in the field"
-      - Improving these areas will boost my confidence and open up new opportunities > learning_goal_rationale="Boost confidence and create new opportunities"
-    probe_responses:
-      - Thank you for sharing that, [first_name]! 🌟 Your motivation is clear and inspiring. Now, let's talk about your current knowledge level in these areas.
-      - I appreciate your thoughtful response! 🚀 Your goals are well-aligned with your aspirations. Can you tell me about your existing knowledge in these topics?
-      - That's a great rationale, [first_name]! 💪 Your determination will surely lead to success. Let's assess your current knowledge level to tailor your learning journey.
-
-  - field: knowledge_level
-    title: knowledge_level
-    annotation: int
-    description: The learner's self-assessed knowledge level in their chosen area of study (1 for Beginner, 2 for Intermediate, 3 for Advanced, 4 for Expert).
-    probe_questions:
-      - "How would you rate your current knowledge level in your chosen topics? (1: Beginner, 2: Intermediate, 3: Advanced, 4: Expert) 📊"
-      - "On a scale of 1 to 4, with 1 being Beginner and 4 being Expert, where would you place your current understanding? 🧠"
-      - "What's your familiarity with the subjects you want to learn? (1: Beginner to 4: Expert) 🎓"
-    user_responses:
-      - I'm a beginner in Python programming
-      - I'd say I'm at an intermediate level in data analysis
-      - I have some experience, so maybe a 2 out of 4
-    extract_examples:
-      - I'm a beginner in Python programming > knowledge_level=1
-      - I'd say I'm at an intermediate level in data analysis > knowledge_level=2
-      - I have some experience, so maybe a 2 out of 4 > knowledge_level=2
-    probe_responses:
-      - Got it, [first_name]! 📚 Understanding your current level helps us create the perfect learning path for you. Now, let's explore how you plan to apply your new knowledge.
-      - Thanks for sharing that, [first_name]! 🌟 Knowing where you're starting from is crucial for your learning journey. Can you tell me how you plan to use these skills in real-life situations?
-      - Excellent, [first_name]! 🚀 We'll make sure to provide content that matches your current level and helps you grow. Lastly, in what areas of your life or work do you see yourself applying these new skills?
-
-  - field: application_area
-    title: application_area
-    annotation: str
-    description: The specific areas or contexts where the learner plans to apply their new knowledge and skills.
-    probe_questions:
-      - In what specific areas of your life or work do you plan to apply your new knowledge? 🌍
-      - How do you envision using these skills in your day-to-day activities? 💼
-      - Can you give me an example of a real-world situation where you'd apply what you learn? 🛠️
-      - What projects or tasks do you have in mind that would benefit from your new skills? 🏗️
-    user_responses:
-      - I want to use Python to automate report generation at work
-      - I plan to apply machine learning techniques to analyze customer data in my company
-      - I'll use my improved public speaking skills for team presentations and client meetings
-    extract_examples:
-      - I want to use Python to automate report generation at work > application_area="Automating work reports using Python"
-      - I plan to apply machine learning techniques to analyze customer data in my company > application_area="Analyzing customer data with machine learning"
-      - I'll use my improved public speaking skills for team presentations and client meetings > application_area="Team presentations and client meetings"
-    probe_responses:
-      - That's a fantastic application, [first_name]! 🌟 Your learning journey is going to have a real impact. We're all set to start crafting your personalized learning experience!
-      - Excellent plan, [first_name]! 🚀 Applying your skills to real-world scenarios will reinforce your learning. Let's get started on your exciting educational journey!
-      - Great thinking, [first_name]! 💡 Your practical approach will make your learning even more valuable. We're ready to help you achieve your goals and apply your new skills effectively!
-
+  The Discussion stage is the second stage of the 4-D Learning Journey.
+  The agent in this stage will define specific learning objectives and propose a personalized curriculum based on the information gathered during Discovery.
