@@ -16,6 +16,9 @@ psycopg[pool]   # for connection pooling
 # supervisor
 # superlance
 
+# For testing
+rich
+
 
 # LLM
 anthropic
