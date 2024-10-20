@@ -79,13 +79,6 @@ class Swarm:
         match result:
             case Result() as result:
                 return result
-            case BaseModel() as model:
-                return Result(
-                    value=str(model), # IMPORTANT: Wherever we have to, customize the __str__ method.
-                    agent=None,
-                    context={},
-                    tool_calls=[],
-                )
             case Agent() as agent:
                 # If the result is an Agent, create a Result object for agent handoff
                 return Result(
@@ -93,15 +86,23 @@ class Swarm:
                     agent=agent,
                     context={},
                 )
+            case BaseModel() as model:
+                return Result(
+                    value=str(model),
+                    agent=None,
+                    context={},
+                    tool_calls=[],
+                )
             case _:
-                # For other types, attempt to convert to string. 
-                # # IMPORTANT: Always add the __str__ method to the Any pydantic models.
+                # For other types, attempt to convert to string
                 try:
                     return Result(value=str(result))
                 except Exception as e:
                     error_message = f"Failed to cast response to string: {result}. Make sure agent functions return a string or Result object. Error: {str(e)}"
                     debug_print(debug, error_message)
                     raise TypeError(error_message)
+
+
 
     def handle_tool_calls(
         self,
@@ -153,6 +154,7 @@ class Swarm:
             )
             partial_response.context.update(result.context)
             if result.agent:
+                debug_print(debug, f"Partial response agent: {result.agent}")
                 partial_response.agent = result.agent
 
         return partial_response
@@ -191,7 +193,6 @@ class Swarm:
             if not message.tool_calls or not execute_tools:
                 debug_print(debug, "Ending turn.")
                 break
-            # NOTE: Instead of this, we will terminate the connection only once demonstration is complete.
             
             # Handle function calls, update context, and switch agents if necessary
             partial_response = self.handle_tool_calls(message.tool_calls, active_agent.functions, context, debug)
@@ -201,6 +202,7 @@ class Swarm:
             # Switch to the new agent if necessary
             if partial_response.agent:
                 active_agent = partial_response.agent
+                debug_print(debug, f"Switching to new agent: {active_agent.name}")
 
         # Return the final response
         return Response(
