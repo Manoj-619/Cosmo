@@ -4,8 +4,8 @@ celerybeat-schedule*.bak
 celerybeat-schedule*.dat
 celerybeat-schedule*.dir
 .cursorignore
-zavmo/agents/
-zavmo/agents/examples/**/*.json
+zavmo/multiagent/examples/
+zavmo/multiagent/examples/**/*.json
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
