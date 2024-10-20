@@ -35,19 +35,12 @@ def transfer_back_to_discussion_agent():
     print("Transferring back to Discussion Agent...")
     return discuss_agent
 
-curriculum_agent.functions.append(transfer_back_to_discussion_agent)
-
-def request_curriculum():
-    """Request the Curriculum Specialist to generate a curriculum."""
-    print("Requesting Curriculum Specialist to generate a curriculum...")
-    return curriculum_agent
 
 
 discuss_agent = Agent(
     name="Discussion",
     instructions=get_agent_instructions('discuss'),
     functions=[
-        request_curriculum,
         UpdateDiscussionData,
         transfer_to_delivery_agent
     ],
@@ -55,3 +48,13 @@ discuss_agent = Agent(
     tool_choice='auto',
     model="gpt-4o"
 )
+
+
+def request_curriculum():
+    """Request the Curriculum Specialist to generate a curriculum."""
+    print("Requesting Curriculum Specialist to generate a curriculum...")
+    return curriculum_agent
+
+
+curriculum_agent.functions.append(transfer_back_to_discussion_agent)
+discuss_agent.functions.append(request_curriculum)

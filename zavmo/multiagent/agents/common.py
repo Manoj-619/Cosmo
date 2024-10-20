@@ -89,7 +89,7 @@ curriculum_agent = Agent(
     model="gpt-4o",
     functions=[Curriculum],
     parallel_tool_calls=False,
-    tool_choice='auto'
+    tool_choice='required'
 )
 
 lesson_specialist_agent = Agent(
@@ -99,7 +99,7 @@ lesson_specialist_agent = Agent(
     model="gpt-4o-mini",
     functions=[Lesson],
     parallel_tool_calls=False,
-    tool_choice='auto'
+    tool_choice='required'
 )
 
 def get_agent_instructions(stage_name: str) -> str:
