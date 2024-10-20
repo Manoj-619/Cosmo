@@ -1,6 +1,5 @@
 from django.db import models
 from django.contrib.auth.models import User
-from .utils import parse_curriculum
 
 class Org(models.Model):
     org_id   = models.CharField(max_length=50, primary_key=True)
@@ -9,30 +8,17 @@ class Org(models.Model):
     def __str__(self):
         return self.org_name
 
-
-class LearnerJourney(models.Model):
-    class Stage(models.IntegerChoices):
-        PROFILE = 1, 'profile'
-        DISCOVER = 2, 'discover'
-        DISCUSS = 3, 'discuss'
-        DELIVER = 4, 'deliver'
-        DEMONSTRATE = 5, 'demonstrate'
-
-    user = models.OneToOneField(
-        User, on_delete=models.CASCADE, related_name='learner_journey', primary_key=True)
-    stage = models.PositiveSmallIntegerField(
-        choices=Stage.choices, default=Stage.PROFILE)
-    org = models.ForeignKey(Org, on_delete=models.SET_NULL,
-                            null=True, blank=True, related_name='learner_journeys')
-
-
-    def __str__(self):
-        return f"{self.user.username} - Stage: {self.get_stage_display()}"
-
-
-# Stage 1 or (0th D)
-class ProfileStage(models.Model):
+# NOTE: USED ONLY ONCE PER USER, DURING ONBOARDING
+class UserProfile(models.Model):
+    """
+    Profile stage model.
+    NOTE: 
+    - This is not a part of the 4d sequence framework.
+    - This should be used only once per user, during onboarding.
+    - We don't need to connect this to 4d sequences via foreign keys because we could have multiple 4d sequences per user.
+    """
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile_stage', verbose_name="User")
+    org = models.ForeignKey(Org, on_delete=models.SET_NULL, null=True, blank=True)
     first_name = models.CharField(max_length=100, blank=True, null=True, verbose_name="First Name")
     last_name = models.CharField(max_length=100, blank=True, null=True, verbose_name="Last Name")
     age = models.PositiveIntegerField(null=True, blank=True, verbose_name="Age")    
@@ -59,9 +45,9 @@ class ProfileStage(models.Model):
         self.current_role = ''
         self.save()
 
-# Stage 2 or (1st D)
+# Stage 1
 class DiscoverStage(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='discover_stage', verbose_name="User")
+    sequence = models.OneToOneField('FourDSequence', on_delete=models.CASCADE, related_name='discover_stage')
     learning_goals = models.TextField(blank=True, null=True, verbose_name="Learning Goals")
     learning_goal_rationale = models.TextField(blank=True, null=True, verbose_name="Learning Goal Rationale")
     knowledge_level = models.PositiveSmallIntegerField(
@@ -83,9 +69,9 @@ class DiscoverStage(models.Model):
         self.application_area = ''
         self.save()
 
-# Stage 3 or (2nd D)
+# Stage 2
 class DiscussStage(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='discuss_stage', verbose_name="User")
+    sequence = models.OneToOneField('FourDSequence', on_delete=models.CASCADE, related_name='discuss_stage')
     interest_areas = models.TextField(blank=True, null=True, verbose_name="Interest Areas") 
     learning_style = models.TextField(blank=True, null=True, verbose_name="Learning Style")
     curriculum = models.JSONField(blank=True, null=True, verbose_name="Curriculum Plan")
@@ -112,9 +98,9 @@ class DiscussStage(models.Model):
     #     self.save()
 
 
-# Stage 4 or (3rd D)
+# Stage 3
 class DeliverStage(models.Model):
-    user      = models.OneToOneField(User, on_delete=models.CASCADE, related_name='deliver_stage', verbose_name="User")
+    sequence = models.OneToOneField('FourDSequence', on_delete=models.CASCADE, related_name='deliver_stage')
     modules   = models.TextField(blank=True, null=True, verbose_name="Modules")
     timeline  = models.TextField(blank=True, null=True, verbose_name="Timeline")
     resources = models.TextField(blank=True, null=True, verbose_name="Resources")
@@ -125,9 +111,9 @@ class DeliverStage(models.Model):
         self.resources = ''
         self.save()
 
-# Stage 5 or (4th D)
+# Stage 4
 class DemonstrateStage(models.Model):
-    user                = models.OneToOneField(User, on_delete=models.CASCADE, related_name='demonstrate_stage', verbose_name="User")
+    sequence = models.OneToOneField('FourDSequence', on_delete=models.CASCADE, related_name='demonstrate_stage')
     topics              = models.TextField(blank=True, null=True, verbose_name="Topics")
     summary             = models.TextField(blank=True, null=True, verbose_name="Summary")
     understanding_levels = models.PositiveSmallIntegerField(
@@ -149,3 +135,25 @@ class DemonstrateStage(models.Model):
         self.feedback = ''
         self.save()
 
+
+class FourDSequence(models.Model):
+    class Stage(models.IntegerChoices):
+        DISCOVER = 1, 'discover'
+        DISCUSS = 2, 'discuss'
+        DELIVER = 3, 'deliver'
+        DEMONSTRATE = 4, 'demonstrate'
+        COMPLETED = 5, 'completed'
+        
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='four_d_sequences')
+    org = models.ForeignKey(Org, on_delete=models.SET_NULL, null=True, blank=True)
+    title      = models.CharField(max_length=255)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    current_stage = models.PositiveSmallIntegerField(choices=Stage.choices, default=Stage.DISCOVER)
+
+    def __str__(self):
+        return f"{self.user.username} - {self.title}"
+
+    @property
+    def stage_display(self):
+        return dict(self.Stage.choices)[self.current_stage]

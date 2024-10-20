@@ -4,7 +4,8 @@ from celery import shared_task
 from sqlalchemy import desc
 from zavmo.celery import app as celery_app
 # Import models
-from stage_app.models import LearnerJourney, ProfileStage, DiscoverStage, DiscussStage, DeliverStage, DemonstrateStage
+from stage_app.models import LearnerJourney, UserProfile, DiscoverStage, DiscussStage, DeliverStage, DemonstrateStage, FourDSequence
+from stage_app.serializers import UserProfileSerializer
 # Import constants
 from helpers.constants import USER_PROFILE_SUFFIX, HISTORY_SUFFIX, STAGE_ORDER
 from helpers.chat import get_prompt, force_tool_call, get_openai_completion, create_message_payload, summarize_history, summarize_stage_data
@@ -15,62 +16,70 @@ logger = get_logger(__name__)
 
 
 @celery_app.task(bind=True, name='manage_stage_data')
-def manage_stage_data(self, user_email, stage_name='profile', action=None):
+def manage_stage_data(self, sequence_id, action=None):
     """Extract stage data from the user's history"""
-    logger.info(f"Starting manage_stage_data task for user: {user_email}, stage: {stage_name}, action: {action}")
+    logger.info(f"Starting manage_stage_data task for sequence: {sequence_id}, action: {action}")
     
-    profile_cache_key = f"{user_email}_{USER_PROFILE_SUFFIX}"
-    profile_data      = cache.get(profile_cache_key)
+    sequence = FourDSequence.objects.get(id=sequence_id)
+    user = sequence.user
+    current_stage = sequence.current_stage
+    stage_instance = getattr(sequence, f'{current_stage}_stage')
     
-    if not profile_data:
-        logger.error(f"No profile data found for user: {user_email}")
-        return {'status': 'error', 'message': 'No profile data found'}
+    profile_stage = UserProfile.objects.get(user=user)
+    profile_data = UserProfileSerializer(profile_stage).data
     
-    stage_data = profile_data['stage_data'][stage_name]
-    logger.debug(f"Stage data: {stage_data}")
-
-    history_key = f"{user_email}_{stage_name}_{HISTORY_SUFFIX}"
-    history_data = cache.get(history_key)
+    message_key = f"{user.email}_{sequence_id}_{current_stage}_{HISTORY_SUFFIX}"
+    history_data = cache.get(message_key, [])
     
     conversation_summary = summarize_history(history_data)    
-    stage_config         = get_yaml_data(stage_name)
+    stage_config = get_yaml_data(current_stage)
     
-    required_fields  = [f['title'] for f in stage_config['fields']]
-    profile_summary = summarize_stage_data(profile_data['stage_data'][stage_name], stage_name)
+    required_fields = [f['title'] for f in stage_config['fields']]
+    profile_summary = summarize_stage_data(profile_data, 'profile')
+    stage_summary = summarize_stage_data(stage_instance.__dict__, current_stage)
     
-    system_message = create_system_message(stage_name, stage_config, mode='extract')
+    system_message = create_system_message(current_stage, stage_config, mode='extract')
     
-    user_message = f"""The learner is at the **{stage_name}** stage.
-    This is the (unverified) information we have about the learner:
+    user_message = f"""
+    Here is what we know about the learner:
         {profile_summary}
-
+    
+    Current stage ({current_stage}) information:
+        {stage_summary}
+           
     Here is the summary of the conversation:
         {conversation_summary}
                     
     Which of the following fields can we add or update about the learner?
         {', '.join(required_fields)}
     """
-    message_payload = create_message_payload(user_message,  system_message, [], max_tokens=10000)
+    message_payload = create_message_payload(user_message, system_message, [], max_tokens=10000)
     models = [create_pydantic_model(name=f['title'], description=f['description'], fields=[f]) for f in stage_config['fields']]
-        
+    
     extraction_tools = force_tool_call(models,
                                        message_payload, 
                                        model='gpt-4o',
                                        tool_choice='required',
                                        parallel_tool_calls=True)
     
-
     for tool in extraction_tools:
-        stage_data.update(tool.dict())
-        
-    # Update cache
-    profile_data['stage_data'][stage_name] = stage_data
-    cache.set(profile_cache_key, profile_data)
+        for field, value in tool.dict().items():
+            setattr(stage_instance, field, value)
+    
+    stage_instance.save()
     
     if action == 'finish':
-        finish_stage(user_email, stage_name, stage_data)
-    else:
-        return {'status': 'success', 'message': f"Extracted fields: {stage_data}"}
+        # Move to the next stage
+        stages = ['discover', 'discuss', 'deliver', 'demonstrate']
+        current_index = stages.index(current_stage)
+        next_index = (current_index + 1) % len(stages)
+        sequence.current_stage = stages[next_index]
+        sequence.save()
+        
+        # Clear the cache for the completed stage
+        cache.delete(message_key)
+    
+    return {'status': 'success', 'message': f"Extracted fields for {current_stage} stage"}
     
     
 def finish_stage(user_email, stage_name, stage_data):
@@ -78,7 +87,7 @@ def finish_stage(user_email, stage_name, stage_data):
     stage_data   = profile_data['stage_data'][stage_name]
     
     stage_models = {
-        'profile': ProfileStage,
+        'profile': UserProfile,
         'discover': DiscoverStage,
         'discuss': DiscussStage,
         'deliver': DeliverStage,

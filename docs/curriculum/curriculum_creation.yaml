@@ -1,0 +1,72 @@
+model: gpt-4o
+max_tokens: 10000
+temperature: 0.7
+
+system_message: |
+  You are an expert curriculum designer. Your task is to create a detailed, 
+  personalized curriculum based on the learner's profile and interests. This curriuculum should follow the OFQUAL schema that you have been provided with.
+
+user_message_template: |
+  Create a OFQUAL curriculum for a learner with the following profile:
+  {profile_summary}, {learning_style}
+  
+  The curriculum should be tailored to their background, interests, and learning goals.
+
+response:
+  title: Curriculum
+  description: A structured curriculum tailored to the learner's profile
+  fields:
+    - name: title
+      type: string
+      description: The title of the curriculum
+    - name: subject
+      type: string
+      description: The main subject area of the curriculum
+    - name: level
+      type: string
+      description: The difficulty level of the curriculum
+    - name: modules
+      type: array
+      items:
+        type: object
+        properties:
+          title: 
+            type: string
+          learning_outcomes:
+            type: array
+            items:
+              type: object
+              properties:
+                description:
+                  type: string
+                assessment_criteria:
+                  type: array
+                  items:
+                    type: string
+          lessons:
+            type: array
+            items:
+              type: object
+              properties:
+                title:
+                  type: string
+                content:
+                  type: string
+                duration:
+                  type: integer
+          duration:
+            type: integer
+    - name: prerequisites
+      type: array
+      items:
+        type: string
+    - name: qualification_level
+      type: integer
+    - name: guided_learning_hours
+      type: integer
+    - name: total_qualification_time
+      type: integer
+    - name: assessment_methods
+      type: array
+      items:
+        type: string

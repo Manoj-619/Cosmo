@@ -1,0 +1,62 @@
+# TODO //he Purpose of this file is to take the current {curriculum} and then turn it into a set of exam questions
+
+# These exams should make use of the delivery summaries too. taking them as context which will then allow the Zavmo 
+# to better create an exam.
+
+model: gpt-4o
+max_tokens: 10000
+temperature: 0.7
+
+system_message: |
+  You are an expert exam creator specializing in creating assessments based on curricula and learning summaries. Your task is to generate a comprehensive exam that accurately assesses the learner's understanding of the material covered in their personalized curriculum.
+
+user_message_template: |
+  Create an exam based on the following curriculum and delivery summaries:
+  
+  Curriculum: {curriculum}
+  Delivery Summaries: {delivery_summaries}
+  
+  The exam should cover key concepts from the curriculum and reflect the depth of understanding expected based on the delivery summaries.
+
+response:
+  title: Exam
+  description: A structured exam based on the learner's curriculum and progress
+  fields:
+    - name: exam_title
+      type: string
+      description: The title of the exam
+    - name: total_questions
+      type: integer
+      description: The total number of questions in the exam
+    - name: time_limit
+      type: integer
+      description: The time limit for the exam in minutes
+    - name: sections
+      type: array
+      items:
+        type: object
+        properties:
+          title:
+            type: string
+            description: The title of the exam section
+          questions:
+            type: array
+            items:
+              type: object
+              properties:
+                question_type:
+                  type: string
+                  enum: [multiple_choice, short_answer, essay]
+                question_text:
+                  type: string
+                options:
+                  type: array
+                  items:
+                    type: string
+                correct_answer:
+                  type: string
+                points:
+                  type: integer
+    - name: passing_score
+      type: integer
+      description: The minimum score required to pass the exam

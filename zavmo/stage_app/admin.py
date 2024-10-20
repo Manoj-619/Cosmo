@@ -1,8 +1,8 @@
 from django.contrib import admin
 from .models import (
     Org, 
-    LearnerJourney,
-    ProfileStage, 
+    FourDSequence,
+    UserProfile, 
     DiscoverStage, 
     DiscussStage, 
     DeliverStage, 
@@ -10,8 +10,8 @@ from .models import (
 )
 
 admin.site.register(Org)
-admin.site.register(LearnerJourney)
-admin.site.register(ProfileStage)
+admin.site.register(FourDSequence)
+admin.site.register(UserProfile)
 admin.site.register(DiscoverStage)
 admin.site.register(DiscussStage)
 admin.site.register(DeliverStage)

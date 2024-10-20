@@ -12,10 +12,10 @@ from zavmo.authentication import CustomJWTAuthentication
 from django.db import IntegrityError
 from django.core.cache import cache
 from django.contrib.auth.models import User
-from stage_app.models import Org, LearnerJourney, ProfileStage, DiscoverStage, DiscussStage, DeliverStage, DemonstrateStage
+from stage_app.models import Org, UserProfile, FourDSequence
 from stage_app.serializers import (
-    UserDetailSerializer, LearnerJourneySerializer, ProfileStageSerializer, DiscoverStageSerializer, 
-    DiscussStageSerializer, DeliverStageSerializer, DemonstrateStageSerializer
+    UserDetailSerializer, UserProfileSerializer, 
+    FourDSequenceSerializer, DetailedFourDSequenceSerializer
 )
 from helpers.chat import force_tool_call, create_message_payload, summarize_history, summarize_stage_data, summarize_profile
 from helpers.functions import create_model_fields, create_pydantic_model, get_yaml_data, create_system_message
@@ -26,72 +26,41 @@ from stage_app.tasks.extraction import manage_stage_data
 logger = logging.getLogger(__name__)
 
 
-# Utility function to get stage data
-def add_stage_data(stage_name, user):
-    """
-    Helper function to add stage data for a specific stage and user.
-    Returns an empty dict if no data is found or all values are null.
-    """
-    stages = {
-        'profile': ProfileStageSerializer,
-        'discover': DiscoverStageSerializer,
-        'discuss': DiscussStageSerializer,
-        'deliver': DeliverStageSerializer,
-        'demonstrate': DemonstrateStageSerializer
-    }
+'''
+# NOTE: with the new 4d sequence framework, we dont need this utility function.
 
-    if stage_name not in stages:
-        return {}
+# TODO: create a new utility function to get stage data from a specific sequence
 
-    serializer_class = stages[stage_name]
-    try:
-        stage_instance = getattr(user, f'{stage_name}')
-        stage_serializer = serializer_class(stage_instance)
-        stage_data = stage_serializer.data
-        if any(stage_data.values()):  # Check if any field has a non-null value
-            return {stage_name: stage_data}
-    except AttributeError:
-        pass
+# # Utility function to get stage data
+# def add_stage_data(stage_name, user):
+#     """
+#     Helper function to add stage data for a specific stage and user.
+#     Returns an empty dict if no data is found or all values are null.
+#     """
+#     stages = {
+#         'profile': UserProfileSerializer,
+#         'discover': DiscoverStageSerializer,
+#         'discuss': DiscussStageSerializer,
+#         'deliver': DeliverStageSerializer,
+#         'demonstrate': DemonstrateStageSerializer
+#     }
 
-    return {stage_name: {}}
+#     if stage_name not in stages:
+#         return {}
 
-def get_user_profile_data(user, use_cache=True):
-    """
-    Retrieve user profile data from cache if available, otherwise from the database.
-    """
-    cache_key = f"{user.email}_{USER_PROFILE_SUFFIX}"
-    
-    # Try to get data from cache
-    if use_cache:
-        cached_data = cache.get(cache_key)
-        if cached_data:
-            return cached_data
+#     serializer_class = stages[stage_name]
+#     try:
+#         stage_instance = getattr(user, f'{stage_name}')
+#         stage_serializer = serializer_class(stage_instance)
+#         stage_data = stage_serializer.data
+#         if any(stage_data.values()):  # Check if any field has a non-null value
+#             return {stage_name: stage_data}
+#     except AttributeError:
+#         pass
 
-    # If not in cache, fetch from database
-    learner_journey = LearnerJourney.objects.filter(user=user).first()
-    if not learner_journey:
-        return None
+#     return {stage_name: {}}
 
-    learner_journey_data = LearnerJourneySerializer(learner_journey).data
-
-    # Get stage data for all stages
-    stage_data = {}
-    for stage_name in ['profile', 'discover', 'discuss', 'deliver', 'demonstrate']:
-        stage_info = add_stage_data(stage_name, user)
-        if stage_info:
-            stage_data.update(stage_info)
-    
-    # Combine profile data with stage data
-    profile_data = {
-        **learner_journey_data,
-        'stage_data': stage_data
-    }
-
-    # Cache the data without a timeout
-    cache.set(cache_key, profile_data)
-
-    return profile_data
-
+'''
 
 # Endpoint: /api/org/create/
 @api_view(['POST'])
@@ -130,7 +99,7 @@ def sync_user(request):
     """
     serializer = UserDetailSerializer(data=request.data, context={'request': request})
     if serializer.is_valid():
-        email  = serializer.validated_data['email']
+        email = serializer.validated_data['email']
         org_id = request.data.get('org_id')
 
         # Validate org_id presence and existence
@@ -150,44 +119,33 @@ def sync_user(request):
             if created:
                 message = "User created successfully."
                 status_code = status.HTTP_201_CREATED
-                try:
-                    learner_journey = LearnerJourney.objects.create(user=user, org=org)
-                    stage = learner_journey.stage
-                    logger.info(f"LearnerJourney created for user {user.username}")
-                except Exception as e:
-                    logger.error(f"Error creating learner journey for user {user.username}: {str(e)}")
-                    user.delete()
-                    return Response({"error": f"An error occurred while creating the learner journey: {str(e)}"},
-                                    status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                UserProfile.objects.create(user=user)
+                logger.info(f"UserProfile created for user {user.username}")
             else:
                 message = "User already exists."
                 status_code = status.HTTP_200_OK
-                learner_journey = LearnerJourney.objects.filter(user=user).first()
-                if learner_journey:
-                    if learner_journey.org != org:
-                        learner_journey.org = org
-                        learner_journey.save()
-                    stage = learner_journey.stage
-                else:
-                    try:
-                        learner_journey = LearnerJourney.objects.create(user=user, org=org)
-                        stage = learner_journey.stage
-                        logger.info(f"LearnerJourney created for existing user {user.username}")
-                    except Exception as e:
-                        logger.error(f"Error creating learner journey for existing user {user.username}: {str(e)}")
-                        return Response({"error": f"An error occurred while creating the learner journey: {str(e)}"},
-                                        status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-            
-            # Fetch the organization details
-            org = Org.objects.filter(org_id=org_id).first()
-            org_name = org.org_name if org else None
-            
+
+            # Get or create the latest 4D sequence
+            sequence = FourDSequence.objects.filter(user=user).order_by('-created_at').first()
+            if not sequence:
+                sequence = FourDSequence.objects.create(
+                    user=user,
+                    org=org,
+                    title='Default Sequence'
+                )
+                logger.info(f"New FourDSequence created for user {user.username}")
+            elif sequence.org != org:
+                sequence.org = org
+                sequence.save()
+                logger.info(f"Updated org for existing FourDSequence of user {user.username}")
+
             return Response({
                 "message": message,
                 "email": user.email,
-                "stage": stage,
+                "stage": sequence.current_stage,
                 "org_id": org_id,
-                "org_name": org_name
+                "org_name": org.org_name,
+                "sequence_id": sequence.id
             }, status=status_code)
         
         except IntegrityError as e:
@@ -203,71 +161,76 @@ def sync_user(request):
 @permission_classes([IsAuthenticated])
 def get_user_profile(request):
     """
-    API to retrieve the user's complete profile data.
+    Retrieve user profile data and all 4D sequences.
     """
     user = request.user
-    use_cache = request.GET.get('use_cache', 'true').lower() == 'true'
-    profile_data = get_user_profile_data(user, use_cache=use_cache)
+    profile_stage = get_object_or_404(UserProfile, user=user)
+    sequences = FourDSequence.objects.filter(user=user)
     
-    if profile_data is None:
-        return Response({"error": "User profile not found"}, status=status.HTTP_404_NOT_FOUND)
-
-    return Response(profile_data)
-
+    profile_data   = UserProfileSerializer(profile_stage).data
+    # NOTE: Perhaps we should just get some basic info about the last K sequences that have not been `completed`
+    sequences_data = FourDSequenceSerializer(sequences, many=True).data
+    
+    return Response({
+        'profile': profile_data,
+        'sequences': sequences_data
+    })
 
 @api_view(['POST'])
 @authentication_classes([CustomJWTAuthentication])
 @permission_classes([IsAuthenticated])
-def reset_all(request):
-    """Delet all cache, and reset learner journey"""
+def create_sequence(request):
+    """
+    Create a new 4D sequence for the user.
+    """
     user = request.user
-    cache.delete_many([f"{user.email}_{USER_PROFILE_SUFFIX}",
-                      f"{user.email}_{HISTORY_SUFFIX}"])
-    # reset learner journey to 1st stage
-    learner_journey = LearnerJourney.objects.filter(user=user).first()
-    learner_journey.stage = 1
-    learner_journey.save()
-    
-    stage_models = [ProfileStage, DiscoverStage, DiscussStage, DeliverStage, DemonstrateStage]  
-    for stage_model in stage_models:
-        stage   = stage_model.objects.filter(user=user).first()
-        if stage:
-            stage.reset()
-    
-    return Response({"message": "All cache and learner journey reset successfully"}, status=status.HTTP_200_OK)
-    
-    
+    serializer = FourDSequenceSerializer(data=request.data)
+    if serializer.is_valid():
+        serializer.save(user=user)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-# Endpoint: /api/chat/
-@api_view(['POST','OPTIONS'])
+@api_view(['GET'])
 @authentication_classes([CustomJWTAuthentication])
-#@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated])
+def get_sequence_detail(request, sequence_id):
+    """
+    Retrieve details of a specific 4D sequence.
+    """
+    sequence = get_object_or_404(FourDSequence, id=sequence_id, user=request.user)
+    serializer = DetailedFourDSequenceSerializer(sequence)
+    return Response(serializer.data)
+
+@api_view(['POST'])
+@authentication_classes([CustomJWTAuthentication])
+@permission_classes([IsAuthenticated])
 def chat_view(request):
     """Handles chat sessions between a user and the AI assistant."""
-    user            = request.user
-    profile_data    = get_user_profile_data(user) # Get user profile data either from cache or database
-    # Get stage data and stage name from profile data
-    stage_name      = profile_data['stage_name']
-    stage           = profile_data['stage']
-    stage_data      = profile_data['stage_data'] # All stage data    
+    user = request.user
+    sequence_id = request.data.get('sequence_id')
+    sequence = get_object_or_404(FourDSequence, id=sequence_id, user=user)
     
-    message_key     = f"{user.email}_{stage_name}_{HISTORY_SUFFIX}"
+    profile_stage = get_object_or_404(UserProfile, user=user)
+    current_stage = sequence.current_stage
+    stage_data = getattr(sequence, f'{current_stage}_stage')
+    
+    message_key = f"{user.email}_{sequence_id}_{current_stage}_{HISTORY_SUFFIX}"
     message_history = cache.get_or_set(message_key, [])
-    user_input      = request.data.get('message', f'Send a personalized welcome message to the learner.')    
-    stage_config    = get_yaml_data(stage_name)
+    user_input = request.data.get('message', f'Send a personalized welcome message to the learner.')
+    
+    stage_config = get_yaml_data(current_stage)
     required_fields = [f['title'] for f in stage_config['fields']]
-    # TODO: Will implement this when we have an async extraction process
-    profile_summary = summarize_profile(profile_data)
-    stage_summary   = summarize_stage_data(stage_data[stage_name], stage_name)
-    resp_schema     = get_yaml_data('common')['response']
-    resp_model    = create_pydantic_model(name=resp_schema['title'],
+    
+    profile_summary = summarize_profile(UserProfileSerializer(profile_stage).data)
+    stage_summary = summarize_stage_data(stage_data.__dict__, current_stage)
+    resp_schema = get_yaml_data('common')['response']
+    resp_model = create_pydantic_model(name=resp_schema['title'],
                                        description=resp_schema['description'],
-                                       fields=resp_schema['fields']
-                                       )
+                                       fields=resp_schema['fields'])
     
-    probe_system_message = create_system_message(stage_name, stage_config, mode='probe')
+    probe_system_message = create_system_message(current_stage, stage_config, mode='probe')
     
-    user_content           = f"""
+    user_content = f"""
     Here is what we know about the learner:
         {profile_summary}
            
@@ -278,36 +241,56 @@ def chat_view(request):
     message_payload = create_message_payload(user_content, 
                                              probe_system_message, 
                                              message_history, 
-                                             max_tokens=10000
-                                             )
+                                             max_tokens=10000)
     
     response_tool = force_tool_call(resp_model, 
                                     message_payload, 
                                     model='gpt-4o',
-                                    tool_choice='required',
-                                    )
-    zavmo_response  = response_tool.message
-    zavmo_action    = response_tool.action.value
-    zavmo_credits   = response_tool.credits
+                                    tool_choice='required')
+    
+    zavmo_response = response_tool.message
+    zavmo_action = response_tool.action.value
+    zavmo_credits = response_tool.credits
     
     message_history.append({'role':'user', 'content':user_input})
     message_history.append({'role':'assistant', 'content':zavmo_response})
     cache.set(message_key, message_history)
-    # After this you should trigger an extraction process
-    manage_stage_data.apply_async(args=[user.email, stage_name, zavmo_action])
-        
+    
+    # Trigger an extraction process
+    manage_stage_data.apply_async(args=[sequence_id, zavmo_action])
+    
     return Response({
-            "type": "text",
-            "message": zavmo_response,
-            "stage": stage,
-            "stage_name": stage_name,
-            "credits":zavmo_credits,
-            "stage_data": stage_data,
-            "action": response_tool.action.value,
-            #"log_history_summary": summarize_history(message_history),
-            #"log_profile_summary": profile_summary,
-            #"log_stage_summary": stage_summary
-        }, 
-                    status=status.HTTP_201_CREATED
-                    )
+        "type": "text",
+        "message": zavmo_response,
+        "stage": current_stage,
+        "credits": zavmo_credits,
+        "action": zavmo_action,
+    }, status=status.HTTP_201_CREATED)
+
+
+
+# NOTE: If we use the new 4d sequence framework, we DONT need this reset function
+# @api_view(['POST'])
+# @authentication_classes([CustomJWTAuthentication])
+# @permission_classes([IsAuthenticated])
+# def reset_all(request):
+#     """Delet all cache, and reset learner journey"""
+#     user = request.user
+#     cache.delete_many([f"{user.email}_{USER_PROFILE_SUFFIX}",
+#                       f"{user.email}_{HISTORY_SUFFIX}"])
+#     # reset learner journey to 1st stage
+#     learner_journey = LearnerJourney.objects.filter(user=user).first()
+#     learner_journey.stage = 1
+#     learner_journey.save()
+    
+#     stage_models = [UserProfile, DiscoverStage, DiscussStage, DeliverStage, DemonstrateStage]  
+#     for stage_model in stage_models:
+#         stage   = stage_model.objects.filter(user=user).first()
+#         if stage:
+#             stage.reset()
+    
+#     return Response({"message": "All cache and learner journey reset successfully"}, status=status.HTTP_200_OK)
+    
+    
+
 
