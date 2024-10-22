@@ -207,14 +207,17 @@ def get_sequence_detail(request, sequence_id):
 def chat_view(request):
     """Handles chat sessions between a user and the AI assistant."""
     user = request.user
-    sequence_id = request.data.get('sequence_id')
-    sequence = get_object_or_404(FourDSequence, id=sequence_id, user=user)
-    
+
+    # sequence_id = request.data.get('sequence_id')
+    # sequence = get_object_or_404(FourDSequence, id=sequence_id, user=user)
+
+    sequence = FourDSequence.objects.filter(user=user).order_by('-created_at').first()
+
     profile_stage = get_object_or_404(UserProfile, user=user)
     current_stage = sequence.current_stage
     stage_data = getattr(sequence, f'{current_stage}_stage')
     
-    message_key = f"{user.email}_{sequence_id}_{current_stage}_{HISTORY_SUFFIX}"
+    message_key = f"{user.email}_{sequence.id}_{current_stage}_{HISTORY_SUFFIX}"
     message_history = cache.get_or_set(message_key, [])
     user_input = request.data.get('message', f'Send a personalized welcome message to the learner.')
     
