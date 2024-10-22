@@ -260,7 +260,7 @@ def chat_view(request):
     cache.set(message_key, message_history)
     
     # Trigger an extraction process
-    manage_stage_data.apply_async(args=[sequence_id, zavmo_action])
+    manage_stage_data.apply_async(args=[sequence.id, zavmo_action])
     
     return Response({
         "type": "text",
