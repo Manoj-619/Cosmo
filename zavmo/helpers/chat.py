@@ -6,7 +6,7 @@ import anthropic
 from openai import OpenAI
 from dotenv import load_dotenv
 from pydantic import BaseModel
-from typing import Union, List
+from typing import Union, List, Any, Callable
 import functools
 load_dotenv(override=True)
 
@@ -212,6 +212,20 @@ def create_message_payload(user_content=None, system_message=None, messages=[], 
     
     return message_history
 
+def log_tokens(func: Callable[..., Any]) -> Callable[..., Any]:
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        response = func(*args, **kwargs)
+        
+        if hasattr(response, 'usage'):
+            print(f"Input tokens: {response.usage.prompt_tokens}")
+            print(f"Output tokens: {response.usage.completion_tokens}")
+            print(f"Total tokens: {response.usage.total_tokens}")
+        else:
+            print("No usage information available in the response.")
+        
+        return response
+    return wrapper
 
 
 def summarize_stage_data(stage_data, stage_name):

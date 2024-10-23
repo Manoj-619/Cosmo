@@ -1,4 +1,4 @@
-from core import Swarm
+from swarm import run_agent, Agent, Response
 from agents.a_discover import discover_agent
 from rich.console import Console
 from rich.panel import Panel
@@ -26,19 +26,17 @@ def print_system_message(message):
     console.print(Text(message, style="yellow"))
 
 def main():
-    swarm = Swarm()
     agent = discover_agent
     messages = []
+    context = {}
 
     console.print("[bold magenta]Welcome to the 4D Learning System![/bold magenta]")
 
     # Initiate the conversation with a model-generated response
-    initial_response = swarm.run(
+    initial_response = run_agent(
         agent=agent,
         messages=[{"role": "system", "content": "Initiate the conversation by introducing yourself and asking about the user's learning goals."}],
-        context={},
-        debug=DEBUG,
-        max_turns=1,
+        context=context,
     )
     
     initial_message = initial_response.messages[0]
@@ -50,31 +48,29 @@ def main():
         print_user_message(user_input)
         messages.append({"role": "user", "content": user_input})
 
-        response = swarm.run(
+        response = run_agent(
             agent=agent,
             messages=messages,
-            context={},  # We can retrieve context and pass it in here
-            debug=DEBUG,
-            max_turns=3,
+            context=context,
         )
 
         messages.extend(response.messages)
+        context.update(response.context)
         
         # If response contains an agent, switch to it
         if response.agent and response.agent != agent:
             print_system_message(f"[bold]Switching to new agent: {response.agent.name}[/bold]")
             agent = response.agent
             # Generate a response for the new agent
-            new_agent_response = swarm.run(
+            new_agent_response = run_agent(
                 agent=agent,
                 messages=messages + [{"role": "system", "content": "Introduce yourself, describe your role, and continue the conversation based on the context."}],
-                context={},
-                debug=DEBUG,
-                max_turns=3,
+                context=context,
             )
             new_agent_message = new_agent_response.messages[0]
             print_agent_message(agent.name, new_agent_message.get('content'))
             messages.append(new_agent_message)
+            context.update(new_agent_response.context)
         else:
             for msg in response.messages:
                 if msg["role"] == "assistant":

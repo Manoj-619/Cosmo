@@ -10,7 +10,7 @@ Fields:
 
 from pydantic import BaseModel, Field
 from typing import Literal, List, Optional, Dict
-from _types import Agent, Response, Result
+from swarm import Agent, Response, Result
 # Handoff Agent for the next stage
 from .b_discuss import discuss_agent
 from .common import get_agent_instructions
