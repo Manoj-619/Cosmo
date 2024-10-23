@@ -3,7 +3,7 @@ import codecs
 import yaml
 from pydantic import BaseModel, Field
 from typing import List
-from _types import Agent
+from swarm import Agent
 
 def get_yaml_data(yaml_path, yaml_dir="assets/data"):
     """Load a YAML file containing field data.

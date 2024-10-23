@@ -6,7 +6,7 @@ import anthropic
 from openai import OpenAI
 from dotenv import load_dotenv
 from pydantic import BaseModel
-from typing import Union, List
+from typing import Union, List, Any, Callable
 import functools
 load_dotenv(override=True)
 

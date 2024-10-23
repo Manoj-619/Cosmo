@@ -9,7 +9,7 @@ Fields:
 
 from pydantic import BaseModel, Field
 from typing import List
-from _types import Agent, Response, Result
+from swarm import Agent, Response, Result
 from .common import Curriculum, Lesson, lesson_specialist_agent, get_agent_instructions
 from .d_demonstrate import demonstrate_agent
 
