@@ -208,18 +208,23 @@ def chat_view(request):
     """Handles chat sessions between a user and the AI assistant."""
     user = request.user
 
-    # sequence_id = request.data.get('sequence_id')
-    # sequence = get_object_or_404(FourDSequence, id=sequence_id, user=user)
+    sequence_id = request.data.get('sequence_id', 1)
+    # Get the sequence object for the given sequence_id
+    sequence = get_object_or_404(FourDSequence, id=sequence_id, user=user)
 
-    sequence = FourDSequence.objects.filter(user=user).order_by('-created_at').first()
+    # Serialize the sequence to get the current stage details
+    stage_data    = FourDSequenceSerializer(sequence).data
 
     profile_stage = get_object_or_404(UserProfile, user=user)
-    current_stage = sequence.current_stage
-    stage_data = getattr(sequence, f'{current_stage}_stage')
-    
-    message_key = f"{user.email}_{sequence.id}_{current_stage}_{HISTORY_SUFFIX}"
+
+    # current_stage = sequence.current_stage
+    # stage_data = getattr(sequence, f'{current_stage}_stage')
+
+    current_stage = stage_data['stage_name']
+
+    message_key     = f"{user.email}_{sequence.id}_{current_stage}_{HISTORY_SUFFIX}"
     message_history = cache.get_or_set(message_key, [])
-    user_input = request.data.get('message', f'Send a personalized welcome message to the learner.')
+    user_input      = request.data.get('message', f'Send a personalized welcome message to the learner.')
     
     stage_config = get_yaml_data(current_stage)
     required_fields = [f['title'] for f in stage_config['fields']]
@@ -254,7 +259,6 @@ def chat_view(request):
     zavmo_response = response_tool.message
     zavmo_action = response_tool.action.value
     zavmo_credits = response_tool.credits
-    
     message_history.append({'role':'user', 'content':user_input})
     message_history.append({'role':'assistant', 'content':zavmo_response})
     cache.set(message_key, message_history)
