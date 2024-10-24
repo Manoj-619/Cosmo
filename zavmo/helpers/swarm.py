@@ -67,7 +67,6 @@ class Agent(BaseModel):
         functions (List[AgentFunction]): The functions that the agent can use.
         tool_choice (str): The tool choice for the agent.
         parallel_tool_calls (bool): Whether to allow parallel tool calls.
-        max_turns (int): The maximum number of turns the agent can take.
     """
     name: str = "Agent"
     model: str = "gpt-4"
@@ -75,14 +74,16 @@ class Agent(BaseModel):
     functions: List[AgentFunction] = []
     tool_choice: str = None
     parallel_tool_calls: bool = True
-    max_turns: int = 1
+    # Removed max_turns attribute
 
 class Tool(BaseModel):
     """
     A base class for tools that can be used by agents.
     """
-    def execute(self, **kwargs) -> Any:
+    @with_context
+    def execute(self, context: Dict = {}) -> Any:
         raise NotImplementedError("Subclasses must implement execute method")
+
 
 # Update forward references
 Agent.update_forward_refs()
@@ -278,9 +279,9 @@ def execute_tool_calls(tool_calls: List[ChatCompletionMessageToolCall], function
         if inspect.isclass(func) and issubclass(func, Tool):
             # Instantiate the Tool with arguments
             tool_instance = func(**args)
-            raw_result = tool_instance.execute()
+            raw_result = tool_instance.execute(context=partial_response.context)  # Pass context here
         elif isinstance(func, Tool):
-            raw_result = func.execute(**args)
+            raw_result = func.execute(context=partial_response.context)  # Pass context here
         elif hasattr(func, '_with_context'):
             # Use context if available
             raw_result = func(**args, context=partial_response.context)
@@ -306,15 +307,15 @@ def execute_tool_calls(tool_calls: List[ChatCompletionMessageToolCall], function
     return partial_response
 
 @with_context
-def run_step(agent: Agent, messages: List, context: Dict = {}) -> Response:
+def run_step(agent: Agent, messages: List, context: Dict = {}, max_turns: int = 5) -> Response:
     """
     Manages the conversation loop with an agent, respecting max turns and updating context.
     """
     active_agent = agent
-    history = copy.deepcopy(messages)
-    turns   = 0
+    history      = copy.deepcopy(messages)
+    turns        = 0
 
-    while active_agent and turns < active_agent.max_turns:
+    while active_agent and turns < max_turns:
         logging.info(f"Running step {turns} with agent {active_agent.name}")
         completion = fetch_agent_response(active_agent, history, context=context)
         message = completion.choices[0].message
