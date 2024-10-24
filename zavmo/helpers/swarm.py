@@ -14,7 +14,7 @@ from openai.types.chat import ChatCompletionMessage
 from openai.types.chat.chat_completion_message_tool_call import ChatCompletionMessageToolCall
 # Define a decorator to handle context uniformly
 import logging
-from _types import Agent, Tool, Result, Response, AgentFunction, function_to_json
+from helpers._types import Agent, Tool, Result, Response, AgentFunction, function_to_json
 from typing import List, Dict, Any
 from collections import defaultdict
 

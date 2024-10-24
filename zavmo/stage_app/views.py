@@ -15,57 +15,25 @@ from django.contrib.auth.models import User
 from stage_app.models import Org, UserProfile, FourDSequence
 from stage_app.serializers import (
     UserDetailSerializer, UserProfileSerializer, 
+    DiscoverStageSerializer, DiscussStageSerializer, DeliverStageSerializer, DemonstrateStageSerializer,
     FourDSequenceSerializer, DetailedFourDSequenceSerializer
 )
 from helpers.constants import USER_PROFILE_SUFFIX, CONTEXT_SUFFIX
 
 from helpers.swarm import run_step
-from helpers.agents import a_discover,b_discuss,c_deliver,d_demonstrate
+from helpers.agents import a_discover,b_discuss,c_deliver,d_demonstrate, profile
 
-agents = { 'discover': a_discover.discover_agent,
-          'discussion': b_discuss.discuss_agent,
-          'deliver': c_deliver.deliver_agent,
-          'demonstrate': d_demonstrate.demonstrate_agent,
+agents = { 'profile': profile.profile_agent,
+           'discover': a_discover.discover_agent,
+           'discussion': b_discuss.discuss_agent,
+           'deliver': c_deliver.deliver_agent,
+           'demonstrate': d_demonstrate.demonstrate_agent,
         }
 
 logger = logging.getLogger(__name__)
 
 
-'''
-# NOTE: with the new 4d sequence framework, we dont need this utility function.
 
-# TODO: create a new utility function to get stage data from a specific sequence
-
-# # Utility function to get stage data
-# def add_stage_data(stage_name, user):
-#     """
-#     Helper function to add stage data for a specific stage and user.
-#     Returns an empty dict if no data is found or all values are null.
-#     """
-#     stages = {
-#         'profile': UserProfileSerializer,
-#         'discover': DiscoverStageSerializer,
-#         'discuss': DiscussStageSerializer,
-#         'deliver': DeliverStageSerializer,
-#         'demonstrate': DemonstrateStageSerializer
-#     }
-
-#     if stage_name not in stages:
-#         return {}
-
-#     serializer_class = stages[stage_name]
-#     try:
-#         stage_instance = getattr(user, f'{stage_name}')
-#         stage_serializer = serializer_class(stage_instance)
-#         stage_data = stage_serializer.data
-#         if any(stage_data.values()):  # Check if any field has a non-null value
-#             return {stage_name: stage_data}
-#     except AttributeError:
-#         pass
-
-#     return {stage_name: {}}
-
-'''
 
 # Endpoint: /api/org/create/
 @api_view(['POST'])
@@ -87,8 +55,9 @@ def create_org(request):
             "org_id": org.org_id,
             "org_name": org.org_name
         }, status=status.HTTP_200_OK)
-    except IntegrityError:
-        return Response({"error": "An error occurred while creating the organization."},
+    except IntegrityError as e:
+        logger.error(f"IntegrityError during organization creation: {str(e)}")
+        return Response({"error": f"An error occurred while creating the organization: {str(e)}"},
                         status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 # Endpoint: /api/user/sync/
@@ -106,11 +75,6 @@ def sync_user(request):
     if serializer.is_valid():
         email = serializer.validated_data['email']
         org_id = request.data.get('org_id')
-
-        # Validate org_id presence and existence
-        if not org_id:
-            return Response({"error": "Organization ID is required."}, status=status.HTTP_400_BAD_REQUEST)
-        
         org = Org.objects.filter(org_id=org_id).first()
         if not org:
             return Response({"error": "Organization with this ID does not exist."}, status=status.HTTP_400_BAD_REQUEST)
@@ -131,25 +95,25 @@ def sync_user(request):
                 status_code = status.HTTP_200_OK
 
             # Get or create the latest 4D sequence
-            sequence = FourDSequence.objects.filter(user=user).order_by('-created_at').first()
-            if not sequence:
-                sequence = FourDSequence.objects.create(
-                    user=user,
-                    org=org,
-                    title='Default Sequence'
-                )
+            sequence, sequence_created = FourDSequence.objects.get_or_create(
+                user=user,
+                # defaults={'title': 'Default Sequence'}
+            )
+            if sequence_created:
                 logger.info(f"New FourDSequence created for user {user.username}")
-            elif sequence.org != org:
-                sequence.org = org
                 sequence.save()
-                logger.info(f"Updated org for existing FourDSequence of user {user.username}")
+
+            # Determine the stage_name
+            profile = UserProfile.objects.filter(user=user).first()
+            if not profile:
+                stage_name = 'profile'
+            else:
+                stage_name = sequence.current_stage
 
             return Response({
                 "message": message,
                 "email": user.email,
-                "stage": sequence.current_stage,
-                "org_id": org_id,
-                "org_name": org.org_name,
+                "stage": stage_name,
                 "sequence_id": sequence.id
             }, status=status_code)
         
@@ -207,50 +171,66 @@ def get_sequence_detail(request, sequence_id):
     return Response(serializer.data)
 
 @api_view(['POST'])
+def delete_all_caches(request):
+    """Clear all caches for entire system."""
+    cache.clear()
+    return Response({"message": "All caches cleared successfully"}, status=status.HTTP_200_OK)
+    
+
+@api_view(['POST'])
 @authentication_classes([CustomJWTAuthentication])
 @permission_classes([IsAuthenticated])
 def chat_view(request):
     """Handles chat sessions between a user and the AI assistant."""
     user        = request.user
-    sequence_id = request.data.get('sequence_id', 1)
-
+    sequence_id = request.data.get('sequence_id', 1)    
+    # Initialize context variable
+    context = {}
     # Get the sequence object for the given sequence_id
     cache_key = f"{user.email}_{sequence_id}_{CONTEXT_SUFFIX}"
     if cache.get(cache_key):
         context = cache.get(cache_key)
         message_history = context['history']
+        stage_name = context['stage']  # Ensure current_stage is set from cached context
     else:
         # Check if user has a profile
         profile = UserProfile.objects.filter(user=user).first()
-        if not profile:
-            stage_name = 'profile'
-        else:
-            sequence    = get_object_or_404(FourDSequence, id=sequence_id, user=user)
-            stage_name  = sequence.current_stage
-        # Serialize the sequence to get the current stage details
-        stage_data    = FourDSequenceSerializer(sequence).data
-        current_stage = stage_data['stage_name']
-        message_history = []
-        context = {
-            'sequence_id': sequence_id,
-            'stage': stage_name,
-            'email': user.email,
-            'stage_data': {
-                'profile': {},
+        if not profile or not profile.is_complete():  # Check if profile is empty
+            stage_name    = 'profile'
+            stage_data = {
+                'profile': UserProfileSerializer(profile).data if profile else {},
                 'discover': {},
                 'discuss': {},
                 'deliver': {},
                 'demonstrate': {}
-           },
+            }
+        else:
+            sequence    = FourDSequence.objects.filter(user=user).order_by('-created_at').first()
+            stage_name  = sequence.current_stage
+            stage_data = {
+                'profile': UserProfileSerializer(profile).data if profile else {},
+                'discover': DiscoverStageSerializer(sequence.discover_stage).data if sequence else {},
+                'discuss': DiscussStageSerializer(sequence.discuss_stage).data if sequence else {},
+                'deliver': DeliverStageSerializer(sequence.deliver_stage).data if sequence else {},
+                'demonstrate': DemonstrateStageSerializer(sequence.demonstrate_stage).data if sequence else {}
+            }
+        message_history = context.get('history', [])
+        context = {
+            'sequence_id': sequence_id,
+            'stage': stage_name,
+            'user': profile.user.email if profile else '',
+            'email': profile.user.email if profile else '',
+            'stage_data': stage_data,
             'history': message_history
         }
         cache.set(cache_key, context)
        
-    if current_stage == 'completed':
+       
+    if stage_name == 'completed':
         return Response({"type": "text",
-                     "message": "You have finished all stages for the sequence.",
-                     "stage": current_stage,
-                     })
+                         "message": "You have finished all stages for the sequence.",
+                         "stage": stage_name,
+                         })
 
     if request.data.get('message'):
         message_history.append({"role": "user","content": request.data.get('message')})
@@ -259,7 +239,7 @@ def chat_view(request):
 
 
     # Initialize the agent
-    agent = agents[current_stage]
+    agent = agents[stage_name]
 
     # Run the agent with the user's input and current message history
     response = run_step(
@@ -269,44 +249,24 @@ def chat_view(request):
             max_turns=5
         )
     new_messages = response.messages
+        
     message_history.extend(new_messages)
     last_message = new_messages[-1]
     context.update(response.context)
+    if response.agent!= agent:
+        logger.info(f"Stage changed from {agent.id} to {response.agent.id}.")
+        stage_name = response.agent.id
+        context['stage'] = stage_name
+    
     cache.set(cache_key, context)
     
     return Response({"type": "text",
                      "message": last_message['content'],
-                     "stage": current_stage,
+                     "stage": stage_name,
                      "sequence_id": sequence_id,
-                     "log_history": message_history
+                     "log_context": context
                      })
     
     
     
     
-
-# NOTE: If we use the new 4d sequence framework, we DONT need this reset function
-# @api_view(['POST'])
-# @authentication_classes([CustomJWTAuthentication])
-# @permission_classes([IsAuthenticated])
-# def reset_all(request):
-#     """Delet all cache, and reset learner journey"""
-#     user = request.user
-#     cache.delete_many([f"{user.email}_{USER_PROFILE_SUFFIX}",
-#                       f"{user.email}_{HISTORY_SUFFIX}"])
-#     # reset learner journey to 1st stage
-#     learner_journey = LearnerJourney.objects.filter(user=user).first()
-#     learner_journey.stage = 1
-#     learner_journey.save()
-    
-#     stage_models = [UserProfile, DiscoverStage, DiscussStage, DeliverStage, DemonstrateStage]  
-#     for stage_model in stage_models:
-#         stage   = stage_model.objects.filter(user=user).first()
-#         if stage:
-#             stage.reset()
-    
-#     return Response({"message": "All cache and learner journey reset successfully"}, status=status.HTTP_200_OK)
-    
-    
-
-

@@ -1,5 +1,5 @@
-stage: 4
 name: Demonstration
+id: demonstrate
 description: >
  The Demonstration stage is the fourth stage of the 4-D Learning Journey.
  In this stage, the agent assesses the learner's understanding of all the material covered during the Delivery stage.
@@ -19,15 +19,13 @@ instructions: >
  9. Update the demonstration data with the learner's performance, self-assessment, and feedback.
 
 examples: >
- "Great! Let's begin the assessment for the module 'Introduction to Programming'. Here's a question about variables and data types:
+ "Great! Let's begin the assessment for the module '[module_name]'. Here's a question about '[topic]':
 
- What is the difference between an integer and a float in Python? Provide an example of when you might use each.
+ [question]
 
  Take your time to think about it and provide your answer when you're ready."
 
- "Thank you for your response. You're on the right track! An integer is indeed a whole number, and a float does involve decimal points. To clarify further, an integer is a whole number without a decimal point, while a float is a number with a decimal point.
-
- For example, you might use an integer to count the number of items in a list (e.g., 5 apples), and a float to represent a measurement with decimal precision (e.g., 3.14 meters).
+ "Thank you for your response. You're on the right track! [feedback]
 
  Let's move on to the next question."
 

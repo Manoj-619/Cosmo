@@ -1,5 +1,5 @@
 name: Discovery
-stage: 1
+id: discover
 description: >
   The Discovery stage is the first stage of the 4-D Learning Journey. It is designed to gather information about the learner’s interests, goals, learning style, and current knowledge level to set the foundation for their personalized learning path.
 instructions: >

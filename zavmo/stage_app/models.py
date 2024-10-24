@@ -44,6 +44,10 @@ class UserProfile(models.Model):
             string_value += f"\n**{key.replace('_', ' ').title()}**: {value}"
         return string_value
 
+    def is_complete(self):
+        """Check if the profile is complete."""
+        return self.first_name and self.last_name and self.age and self.edu_level and self.current_role
+
 
 # Stage 1
 class DiscoverStage(models.Model):
@@ -122,15 +126,13 @@ class FourDSequence(models.Model):
         DEMONSTRATE = 4, 'demonstrate'
         COMPLETED = 5, 'completed'
         
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='four_d_sequences')
-    org = models.ForeignKey(Org, on_delete=models.SET_NULL, null=True, blank=True)
-    title      = models.CharField(max_length=255)
+    user        = models.ForeignKey(User, on_delete=models.CASCADE, related_name='four_d_sequences')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     current_stage = models.PositiveSmallIntegerField(choices=Stage.choices, default=Stage.DISCOVER)
 
     def __str__(self):
-        return f"{self.user.username} - {self.title}"
+        return f"{self.user.email} - {self.created_at} - {self.stage_display}"
 
     @property
     def stage_display(self):

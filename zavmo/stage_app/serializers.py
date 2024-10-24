@@ -24,10 +24,13 @@ class BaseStageSerializer(serializers.ModelSerializer):
         return filtered_result
 
 class UserProfileSerializer(BaseStageSerializer):
+    email    = serializers.CharField(source='user.email', read_only=True)
+    org_id   = serializers.PrimaryKeyRelatedField(source='user.org.org_id', read_only=True)
+    org_name = serializers.CharField(source='user.org.org_name', read_only=True)
     class Meta:
         model = UserProfile
-        exclude = ('user',)
-
+        fields = ['id', 'email', 'org_id', 'org_name', 'first_name', 'last_name', 'age', 'edu_level', 'current_role']
+                
 class DiscoverStageSerializer(BaseStageSerializer):
     class Meta:
         model = DiscoverStage
@@ -50,10 +53,12 @@ class DemonstrateStageSerializer(BaseStageSerializer):
 
 class FourDSequenceSerializer(serializers.ModelSerializer):
     stage_name = serializers.CharField(source='get_current_stage_display', read_only=True)
-
+    email      = serializers.CharField(source='user.email', read_only=True)
+    org_id     = serializers.PrimaryKeyRelatedField(source='user.org', read_only=True)
+    org_name   = serializers.CharField(source='user.org.org_name', read_only=True)
     class Meta:
         model = FourDSequence
-        fields = ['id', 'user', 'org', 'title', 'created_at', 'updated_at', 'current_stage', 'stage_name']
+        fields = ['id', 'user', 'created_at', 'updated_at', 'current_stage', 'stage_name', 'email', 'org_id', 'org_name']
 
 class DetailedFourDSequenceSerializer(FourDSequenceSerializer):
     discover_stage = DiscoverStageSerializer(read_only=True)

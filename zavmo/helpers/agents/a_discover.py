@@ -7,7 +7,7 @@ Fields:
     application_area: str
 """
 
-from pydantic import BaseModel, Field
+from pydantic import Field
 from typing import Literal, List, Optional, Dict
 from helpers.swarm import Agent, Response, Result, Tool
 from stage_app.models import DiscoverStage

@@ -117,6 +117,7 @@ def transfer_to_delivery_agent():
 
 discuss_agent = Agent(
     name="Discussion",
+    id="discuss",
     instructions=get_agent_instructions('discuss'),
     functions=[
         update_discussion_data,

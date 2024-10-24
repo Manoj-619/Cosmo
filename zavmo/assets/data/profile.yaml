@@ -1,5 +1,5 @@
-stage: 0
 name: Profile
+id: profile
 description: >
   The Profile stage is a preliminary stage in the learning journey. It is designed to gather essential information about the user during onboarding, which will help tailor the learning experience to their needs and preferences.
 instructions: >
