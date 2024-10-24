@@ -118,3 +118,15 @@ class FourDSequence(models.Model):
     @property
     def stage_display(self):
         return dict(self.Stage.choices)[self.current_stage]
+    
+    def advance_stage(self):
+        """
+        Advance to the next stage after updating the current stage.
+        """
+        # Check if the current stage is less than COMPLETED
+        if self.current_stage < self.Stage.COMPLETED:
+            # Increment the stage to the next one
+            self.current_stage += 1
+            self.save()
+        else:
+            raise ValueError("The sequence is already completed and cannot be advanced.")

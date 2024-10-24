@@ -4,7 +4,7 @@ from celery import shared_task
 from sqlalchemy import desc
 from zavmo.celery import app as celery_app
 # Import models
-from stage_app.models import LearnerJourney, UserProfile, DiscoverStage, DiscussStage, DeliverStage, DemonstrateStage, FourDSequence
+from stage_app.models import UserProfile, DiscoverStage, DiscussStage, DeliverStage, DemonstrateStage, FourDSequence
 from stage_app.serializers import UserProfileSerializer
 # Import constants
 from helpers.constants import USER_PROFILE_SUFFIX, HISTORY_SUFFIX, STAGE_ORDER
@@ -13,6 +13,43 @@ from helpers.functions import create_model_fields, create_pydantic_model, get_ya
 from helpers.utils import timer, get_logger
 
 logger = get_logger(__name__)
+
+@celery_app.task(bind=True, name='update_stage')
+def update_stage(self, sequence_id, stage_name, data):
+    """
+    Dynamically updates the given stage model and advances the FourDSequence.
+    
+    Args:
+        sequence_id (int): ID of the FourDSequence.
+        stage_name (str): The name of the stage ('discover', 'discuss', 'deliver', 'demonstrate').
+        data (dict): The data to update in the stage.
+    """
+    # Get the FourDSequence
+    sequence = FourDSequence.objects.get(id=sequence_id)
+    
+    # Map the stage name to the corresponding model
+    stage_models = {
+        'Discover': DiscoverStage,
+        'Discuss': DiscussStage,
+        'Deliver': DeliverStage,
+        'Demonstrate': DemonstrateStage
+    }
+    
+    # Get the appropriate stage model
+    StageModel = stage_models.get(stage_name)
+    if not StageModel:
+        raise ValueError(f"Invalid stage name: {stage_name}")
+    
+    # Get or create the stage instance for the sequence
+    stage_instance, created = StageModel.objects.get_or_create(sequence=sequence)
+    
+    # Update the stage instance with the provided data
+    for field, value in data.items():
+        setattr(stage_instance, field, value)
+    stage_instance.save()
+    
+    # Advance to the next stage in the sequence
+    sequence.advance_stage()
 
 
 @celery_app.task(bind=True, name='manage_stage_data')
@@ -82,46 +119,46 @@ def manage_stage_data(self, sequence_id, action=None):
     return {'status': 'success', 'message': f"Extracted fields for {current_stage} stage"}
     
     
-def finish_stage(user_email, stage_name, stage_data):
-    profile_data = cache.get(f"{user_email}_{USER_PROFILE_SUFFIX}")
-    stage_data   = profile_data['stage_data'][stage_name]
+# def finish_stage(user_email, stage_name, stage_data):
+#     profile_data = cache.get(f"{user_email}_{USER_PROFILE_SUFFIX}")
+#     stage_data   = profile_data['stage_data'][stage_name]
     
-    stage_models = {
-        'profile': UserProfile,
-        'discover': DiscoverStage,
-        'discuss': DiscussStage,
-        'deliver': DeliverStage,
-        'demonstrate': DemonstrateStage
-    }
+#     stage_models = {
+#         'profile': UserProfile,
+#         'discover': DiscoverStage,
+#         'discuss': DiscussStage,
+#         'deliver': DeliverStage,
+#         'demonstrate': DemonstrateStage
+#     }
     
-    # Get learner journey and user
-    learner_journey = LearnerJourney.objects.get(user__email=user_email)
-    user = learner_journey.user
+#     # Get learner journey and user
+#     learner_journey = LearnerJourney.objects.get(user__email=user_email)
+#     user = learner_journey.user
     
-    # Get the appropriate stage model
-    StageModel = stage_models.get(stage_name)
-    if not StageModel:
-        return {'status': 'error', 'message': f"Invalid stage name: {stage_name}"}
+#     # Get the appropriate stage model
+#     StageModel = stage_models.get(stage_name)
+#     if not StageModel:
+#         return {'status': 'error', 'message': f"Invalid stage name: {stage_name}"}
     
-    # Update or create the stage instance
-    stage_instance = StageModel.objects.get(user=user)
+#     # Update or create the stage instance
+#     stage_instance = StageModel.objects.get(user=user)
     
-    # Update fields
-    for field, value in stage_data.items():
-        setattr(stage_instance, field, value)
-    stage_instance.save()
+#     # Update fields
+#     for field, value in stage_data.items():
+#         setattr(stage_instance, field, value)
+#     stage_instance.save()
     
-    # Increment the stage
-    new_stage_index = min(STAGE_ORDER[stage_name] + 1, 5)
-    learner_journey.stage = new_stage_index
-    learner_journey.save()
-    # get new stage name    
-    new_stage_name = list(STAGE_ORDER.keys())[new_stage_index-1]
+#     # Increment the stage
+#     new_stage_index = min(STAGE_ORDER[stage_name] + 1, 5)
+#     learner_journey.stage = new_stage_index
+#     learner_journey.save()
+#     # get new stage name    
+#     new_stage_name = list(STAGE_ORDER.keys())[new_stage_index-1]
     
-    # Also update cache for stage
-    profile_data['stage_name'] = new_stage_name
-    profile_data['stage'] = new_stage_index
-    cache.set(f"{user_email}_{USER_PROFILE_SUFFIX}", profile_data)    
-    # Delete the cache data
-    # cache.delete_many([f"{user_email}_{stage_name}_{USER_PROFILE_SUFFIX}",f"{user_email}_{stage_name}_{HISTORY_SUFFIX}"])
+#     # Also update cache for stage
+#     profile_data['stage_name'] = new_stage_name
+#     profile_data['stage'] = new_stage_index
+#     cache.set(f"{user_email}_{USER_PROFILE_SUFFIX}", profile_data)    
+#     # Delete the cache data
+#     # cache.delete_many([f"{user_email}_{stage_name}_{USER_PROFILE_SUFFIX}",f"{user_email}_{stage_name}_{HISTORY_SUFFIX}"])
 

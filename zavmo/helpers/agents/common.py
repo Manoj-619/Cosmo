@@ -3,9 +3,9 @@ import codecs
 import yaml
 from pydantic import BaseModel, Field
 from typing import List
-from swarm import Agent
+from helpers.swarm import Agent
 
-def get_yaml_data(yaml_path, yaml_dir="assets/data"):
+def get_yaml_data(yaml_path, yaml_dir="/zavmo/assets/data"):
     """Load a YAML file containing field data.
 
     Args:
@@ -85,7 +85,7 @@ class Curriculum(BaseModel):
 curriculum_agent = Agent(
     name="Curriculum Specialist",
     description="A specialist in curriculum design and development",
-    instructions=open("assets/prompts/curriculum.md").read(),
+    instructions=open("/zavmo/assets/prompts/curriculum.md").read(),
     model="gpt-4o",
     functions=[Curriculum],
     parallel_tool_calls=False,
@@ -95,7 +95,7 @@ curriculum_agent = Agent(
 lesson_specialist_agent = Agent(
     name="Lesson Specialist",
     description="A specialist in creating engaging and informative lessons",
-    instructions=open("assets/prompts/lesson.md").read(),
+    instructions=open("/zavmo/assets/prompts/lesson.md").read(),
     model="gpt-4o-mini",
     functions=[Lesson],
     parallel_tool_calls=False,
@@ -113,7 +113,7 @@ def get_agent_instructions(stage_name: str) -> str:
         str: Instructions for the agent.
     """
     conf_data       = get_yaml_data(stage_name.lower())
-    prompt_path     = os.path.join("assets/prompts/probe.md")
+    prompt_path     = os.path.join("/zavmo/assets/prompts/probe.md")
     prompt_template = open(prompt_path, "r", encoding="utf-8").read()
     system_content  = prompt_template.format(NAME=conf_data['name'],
                                             DESCRIPTION=conf_data['description'],

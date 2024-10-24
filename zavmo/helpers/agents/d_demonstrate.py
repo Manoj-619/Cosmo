@@ -11,7 +11,7 @@ Fields:
 
 from pydantic import BaseModel, Field
 from typing import List
-from swarm import Agent, Response, Result
+from helpers.swarm import Agent, Response, Result
 from .common import Lesson, get_agent_instructions
     
 
@@ -46,7 +46,7 @@ def request_question():
 assessment_consultant_agent = Agent(
     name="Assessment Consultant",
     description="A specialist in creating assessment questions for learners",
-    instructions=open("assets/prompts/assessment.md").read(),
+    instructions=open("/zavmo/assets/prompts/assessment.md").read(),
     model="gpt-4o",
     functions=[Question],
     parallel_tool_calls=True,

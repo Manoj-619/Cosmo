@@ -20,8 +20,17 @@ from stage_app.serializers import (
 from helpers.chat import force_tool_call, create_message_payload, summarize_history, summarize_stage_data, summarize_profile
 from helpers.functions import create_model_fields, create_pydantic_model, get_yaml_data, create_system_message
 from helpers.constants import USER_PROFILE_SUFFIX, HISTORY_SUFFIX
-from stage_app.tasks.extraction import manage_stage_data
+from stage_app.tasks.extraction import manage_stage_data, update_stage
+import json
 
+from helpers.swarm import run_agent
+from helpers.agents import a_discover,b_discuss,c_deliver,d_demonstrate
+
+agents = {'discover': a_discover.discover_agent,
+          'discussion': b_discuss.discuss_agent,
+          'deliver': c_deliver.deliver_agent,
+          'demonstrate': d_demonstrate.demonstrate_agent,
+        }
 
 logger = logging.getLogger(__name__)
 
@@ -209,6 +218,7 @@ def chat_view(request):
     user = request.user
 
     sequence_id = request.data.get('sequence_id', 1)
+
     # Get the sequence object for the given sequence_id
     sequence = get_object_or_404(FourDSequence, id=sequence_id, user=user)
 
@@ -217,62 +227,121 @@ def chat_view(request):
 
     profile_stage = get_object_or_404(UserProfile, user=user)
 
-    # current_stage = sequence.current_stage
-    # stage_data = getattr(sequence, f'{current_stage}_stage')
-
     current_stage = stage_data['stage_name']
+    
+    if current_stage == 'completed':
+        return Response({"type": "text",
+                     "message": "You have finished all stages for the sequence.",  #  {stage_data['title']} - will be used if multiple sequences are created
+                     "stage": current_stage,
+                     "agent":response.agent.name})
 
     message_key     = f"{user.email}_{sequence.id}_{current_stage}_{HISTORY_SUFFIX}"
     message_history = cache.get_or_set(message_key, [])
     user_input      = request.data.get('message', f'Send a personalized welcome message to the learner.')
+
+    # profile_summary = summarize_profile(UserProfileSerializer(profile_stage).data)
+    # stage_summary = summarize_stage_data(stage_data.__dict__, current_stage)
     
-    stage_config = get_yaml_data(current_stage)
-    required_fields = [f['title'] for f in stage_config['fields']]
-    
-    profile_summary = summarize_profile(UserProfileSerializer(profile_stage).data)
-    stage_summary = summarize_stage_data(stage_data.__dict__, current_stage)
-    resp_schema = get_yaml_data('common')['response']
-    resp_model = create_pydantic_model(name=resp_schema['title'],
-                                       description=resp_schema['description'],
-                                       fields=resp_schema['fields'])
-    
-    probe_system_message = create_system_message(current_stage, stage_config, mode='probe')
-    
-    user_content = f"""
-    Here is what we know about the learner:
-        {profile_summary}
-           
-    We need to probe the learner for the following fields: {required_fields}
-    
-    Learner's message: {user_input}
-    """
-    message_payload = create_message_payload(user_content, 
-                                             probe_system_message, 
-                                             message_history, 
-                                             max_tokens=10000)
-    
-    response_tool = force_tool_call(resp_model, 
-                                    message_payload, 
-                                    model='gpt-4o',
-                                    tool_choice='required')
-    
-    zavmo_response = response_tool.message
-    zavmo_action = response_tool.action.value
-    zavmo_credits = response_tool.credits
+    context = {}
+
+    user_message = {"role": "user","content": user_input}
+
+    message_history.append(user_message)
+
+    # Initialize the agent
+    agent = agents[current_stage]
+
+    # Run the agent with the user's input and current message history
+    response = run_agent(
+            agent=agent,
+            messages=message_history,
+            context=context,
+        )
+
+    context.update(response.context)
+
+    if response.agent and response.agent != agent:
+        tool_calls = [msg.get("tool_calls") for msg in response.messages][0]
+        current_stage_data = next((json.loads(call["function"]["arguments"]) 
+                                   for call in tool_calls if call.get("function") and call["function"].get("arguments")),None)
+        
+        update_stage.apply_async(args=[sequence_id, current_stage.capitalize(), current_stage_data])
+
+
+        agent = agents[response.agent.name.lower()]
+        # Generate a response for the new agent
+        new_agent_response = run_agent(
+            agent=agent,
+            messages=message_history + [{"role": "system", "content": "Introduce yourself, describe your role, and continue the conversation based on the context."}],
+            context=context,
+        )
+        new_agent_message = new_agent_response.messages[0]
+        zavmo_response = new_agent_message.get('content')
+        context.update(new_agent_response.context)
+    else:
+        for msg in response.messages:
+            if msg["role"] == "assistant":
+                zavmo_response = msg.get('content')
+            elif msg["role"] == "tool":
+                zavmo_response = msg.get('content', 'No content')
+
     message_history.append({'role':'user', 'content':user_input})
     message_history.append({'role':'assistant', 'content':zavmo_response})
     cache.set(message_key, message_history)
+
+    return Response({"type": "text",
+                     "message":zavmo_response,
+                     "stage": current_stage,
+                     "agent":response.agent.name})
+
+
+    # stage_config = get_yaml_data(current_stage)
+    # required_fields = [f['title'] for f in stage_config['fields']]
     
-    # Trigger an extraction process
-    manage_stage_data.apply_async(args=[sequence.id, zavmo_action])
+    # profile_summary = summarize_profile(UserProfileSerializer(profile_stage).data)
+    # stage_summary = summarize_stage_data(stage_data.__dict__, current_stage)
+    # resp_schema = get_yaml_data('common')['response']
+    # resp_model = create_pydantic_model(name=resp_schema['title'],
+    #                                    description=resp_schema['description'],
+    #                                    fields=resp_schema['fields'])
     
-    return Response({
-        "type": "text",
-        "message": zavmo_response,
-        "stage": current_stage,
-        "credits": zavmo_credits,
-        "action": zavmo_action,
-    }, status=status.HTTP_201_CREATED)
+    # probe_system_message = create_system_message(current_stage, stage_config, mode='probe')
+    
+    # user_content = f"""
+    # Here is what we know about the learner:
+    #     {profile_summary}
+           
+    # We need to probe the learner for the following fields: {required_fields}
+    
+    # Learner's message: {user_input}
+    # """
+    # message_payload = create_message_payload(user_content, 
+    #                                          probe_system_message, 
+    #                                          message_history, 
+    #                                          max_tokens=10000)
+    
+    # response_tool = force_tool_call(resp_model, 
+    #                                 message_payload, 
+    #                                 model='gpt-4o',
+    #                                 tool_choice='required')
+    
+    # zavmo_response = response_tool.message
+    # zavmo_action = response_tool.action.value
+    # zavmo_credits = response_tool.credits
+    # message_history.append({'role':'user', 'content':user_input})
+    # message_history.append({'role':'assistant', 'content':zavmo_response})
+    # cache.set(message_key, message_history)
+    
+    # # Trigger an extraction process
+    # manage_stage_data.apply_async(args=[sequence.id, zavmo_action])
+    
+    # return Response({
+    #     "type": "text",
+    #     "message": zavmo_response,
+    #     "stage": current_stage,
+    #     "credits": zavmo_credits,
+    #     "action": zavmo_action,
+    # }, status=status.HTTP_201_CREATED)
 
 
 

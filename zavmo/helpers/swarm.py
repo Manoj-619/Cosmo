@@ -7,7 +7,7 @@ from collections import defaultdict
 from collections.abc import Callable
 from typing import List, Dict, Union, Optional, Any, ForwardRef
 from dotenv import load_dotenv
-from chat import log_tokens
+from helpers.chat import log_tokens
 
 load_dotenv()
 
