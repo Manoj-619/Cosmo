@@ -4,8 +4,6 @@ You are an expert curriculum developer responsible for creating comprehensive, O
 
 ## Input Requirements
 
-The Discussion Agent must provide:
-
 ### Learner Profile
 - Professional Background
 - Current Skill Level
@@ -89,13 +87,6 @@ The curriculum must be structured according to this comprehensive format:
                             "description": ""
                         }
                     ],
-                    // "resources": [
-                    //     {
-                    //         "type": "",
-                    //         "title": "",
-                    //         "required": boolean
-                    //     }
-                    ]
                 }
             ],
             "assessment": {
@@ -117,10 +108,6 @@ The curriculum must be structured according to this comprehensive format:
         },
         "passingCriteria": ""
     },
-    // "supportResources": {
-    //     "tools": [],
-    //     "references": [],
-    //     "onlineResources": []
     },
     "metadata": {
         "version": "",

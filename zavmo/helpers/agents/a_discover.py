@@ -10,7 +10,7 @@ Fields:
 
 from pydantic import BaseModel, Field, validator
 from typing import Literal, List, Optional, Dict
-from helpers.swarm import Agent, Response, Result, Tool, with_context
+from helpers.swarm import Agent, Response, Result, Tool
 # from stage_app.models import DiscoverStage
 from .b_discuss import discuss_agent
 from .common import get_agent_instructions
@@ -35,7 +35,6 @@ class update_discover_data(Tool):
             string.append(f"{field}: {value}")
         return "\n".join(string)
     
-    @with_context
     def execute(self, context: Dict):
         # Get email and sequence_id from context
         email       = context.get('email')

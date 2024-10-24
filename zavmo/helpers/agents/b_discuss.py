@@ -12,7 +12,7 @@ from openai import OpenAI
 from pydantic import BaseModel, Field
 from typing import List, Dict, Literal, Optional
 from helpers.chat import get_prompt
-from helpers.swarm import Agent, Result, Tool, with_context
+from helpers.swarm import Agent, Result, Tool, Response
 #from stage_app.models import DiscussStage
 from .common import get_agent_instructions
 #from .c_deliver import deliver_agent
@@ -39,13 +39,19 @@ class Curriculum(BaseModel):
     level: str = Field(description="The difficulty level of the curriculum (e.g., beginner, intermediate, advanced)")
     prerequisites: List[str] = Field(description="Any prerequisites needed to undertake this curriculum")
     modules: List[Module] = Field(description="List of modules included in the curriculum")
+    def __str__(self):
+        return "\n".join(f"{field.replace('_', ' ').title()}: {value}" for field, value in self.__dict__.items())
 
-
-@with_context
-def request_curriculum(instruction: str, context: Dict):
-    """Request the Curriculum Specialist to generate a curriculum."""
+def request_curriculum(learning_objectives: str, 
+                       interest_areas: str,
+                       time_available: str,
+                       instructions: str, 
+                       context: Dict):
+    """Request the Curriculum Specialist to generate a curriculum with learning objectives, interest areas, time available and instructions."""
+    if not context:
+        print("Warning: Context is empty at the start of request_curriculum.")
     system_prompt = get_prompt('curriculum')
-    user_prompt = f"Instruction: {instruction}"
+    user_prompt = f"Instruction: {instructions}"
     messages = [
         {"role": "system", "content": system_prompt},
         {"role": "user", "content": user_prompt}
@@ -56,10 +62,12 @@ def request_curriculum(instruction: str, context: Dict):
         messages=messages,
         response_format=Curriculum
     )
-    result = response.choices[0].message.parsed
-    context['stage_data']['discuss']['curriculum'] = result.model_dump()
-    
-    return Result(message=result, context=context)
+    model_result = response.choices[0].message.parsed
+    context['stage_data']['discuss']['curriculum'] = model_result.model_dump()    
+    print(f"Context after updating: {context}")    
+    string_result = str(model_result)
+    # Return a Response object instead of Result
+    return Result(value=string_result, context=context)
         
 
 class update_discussion_data(Tool):
@@ -71,10 +79,9 @@ class update_discussion_data(Tool):
     def __str__(self):
         return "\n".join(f"{field.replace('_', ' ').title()}: {value}" for field, value in self.__dict__.items())
     
-    @with_context
-    def execute(self, context:Dict):
+    def execute(self, context: Dict):
         # Get email and sequence id from context
-        email        = context['email']
+        email = context['email']
         sequence_id = context['sequence_id']
         if not email or not sequence_id:
             raise ValueError("Email and sequence id are required to update discussion data.")

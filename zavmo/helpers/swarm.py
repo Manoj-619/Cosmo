@@ -8,9 +8,8 @@ from collections.abc import Callable
 from typing import List, Dict, Union, Optional, Any, ForwardRef
 from dotenv import load_dotenv
 from helpers.chat import log_tokens
-
+from helpers.utils import get_redis_connection
 load_dotenv()
-
 # Package/library imports
 import openai
 from openai import OpenAI
@@ -19,29 +18,14 @@ from openai.types.chat.chat_completion_message_tool_call import ChatCompletionMe
 
 # Third-party imports
 from pydantic import BaseModel, Field
-
 # Define a decorator to handle context uniformly
 from functools import wraps
 import logging
 
+redis_client = get_redis_connection()
+
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-
-
-def with_context(func):
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        context = kwargs.pop('context', None)
-        if context is None:
-            context = {}
-        result = func(*args, **kwargs, context=context)
-        if isinstance(result, dict) and 'context' in result:
-            context.update(result['context'])
-        elif isinstance(result, Response):
-            result.context.update(context)
-        return result
-    return wrapper
+openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 # Define forward references
 AgentRef = ForwardRef('Agent')
@@ -68,13 +52,11 @@ class Agent(BaseModel):
     functions: List[AgentFunction] = []
     tool_choice: str = None
     parallel_tool_calls: bool = True
-    # Removed max_turns attribute
 
 class Tool(BaseModel):
     """
     A base class for tools that can be used by agents.
     """
-    @with_context
     def execute(self, context: Dict = {}) -> Any:
         raise NotImplementedError("Subclasses must implement execute method")
 
@@ -169,30 +151,27 @@ def function_to_json(func) -> dict:
         raise TypeError(f"Unsupported function or tool: {func}")
 
 
-@log_tokens
-def _tool_call(tool: Tool, messages: List[Dict[str, Any]]):
+def _tool_call(tool: Tool, messages: List[Dict[str, Any]], context: Dict = {}):
     """Make a tool call to the given tool."""
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",
+    response = openai_client.chat.completions.create(
+        model="gpt-4o",
         messages=messages,
-        tools=[openai.pydantic_function_tool(tool)],
+        tools=[function_to_json(tool)],
         tool_choice="required",
         parallel_tool_calls=False,
     )
     return response
 
-def make_tool_call(tool: Tool, messages: List[Dict[str, Any]]):
+def make_tool_call(tool: Tool, messages: List[Dict[str, Any]], context: Dict = {}):
     """Make a tool call to the given tool."""
-    response = _tool_call(tool, messages)
+    response = _tool_call(tool, messages, context=context)
     try:
         result = tool.model_validate_json(response.choices[0].message.tool_calls[0].function.arguments)
     except Exception as e:
-        print(f"Error in {tool.__name__} MCQ Design: {e}")
+        print(f"Error in {tool.__name__} Model Validation: {e}")
         raise e
     return result
 
-@with_context
-@log_tokens
 def fetch_agent_response(agent: Agent, history: List, context: Dict) -> ChatCompletionMessage:
     """Fetches the response from an agent."""
     context = defaultdict(str, context)
@@ -211,9 +190,8 @@ def fetch_agent_response(agent: Agent, history: List, context: Dict) -> ChatComp
     if tools:
         create_params["parallel_tool_calls"] = agent.parallel_tool_calls
 
-    return client.chat.completions.create(**create_params)
+    return openai_client.chat.completions.create(**create_params)
 
-@with_context
 def process_function_result(result, context: Dict) -> Result:
     """
     Processes the result of an agent function or Tool.
@@ -228,15 +206,14 @@ def process_function_result(result, context: Dict) -> Result:
         )
     elif isinstance(result, Tool):
         # Handle the tool result via the execute method
-        return Result(value=str(result.execute()), context=context)
+        return Result(value=str(result.execute(context=context)))
     else:
         try:
             return Result(value=str(result), context=context)
         except Exception as e:
             error_message = f"Failed to cast response to string: {result}. Make sure agent functions return a string or Result object. Error: {str(e)}"
             raise TypeError(error_message)
-        
-@with_context
+
 def execute_tool_calls(tool_calls: List[ChatCompletionMessageToolCall], functions: List[AgentFunction], context: Dict) -> Response:
     """
     Executes tool calls from the agent and updates the context.
@@ -273,18 +250,20 @@ def execute_tool_calls(tool_calls: List[ChatCompletionMessageToolCall], function
         if inspect.isclass(func) and issubclass(func, Tool):
             # Instantiate the Tool with arguments
             tool_instance = func(**args)
-            raw_result = tool_instance.execute(context=partial_response.context)  # Pass context here
+            raw_result    = tool_instance.execute(context=context)
         elif isinstance(func, Tool):
-            raw_result = func.execute(context=partial_response.context)  # Pass context here
-        elif hasattr(func, '_with_context'):
-            # Use context if available
-            raw_result = func(**args, context=partial_response.context)
+            raw_result = func.execute(context=context)
         else:
-            raw_result = func(**args)
+            # Ensure context is passed to functions that require it
+            if 'context' in inspect.signature(func).parameters:
+                raw_result = func(**args, context=context)
+            else:
+                raw_result = func(**args)
 
         # Process the result based on its type
-        result: Result = process_function_result(raw_result)
+        result: Result = process_function_result(raw_result, context=context)
 
+        # Add the result to the tool call response
         partial_response.messages.append({
             "role": "tool",
             "tool_call_id": tool_call.id,
@@ -300,14 +279,10 @@ def execute_tool_calls(tool_calls: List[ChatCompletionMessageToolCall], function
 
     return partial_response
 
-@with_context
 def run_step(agent: Agent, messages: List, context: Dict = {}, max_turns: int = 5) -> Response:
-    """
-    Manages the conversation loop with an agent, respecting max turns and updating context.
-    """
     active_agent = agent
-    history      = copy.deepcopy(messages)
-    turns        = 0
+    history = copy.deepcopy(messages)
+    turns = 0
 
     while active_agent and turns < max_turns:
         logging.info(f"Running step {turns} with agent {active_agent.name}")
@@ -320,6 +295,10 @@ def run_step(agent: Agent, messages: List, context: Dict = {}, max_turns: int = 
             break
 
         partial_response = execute_tool_calls(message.tool_calls, active_agent.functions, context=context)
+
+        # Append tool response messages to history
+        history.extend(partial_response.messages)
+
         context.update(copy.deepcopy(partial_response.context))
 
         if partial_response.agent:
@@ -332,4 +311,3 @@ def run_step(agent: Agent, messages: List, context: Dict = {}, max_turns: int = 
         agent=active_agent,
         context=context,
     )
-    
