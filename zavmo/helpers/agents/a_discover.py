@@ -18,11 +18,9 @@ from .common import get_agent_instructions
 ### For handoff
 def transfer_to_discussion_agent():
     """Transfer to the Discussion Agent when the learner is satisfied with the summary of the information gathered."""
-    print("Transferring to Discussion Agent...")
     return discuss_agent
 
 ### For updating the data
-
 class update_discover_data(Tool):
     """Update the learner's information gathered during the Discovery stage."""
     learning_goals: str = Field(description="The learner's learning goals.")
@@ -42,10 +40,8 @@ class update_discover_data(Tool):
         # Get email and sequence_id from context
         email       = context.get('email')
         sequence_id = context.get('sequence_id')
-        if not email:
-            raise ValueError("Email not found in context")
-        if not sequence_id:
-            raise ValueError("Sequence ID not found in context")
+        if not email or not sequence_id:
+            raise ValueError("Email and sequence ID are required to update discovery data.")
         
         # # Get the DiscoverStage object
         # discover_stage = DiscoverStage.objects.get(user_email=email, sequence_id=sequence_id)
@@ -58,12 +54,15 @@ class update_discover_data(Tool):
         # discover_stage.knowledge_level = self.knowledge_level
         # discover_stage.application_area = self.application_area
         # discover_stage.save()
-        
-        return Result(value=f"Updated DiscoverStage for {email} with sequence ID {sequence_id}. The following fields were updated: {str(self)}")
-      
-#### For responding / handoff
-discover_agent = Agent(
-    name="Discover",
+        value = f"""Updated DiscoverStage for {email} with sequence ID {sequence_id}.
+        The following data was updated:
+        {str(self)}
+        """
+        context['stage_data']['discover'] = self.model_dump()    
+        return Result(value=value, context=context)
+            
+discovery_agent = Agent(
+    name="Discovery",
     model="gpt-4o-mini",
     instructions=get_agent_instructions('discover'),
     functions=[

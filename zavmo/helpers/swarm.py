@@ -32,20 +32,14 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 def with_context(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
-        # Extract context from kwargs if it exists, otherwise use an empty dict
-        context = kwargs.pop('context', {})
-        
-        # Call the function with the original args and kwargs, plus context
+        context = kwargs.pop('context', None)
+        if context is None:
+            context = {}
         result = func(*args, **kwargs, context=context)
-        
-        # If the result is a dict and contains a 'context' key, update the context
         if isinstance(result, dict) and 'context' in result:
             context.update(result['context'])
-        
-        # If the result is a Response object, update its context
         elif isinstance(result, Response):
             result.context.update(context)
-        
         return result
     return wrapper
 
@@ -243,7 +237,7 @@ def process_function_result(result, context: Dict) -> Result:
             raise TypeError(error_message)
         
 @with_context
-def execute_tool_calls(tool_calls: List[ChatCompletionMessageToolCall], functions: List[AgentFunction], context: Dict = {}) -> Response:
+def execute_tool_calls(tool_calls: List[ChatCompletionMessageToolCall], functions: List[AgentFunction], context: Dict) -> Response:
     """
     Executes tool calls from the agent and updates the context.
     """
@@ -326,12 +320,10 @@ def run_step(agent: Agent, messages: List, context: Dict = {}, max_turns: int = 
             break
 
         partial_response = execute_tool_calls(message.tool_calls, active_agent.functions, context=context)
-        history.extend(partial_response.messages)
         context.update(copy.deepcopy(partial_response.context))
 
         if partial_response.agent:
             active_agent = partial_response.agent
-            turns = 0  # Reset turns for the new agent
 
         turns += 1  # Increment the turn counter
 

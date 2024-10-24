@@ -42,30 +42,6 @@ def get_yaml_data(yaml_path, yaml_dir="assets/data"):
 
 ###### Curriculum Schema ######
 
-class LearningOutcome(BaseModel):
-    description: str = Field(..., description="Description of the learning outcome")
-    assessment_criteria: List[str] = Field(..., description="List of assessment criteria for the learning outcome")
-
-
-class Lesson(BaseModel):
-    title: str = Field( description="The title of the lesson")
-    content: str = Field( description="The main content of the lesson")
-    examples: List[str] = Field( description="List of examples to illustrate the lesson")
-    exercises: List[str] = Field( description="List of exercises for the learner to practice")
-
-class Module(BaseModel):
-    title: str = Field(description="The title of the module")
-    learning_outcomes: List[str] = Field(description="Learning outcomes for the module")
-    lessons: List[str] = Field(description="List of lessons in this module")
-    duration: int = Field(description="The total duration of the module in hours")
-
-class Curriculum(BaseModel):
-    title: str = Field(description="The title of the curriculum")
-    subject: str = Field(description="The main subject area of the curriculum")
-    level: str = Field(description="The difficulty level of the curriculum (e.g., beginner, intermediate, advanced)")
-    prerequisites: List[str] = Field(description="Any prerequisites needed to undertake this curriculum")
-    modules: List[Module] = Field(description="List of modules included in the curriculum")
-
 
 def get_agent_instructions(stage_name: str) -> str:
     """
