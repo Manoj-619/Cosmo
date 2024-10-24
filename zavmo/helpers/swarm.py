@@ -3,9 +3,6 @@ import os
 import copy
 import json
 import inspect
-from collections import defaultdict
-from collections.abc import Callable
-from typing import List, Dict, Union, Optional, Any, ForwardRef
 from dotenv import load_dotenv
 from helpers.chat import log_tokens
 from helpers.utils import get_redis_connection
@@ -15,140 +12,16 @@ import openai
 from openai import OpenAI
 from openai.types.chat import ChatCompletionMessage
 from openai.types.chat.chat_completion_message_tool_call import ChatCompletionMessageToolCall
-
-# Third-party imports
-from pydantic import BaseModel, Field
 # Define a decorator to handle context uniformly
-from functools import wraps
 import logging
+from _types import Agent, Tool, Result, Response, AgentFunction, function_to_json
+from typing import List, Dict, Any
+from collections import defaultdict
 
 redis_client = get_redis_connection()
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-
-# Define forward references
-AgentRef = ForwardRef('Agent')
-ToolRef = ForwardRef('Tool')
-
-# Define the agent function type
-AgentFunction = Union[Callable[..., Union[str, AgentRef, dict]], ToolRef]
-
-class Agent(BaseModel):
-    """
-    An agent class that can be used to create agents.
-    
-    Attributes:
-        name (str): The name of the agent.
-        model (str): The model to use for the agent.
-        instructions (Union[str, Callable[[], str]]): The instructions for the agent.
-        functions (List[AgentFunction]): The functions that the agent can use.
-        tool_choice (str): The tool choice for the agent.
-        parallel_tool_calls (bool): Whether to allow parallel tool calls.
-    """
-    name: str = "Agent"
-    model: str = "gpt-4"
-    instructions: Union[str, Callable[[], str]] = "You are a helpful agent."
-    functions: List[AgentFunction] = []
-    tool_choice: str = None
-    parallel_tool_calls: bool = True
-
-class Tool(BaseModel):
-    """
-    A base class for tools that can be used by agents.
-    """
-    def execute(self, context: Dict = {}) -> Any:
-        raise NotImplementedError("Subclasses must implement execute method")
-
-
-# Update forward references
-Agent.update_forward_refs()
-AgentFunction = Union[Callable[..., Union[str, Agent, dict]], Tool]
-
-class Response(BaseModel):
-    """
-    Encapsulates the possible return values for an agent function.
-
-    Attributes:
-        messages (List): A list of messages - New messages from the agent.
-        agent (Agent): The agent instance, if applicable.
-        context (dict): A dictionary of context variables.
-    """
-    messages: List = [] 
-    agent: Optional[Agent] = None
-    context: dict = {}
-
-class Result(BaseModel):
-    """
-    Encapsulates the possible return values for an agent function.
-    
-    Attributes:
-        value (str): The result value as a string.
-        agent (Agent): The agent instance, if applicable.
-        context (dict): A dictionary of context variables.
-    """
-    value: str = ""
-    agent: Optional[Agent] = None
-    context: dict = {}
-
-def function_to_json(func) -> dict:
-    """
-    Converts a Python function or Tool into a JSON-serializable dictionary
-    that describes the function's signature, including its name, description, and parameters.
-    """
-    if inspect.isclass(func) and issubclass(func, Tool):
-        # Handle Pydantic model classes that inherit from Tool
-        return openai.pydantic_function_tool(func)
-    elif isinstance(func, Tool):
-        # Handle instances of Tool or its subclasses
-        return openai.pydantic_function_tool(func)
-    elif callable(func):
-        # Standard function signature processing for non-tool functions
-        type_map = {
-            str: {"type": "string"},
-            int: {"type": "integer"},
-            float: {"type": "number"},
-            bool: {"type": "boolean"},
-            list: {"type": "array"},
-            dict: {"type": "object"},
-            type(None): {"type": "null"},
-        }
-
-        try:
-            signature = inspect.signature(func)
-        except ValueError as e:
-            raise ValueError(f"Failed to get signature for function {func.__name__}: {str(e)}")
-
-        parameters = {}
-        for param_name, param in signature.parameters.items():
-            # Skip the 'context' parameter
-            if param_name == 'context':
-                continue
-
-            param_annotation = param.annotation
-            if param_annotation in type_map:
-                param_schema = type_map[param_annotation]
-            else:
-                param_schema = {"type": "string"}
-            
-            parameters[param_name] = param_schema
-
-        required = [param.name for param in signature.parameters.values()  if param.default == inspect._empty and param.name != 'context']
-
-        return {
-            "type": "function",
-            "function": {
-                "name": func.__name__,
-                "description": func.__doc__ or "",
-                "parameters": {
-                    "type": "object",
-                    "properties": parameters,
-                    "required": required,
-                },
-            },
-        }
-    else:
-        raise TypeError(f"Unsupported function or tool: {func}")
 
 
 def _tool_call(tool: Tool, messages: List[Dict[str, Any]], context: Dict = {}):
@@ -174,11 +47,11 @@ def make_tool_call(tool: Tool, messages: List[Dict[str, Any]], context: Dict = {
 
 def fetch_agent_response(agent: Agent, history: List, context: Dict) -> ChatCompletionMessage:
     """Fetches the response from an agent."""
-    context = defaultdict(str, context)
+    context      = defaultdict(str, context)
     instructions = agent.instructions(context) if callable(agent.instructions) else agent.instructions
-    messages = [{"role": "system", "content": instructions}] + history
+    messages     = [{"role": "system", "content": instructions}] + history
 
-    tools = [function_to_json(f) for f in agent.functions]
+    tools        = [function_to_json(f) for f in agent.functions]
 
     create_params = {
         "model": agent.model,
@@ -306,8 +179,9 @@ def run_step(agent: Agent, messages: List, context: Dict = {}, max_turns: int = 
 
         turns += 1  # Increment the turn counter
 
+    new_history = history[len(messages):]
     return Response(
-        messages=history[len(messages):],
+        messages=new_history,
         agent=active_agent,
         context=context,
     )

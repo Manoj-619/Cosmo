@@ -6,43 +6,44 @@ Fields:
     current_module: str
     current_lesson: str
 """
-
+import os
+from dotenv import load_dotenv
 from pydantic import BaseModel, Field
-from typing import List
+from typing import List, Dict
 from helpers.swarm import Agent, Response, Result
 from .common import get_agent_instructions
 from .d_demonstrate import demonstrate_agent
+from stage_app.models import DeliverStage
+from openai import OpenAI
 
-class UpdateDeliveryData(BaseModel):
-    """At the end of the Delivery stage, update the lessons and curriculum."""
-    curriculum: Curriculum = Field(description="The curriculum plan agreed upon by the learner.")
-    lessons: List[Lesson] = Field(description="The lessons to be taught.")
+load_dotenv()
 
-    def __str__(self):
-        return "\n".join(f"{field.replace('_', ' ').title()}: {value}" 
-                         for field, value in self.__dict__.items())
+
+
 
 def transfer_to_demonstration_agent():
     """Once the Delivery stage is complete, transfer to the Demonstration Agent."""
     print("Transferring to Demonstration Agent...")
     return demonstrate_agent
 
-def request_lesson():
-    """Request the Lesson Specialist to generate a lesson."""
-    print("Requesting Lesson Specialist to generate a lesson...")
-    return lesson_specialist_agent
-
-def transfer_back_to_delivery_agent():
-    """Generate a lesson and transfer back to the Delivery Agent."""
-    print("Transferring back to Delivery Agent...")
-    return deliver_agent
+def request_lesson(learning_objective:str, module:str, context:Dict):
+    """Request a new lesson from the Lesson Specialist."""
+    print(f"Requesting Lesson Specialist to generate a lesson: {learning_objective} for module: {module}")
+    # Get the Lesson Specialist agent
+    openai_client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+    
+def update_deliver_data(lesson:str, context:Dict):
+    """Update the DeliverStage with the new lesson."""
+    print(f"Updating DeliverStage with new lesson: {lesson}")
+    # Update the DeliverStage object
+    
 
 deliver_agent = Agent(
     name="Delivery",
+    id="deliver",
     instructions=get_agent_instructions('deliver'),
     functions=[
         request_lesson,
-        UpdateDeliveryData,
         transfer_to_demonstration_agent
     ],
     parallel_tool_calls=True,
@@ -50,4 +51,3 @@ deliver_agent = Agent(
     model="gpt-4o"
 )
 
-lesson_specialist_agent.functions.append(transfer_back_to_delivery_agent)

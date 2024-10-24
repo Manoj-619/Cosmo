@@ -13,9 +13,9 @@ from pydantic import BaseModel, Field
 from typing import List, Dict, Literal, Optional
 from helpers.chat import get_prompt
 from helpers.swarm import Agent, Result, Tool, Response
-#from stage_app.models import DiscussStage
+from stage_app.models import DiscussStage
 from .common import get_agent_instructions
-#from .c_deliver import deliver_agent
+from .c_deliver import deliver_agent
 
 class LearningOutcome(BaseModel):
     description: str = Field(..., description="Description of the learning outcome")
@@ -48,10 +48,15 @@ def request_curriculum(learning_objectives: str,
                        instructions: str, 
                        context: Dict):
     """Request the Curriculum Specialist to generate a curriculum with learning objectives, interest areas, time available and instructions."""
+    
     if not context:
         print("Warning: Context is empty at the start of request_curriculum.")
     system_prompt = get_prompt('curriculum')
-    user_prompt = f"Instruction: {instructions}"
+    user_prompt = f"Here is a history of the conversation so far: {context['history']}\n\n"
+    user_prompt += f"Learning objectives: {learning_objectives}\n\n"
+    user_prompt += f"Interest areas: {interest_areas}\n\n"
+    user_prompt += f"Time available per week: {time_available}\n\n"
+    user_prompt += f"Instructions: {instructions}"
     messages = [
         {"role": "system", "content": system_prompt},
         {"role": "user", "content": user_prompt}
@@ -63,50 +68,51 @@ def request_curriculum(learning_objectives: str,
         response_format=Curriculum
     )
     model_result = response.choices[0].message.parsed
-    context['stage_data']['discuss']['curriculum'] = model_result.model_dump()    
-    print(f"Context after updating: {context}")    
-    string_result = str(model_result)
+    context['stage_data']['discuss']['curriculum'].update(model_result.model_dump())
     # Return a Response object instead of Result
-    return Result(value=string_result, context=context)
+    return Result(value=str(model_result), context=context)
         
 
-class update_discussion_data(Tool):
+def update_discussion_data(interest_areas: str,
+                           learning_style: str,
+                           timeline: str,
+                           context: Dict):
     """Update the discussion data after the learner has agreed to the curriculum."""
-    interest_areas: str = Field(description="The learner's interest areas.")
-    learning_style: str = Field(description="The learner's learning style.")
-    timeline: str = Field(description="The learner's timeline.")
-
-    def __str__(self):
-        return "\n".join(f"{field.replace('_', ' ').title()}: {value}" for field, value in self.__dict__.items())
     
-    def execute(self, context: Dict):
-        # Get email and sequence id from context
-        email = context['email']
-        sequence_id = context['sequence_id']
-        if not email or not sequence_id:
-            raise ValueError("Email and sequence id are required to update discussion data.")
-        # discuss_stage = DiscussStage.objects.get(user__email=email, sequence_id=sequence_id)
-        # discuss_stage.interest_areas = self.interest_areas
-        # discuss_stage.learning_style = self.learning_style
-        # discuss_stage.curriculum = context['stage_data']['discuss']['curriculum']
-        # discuss_stage.timeline = self.timeline
-        # discuss_stage.save()
+    # Get email and sequence id from context
+    email = context['email']
+    sequence_id = context['sequence_id']
+    if not email or not sequence_id:
+        raise ValueError("Email and sequence id are required to update discussion data.")
+    
+    # Get the DiscussStage object
+    discuss_stage = DiscussStage.objects.get(user__email=email, sequence_id=sequence_id)
+    discuss_stage.interest_areas = interest_areas
+    discuss_stage.learning_style = learning_style
+    discuss_stage.curriculum = context['stage_data']['discuss']['curriculum']
+    discuss_stage.timeline = timeline
+    discuss_stage.save()
         
-        result_message = f"""Discussion data updated successfully for {email} with sequence id {sequence_id}.
+    result_message = f"""Discussion data updated successfully for {email} with sequence id {sequence_id}.
         
-        **Discussion data:**         
-        {str(self)}
-        """
-        for key, value in context['stage_data']['discuss'].items():
-            result_message += f"\n**{key.replace('_', ' ').title()}**: {value}"
-        return Result(message=result_message, agent=None, context=context)
+    **Discussion data:**         
+        {str(discuss_stage)}
+    """
+    
+    context['stage_data']['discuss'].update({
+        'curriculum': discuss_stage.curriculum,
+        'timeline': discuss_stage.timeline,
+        'interest_areas': discuss_stage.interest_areas,
+        'learning_style': discuss_stage.learning_style
+    })
+    return Result(message=result_message, agent=None, context=context)
          
 
 # Handoff Agent for the next stage
 def transfer_to_delivery_agent():
     """Transfer to the Delivery Agent once the Discussion stage is complete."""
     print("Transferring to Delivery Agent...")
-    return None
+    return deliver_agent
 
 
 discuss_agent = Agent(

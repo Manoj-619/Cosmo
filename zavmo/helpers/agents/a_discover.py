@@ -1,6 +1,5 @@
 """
 # Stage 1: Discovery
-
 Fields:
     learning_goals: str
     learning_goal_rationale: str
@@ -8,10 +7,10 @@ Fields:
     application_area: str
 """
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field
 from typing import Literal, List, Optional, Dict
 from helpers.swarm import Agent, Response, Result, Tool
-# from stage_app.models import DiscoverStage
+from stage_app.models import DiscoverStage
 from .b_discuss import discuss_agent
 from .common import get_agent_instructions
 
@@ -42,27 +41,29 @@ class update_discover_data(Tool):
         if not email or not sequence_id:
             raise ValueError("Email and sequence ID are required to update discovery data.")
         
-        # # Get the DiscoverStage object
-        # discover_stage = DiscoverStage.objects.get(user_email=email, sequence_id=sequence_id)
-        # if not discover_stage:
-        #     raise ValueError("DiscoverStage not found")
+        # Get the DiscoverStage object
+        discover_stage = DiscoverStage.objects.get(user_email=email, sequence_id=sequence_id)
+        if not discover_stage:
+            raise ValueError("DiscoverStage not found")
         
-        # # Update the DiscoverStage object
-        # discover_stage.learning_goals = self.learning_goals
-        # discover_stage.learning_goal_rationale = self.learning_goal_rationale
-        # discover_stage.knowledge_level = self.knowledge_level
-        # discover_stage.application_area = self.application_area
-        # discover_stage.save()
+        # Update the DiscoverStage object
+        discover_stage.learning_goals = self.learning_goals
+        discover_stage.learning_goal_rationale = self.learning_goal_rationale
+        discover_stage.knowledge_level = self.knowledge_level
+        discover_stage.application_area = self.application_area
+        discover_stage.save()
         value = f"""Updated DiscoverStage for {email} with sequence ID {sequence_id}.
         The following data was updated:
         {str(self)}
         """
-        context['stage_data']['discover'] = self.model_dump()    
+        context['stage_data']['discover'].update(self.model_dump())
+        
         return Result(value=value, context=context)
             
-discovery_agent = Agent(
+discover_agent = Agent(
     name="Discovery",
-    model="gpt-4o-mini",
+    id="discover",
+    model="gpt-4o",
     instructions=get_agent_instructions('discover'),
     functions=[
         update_discover_data,

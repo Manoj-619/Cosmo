@@ -5,6 +5,7 @@
 
 HISTORY_SUFFIX         = "history"
 USER_PROFILE_SUFFIX    = "data"
+CONTEXT_SUFFIX         = "context"
 
 
 STAGE_ORDER = {

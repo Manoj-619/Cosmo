@@ -4,6 +4,12 @@ def delete_migrations():
     project_dir = os.getcwd()
     deleted_files_count = 0
 
+    # Check and delete db.sqlite3 if it exists
+    db_file_path = os.path.join(project_dir, 'db.sqlite3')
+    if os.path.exists(db_file_path):
+        os.remove(db_file_path)
+        print(f"Deleted database file: {db_file_path}")
+
     for root, dirs, files in os.walk(project_dir):
         if 'migrations' in dirs:
             migrations_dir = os.path.join(root, 'migrations')

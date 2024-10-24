@@ -36,6 +36,13 @@ class UserProfile(models.Model):
         verbose_name="Education Level"
     )
     current_role = models.CharField(max_length=100, blank=True, null=True, verbose_name="Current Role")
+    
+    def __str__(self):
+        """Get a dump of the Django model as a string."""
+        string_value = ""
+        for key, value in self.__dict__.items():
+            string_value += f"\n**{key.replace('_', ' ').title()}**: {value}"
+        return string_value
 
 
 # Stage 1
@@ -56,6 +63,12 @@ class DiscoverStage(models.Model):
     )    
     application_area = models.TextField(blank=True, null=True, verbose_name="Application Area")
     
+    def __str__(self):
+        """Get a dump of the Django model as a string."""
+        string_value = ""
+        for key, value in self.__dict__.items():
+            string_value += f"\n**{key.replace('_', ' ').title()}**: {value}"
+        return string_value
 
 
 # Stage 2
@@ -65,10 +78,14 @@ class DiscussStage(models.Model):
     interest_areas = models.JSONField(blank=True, null=True, verbose_name="Interest Areas")
     learning_style = models.TextField(blank=True, null=True, verbose_name="Learning Style")
     available_time = models.IntegerField(blank=True, null=True, verbose_name="Available Time (hours per week)")
-
     curriculum     = models.JSONField(blank=True, null=True, verbose_name="Curriculum Plan")
     
-
+    def __str__(self):
+        """Get a dump of the Django model as a string."""
+        string_value = ""
+        for key, value in self.__dict__.items():
+            string_value += f"\n**{key.replace('_', ' ').title()}**: {value}"
+        return string_value
 
 
 # Stage 3
@@ -130,3 +147,11 @@ class FourDSequence(models.Model):
             self.save()
         else:
             raise ValueError("The sequence is already completed and cannot be advanced.")
+        
+    def __str__(self):
+        """Get a dump of the Django model as a string."""
+        string_value = ""
+        for key, value in self.__dict__.items():
+            string_value += f"\n**{key.replace('_', ' ').title()}**: {value}"
+        return string_value
+
