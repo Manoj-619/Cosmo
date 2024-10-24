@@ -40,25 +40,56 @@ def get_yaml_data(yaml_path, yaml_dir="assets/data"):
         raise
     
 
+###### Curriculum Schema ######
+
+class LearningOutcome(BaseModel):
+    description: str = Field(..., description="Description of the learning outcome")
+    assessment_criteria: List[str] = Field(..., description="List of assessment criteria for the learning outcome")
+
+# class Lesson(BaseModel):
+#     title: str = Field(..., description="Title of the lesson")
+#     content: str = Field(..., description="A description of the lesson content")
+#     duration: int = Field(..., description="Number of hours to complete the lesson")
+
+
+# class Module(BaseModel):
+#     title: str = Field(..., description="Title of the module")
+#     learning_outcomes: List[LearningOutcome] = Field(..., description="List of learning outcomes for the module")
+#     lessons: List[Lesson] = Field(..., description="List of lessons in the module")
+#     duration: int = Field(..., description="Duration of the module in hours")
+
+
+# class Curriculum(BaseModel):
+#     """Represents a complete curriculum structure"""
+#     title: str = Field(..., description="The title of the curriculum")
+#     subject: str = Field(..., description="The main subject area of the curriculum")
+#     level: str = Field(..., description="The difficulty level of the curriculum")
+#     modules: List[Module] = Field(..., description="List of modules in the curriculum")
+#     prerequisites: List[str] = Field(..., description="List of prerequisites for the curriculum")
+#     qualification_level: int = Field(..., description="The qualification level of the curriculum")
+#     guided_learning_hours: int = Field(..., description="The number of guided learning hours")
+#     total_qualification_time: int = Field(..., description="The total qualification time")
+#     assessment_methods: List[str] = Field(..., description="List of assessment methods used in the curriculum")
+
 
 class Lesson(BaseModel):
-    title: str = Field(..., description="The title of the lesson")
-    content: str = Field(..., description="The main content of the lesson")
-    examples: List[str] = Field(..., description="List of examples to illustrate the lesson")
-    exercises: List[str] = Field(..., description="List of exercises for the learner to practice")
+    title: str = Field( description="The title of the lesson")
+    content: str = Field( description="The main content of the lesson")
+    examples: List[str] = Field( description="List of examples to illustrate the lesson")
+    exercises: List[str] = Field( description="List of exercises for the learner to practice")
 
 class Module(BaseModel):
-    title: str = Field(..., description="The title of the module")
-    learning_outcomes: List[str] = Field(..., description="Learning outcomes for the module")
-    lessons: List[str] = Field(..., description="List of lessons in this module")
-    duration: int = Field(..., description="The total duration of the module in hours")
+    title: str = Field(description="The title of the module")
+    learning_outcomes: List[str] = Field(description="Learning outcomes for the module")
+    lessons: List[str] = Field(description="List of lessons in this module")
+    duration: int = Field(description="The total duration of the module in hours")
 
 class Curriculum(BaseModel):
-    title: str = Field(..., description="The title of the curriculum")
-    subject: str = Field(..., description="The main subject area of the curriculum")
-    level: str = Field(..., description="The difficulty level of the curriculum (e.g., beginner, intermediate, advanced)")
-    prerequisites: List[str] = Field(..., description="Any prerequisites needed to undertake this curriculum")
-    modules: List[Module] = Field(..., description="List of modules included in the curriculum")
+    title: str = Field(description="The title of the curriculum")
+    subject: str = Field(description="The main subject area of the curriculum")
+    level: str = Field(description="The difficulty level of the curriculum (e.g., beginner, intermediate, advanced)")
+    prerequisites: List[str] = Field(description="Any prerequisites needed to undertake this curriculum")
+    modules: List[Module] = Field(description="List of modules included in the curriculum")
 
     def __str__(self):
         markdown = f"# {self.title}\n\n"
