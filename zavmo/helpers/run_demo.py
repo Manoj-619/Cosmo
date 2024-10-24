@@ -1,29 +1,10 @@
 from swarm import run_agent, Agent, Response
 from agents.a_discover import discover_agent
-from rich.console import Console
-from rich.panel import Panel
-from rich.text import Text
-from rich.markdown import Markdown
 
 DEBUG = True
 
 console = Console()
 
-def print_agent_message(agent_name, message):
-    if message is None:
-        console.print(Panel(Text("No message content", style="red"), title=f"[bold blue]{agent_name}[/bold blue]", expand=False))
-    else:
-        try:
-            markdown = Markdown(message)
-            console.print(Panel(markdown, title=f"[bold blue]{agent_name}[/bold blue]", expand=False))
-        except Exception as e:
-            console.print(Panel(Text(f"Error rendering message: {str(e)}", style="red"), title=f"[bold blue]{agent_name}[/bold blue]", expand=False))
-
-def print_user_message(message):
-    console.print(Panel(Text(message, style="green"), title="[bold green]User[/bold green]", expand=False))
-
-def print_system_message(message):
-    console.print(Text(message, style="yellow"))
 
 def main():
     agent = discover_agent
@@ -40,12 +21,12 @@ def main():
     )
     
     initial_message = initial_response.messages[0]
-    print_agent_message(agent.name, initial_message.get('content'))
+    print(agent.name, initial_message.get('content'))
     messages.append(initial_message)
 
     while True:
         user_input = console.input("[bold green]User: [/bold green]")
-        print_user_message(user_input)
+        print(user_input)
         messages.append({"role": "user", "content": user_input})
 
         response = run_agent(
@@ -59,7 +40,7 @@ def main():
         
         # If response contains an agent, switch to it
         if response.agent and response.agent != agent:
-            print_system_message(f"[bold]Switching to new agent: {response.agent.name}[/bold]")
+            print(f"[bold]Switching to new agent: {response.agent.name}[/bold]")
             agent = response.agent
             # Generate a response for the new agent
             new_agent_response = run_agent(
@@ -68,15 +49,15 @@ def main():
                 context=context,
             )
             new_agent_message = new_agent_response.messages[0]
-            print_agent_message(agent.name, new_agent_message.get('content'))
+            print(agent.name, new_agent_message.get('content'))
             messages.append(new_agent_message)
             context.update(new_agent_response.context)
         else:
             for msg in response.messages:
                 if msg["role"] == "assistant":
-                    print_agent_message(agent.name, msg.get('content'))
+                    print(agent.name, msg.get('content'))
                 elif msg["role"] == "tool":
-                    print_system_message(f"[bold]{msg['tool_name']}:[/bold] {msg.get('content', 'No content')}")
+                    print(f"[bold]{msg['tool_name']}:[/bold] {msg.get('content', 'No content')}")
 
 if __name__ == "__main__":
     main()

@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field
 from typing import List
 from helpers.swarm import Agent
 
-def get_yaml_data(yaml_path, yaml_dir="/zavmo/assets/data"):
+def get_yaml_data(yaml_path, yaml_dir="assets/data"):
     """Load a YAML file containing field data.
 
     Args:
@@ -46,31 +46,6 @@ class LearningOutcome(BaseModel):
     description: str = Field(..., description="Description of the learning outcome")
     assessment_criteria: List[str] = Field(..., description="List of assessment criteria for the learning outcome")
 
-# class Lesson(BaseModel):
-#     title: str = Field(..., description="Title of the lesson")
-#     content: str = Field(..., description="A description of the lesson content")
-#     duration: int = Field(..., description="Number of hours to complete the lesson")
-
-
-# class Module(BaseModel):
-#     title: str = Field(..., description="Title of the module")
-#     learning_outcomes: List[LearningOutcome] = Field(..., description="List of learning outcomes for the module")
-#     lessons: List[Lesson] = Field(..., description="List of lessons in the module")
-#     duration: int = Field(..., description="Duration of the module in hours")
-
-
-# class Curriculum(BaseModel):
-#     """Represents a complete curriculum structure"""
-#     title: str = Field(..., description="The title of the curriculum")
-#     subject: str = Field(..., description="The main subject area of the curriculum")
-#     level: str = Field(..., description="The difficulty level of the curriculum")
-#     modules: List[Module] = Field(..., description="List of modules in the curriculum")
-#     prerequisites: List[str] = Field(..., description="List of prerequisites for the curriculum")
-#     qualification_level: int = Field(..., description="The qualification level of the curriculum")
-#     guided_learning_hours: int = Field(..., description="The number of guided learning hours")
-#     total_qualification_time: int = Field(..., description="The total qualification time")
-#     assessment_methods: List[str] = Field(..., description="List of assessment methods used in the curriculum")
-
 
 class Lesson(BaseModel):
     title: str = Field( description="The title of the lesson")
@@ -91,47 +66,6 @@ class Curriculum(BaseModel):
     prerequisites: List[str] = Field(description="Any prerequisites needed to undertake this curriculum")
     modules: List[Module] = Field(description="List of modules included in the curriculum")
 
-    def __str__(self):
-        markdown = f"# {self.title}\n\n"
-        markdown += f"| **Subject:** | {self.subject} |\n"
-        markdown += f"| **Level:** | {self.level} |\n\n"
-        
-        if self.prerequisites:
-            markdown += "**Prerequisites:**\n"
-            for prereq in self.prerequisites:
-                markdown += f"- {prereq}\n"
-            markdown += "\n"
-        
-        markdown += "## Modules\n\n"
-        markdown += "| Module | Duration | Learning Outcomes | Lessons |\n"
-        markdown += "|--------|----------|-------------------|--------|\n"
-        for module in self.modules:
-            outcomes = "<br>".join(f"- {outcome}" for outcome in module.learning_outcomes)
-            lessons = "<br>".join(f"- {lesson}" for lesson in module.lessons)
-            markdown += f"| **{module.title}** | {module.duration} hours | {outcomes} | {lessons} |\n"
-        
-        return markdown
-
-# Shared agent definitions
-curriculum_agent = Agent(
-    name="Curriculum Specialist",
-    description="A specialist in curriculum design and development",
-    instructions=open("/zavmo/assets/prompts/curriculum.md").read(),
-    model="gpt-4o",
-    functions=[Curriculum],
-    parallel_tool_calls=False,
-    tool_choice='required'
-)
-
-lesson_specialist_agent = Agent(
-    name="Lesson Specialist",
-    description="A specialist in creating engaging and informative lessons",
-    instructions=open("/zavmo/assets/prompts/lesson.md").read(),
-    model="gpt-4o-mini",
-    functions=[Lesson],
-    parallel_tool_calls=False,
-    tool_choice='required'
-)
 
 def get_agent_instructions(stage_name: str) -> str:
     """
@@ -144,7 +78,7 @@ def get_agent_instructions(stage_name: str) -> str:
         str: Instructions for the agent.
     """
     conf_data       = get_yaml_data(stage_name.lower())
-    prompt_path     = os.path.join("/zavmo/assets/prompts/probe.md")
+    prompt_path     = os.path.join("assets/prompts/probe.md")
     prompt_template = open(prompt_path, "r", encoding="utf-8").read()
     system_content  = prompt_template.format(NAME=conf_data['name'],
                                             DESCRIPTION=conf_data['description'],

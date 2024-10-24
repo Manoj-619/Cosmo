@@ -1,45 +1,45 @@
-name: Demonstration
 stage: 4
+name: Demonstration
 description: >
-  The Demonstration stage is the fourth stage of the 4-D Learning Journey.
-  In this stage, the agent assesses the learner's understanding of all the material covered during the Delivery stage.
-  The agent consults an Assessment Consultant to prepare appropriate evaluation questions for each lesson in the curriculum.
-  The learner answers questions to demonstrate their understanding, and the agent provides feedback on their responses.
-  At the end of the assessment, the learner provides a self-assessment and feedback on the learning experience.
+ The Demonstration stage is the fourth stage of the 4-D Learning Journey.
+ In this stage, the agent assesses the learner's understanding of all the material covered during the Delivery stage.
+ The agent consults an Assessment Consultant to prepare appropriate evaluation questions for each lesson in the curriculum.
+ The learner answers questions to demonstrate their understanding, and the agent provides feedback on their responses.
+ At the end of the assessment, the learner provides a self-assessment and feedback on the learning experience.
 
 instructions: >
-  1. Request the Assessment Consultant agent to gather an appropriate evaluation question for each lesson in the curriculum.
-  2. Present each question to the learner and allow them to respond.
-  3. Evaluate the learner's response, providing feedback on whether they were correct, incorrect, or close.
-  4. Briefly explain the correct answer if the learner's response was incorrect or partially correct.
-  5. Repeat steps 1-4 for each lesson in the curriculum.
-  6. After completing all assessments, congratulate the learner on finishing the assessment.
-  7. Ask the learner to provide a self-assessment of their learning experience.
-  8. Request feedback from the learner on the test and overall learning journey.
-  9. Update the demonstration data with the learner's performance, self-assessment, and feedback.
+ 1. Request the Assessment Consultant agent to gather an appropriate evaluation question for each lesson in the curriculum.
+ 2. Present each question to the learner and allow them to respond.
+ 3. Evaluate the learner's response, providing feedback on whether they were correct, incorrect, or close.
+ 4. Briefly explain the correct answer if the learner's response was incorrect or partially correct.
+ 5. Repeat steps 1-4 for each lesson in the curriculum.
+ 6. After completing all assessments, congratulate the learner on finishing the assessment.
+ 7. Ask the learner to provide a self-assessment of their learning experience.
+ 8. Request feedback from the learner on the test and overall learning journey.
+ 9. Update the demonstration data with the learner's performance, self-assessment, and feedback.
 
 examples: >
-  "Great! Let's begin the assessment for the module 'Introduction to Programming'. Here's a question about variables and data types:
+ "Great! Let's begin the assessment for the module 'Introduction to Programming'. Here's a question about variables and data types:
 
-  What is the difference between an integer and a float in Python? Provide an example of when you might use each.
+ What is the difference between an integer and a float in Python? Provide an example of when you might use each.
 
-  Take your time to think about it and provide your answer when you're ready."
+ Take your time to think about it and provide your answer when you're ready."
 
-  "Thank you for your response. You're on the right track! An integer is indeed a whole number, and a float does involve decimal points. To clarify further, an integer is a whole number without a decimal point, while a float is a number with a decimal point. 
+ "Thank you for your response. You're on the right track! An integer is indeed a whole number, and a float does involve decimal points. To clarify further, an integer is a whole number without a decimal point, while a float is a number with a decimal point.
 
-  For example, you might use an integer to count the number of items in a list (e.g., 5 apples), and a float to represent a measurement with decimal precision (e.g., 3.14 meters).
+ For example, you might use an integer to count the number of items in a list (e.g., 5 apples), and a float to represent a measurement with decimal precision (e.g., 3.14 meters).
 
-  Let's move on to the next question."
+ Let's move on to the next question."
 
-  "Congratulations on completing the assessment! You've done an excellent job demonstrating your understanding of the material we've covered.
+ "Congratulations on completing the assessment! You've done an excellent job demonstrating your understanding of the material we've covered.
 
-  Now, I'd like to ask you for a self-assessment of your learning experience. How do you feel about your progress and understanding of the topics we've covered? Please share your thoughts."
+ Now, I'd like to ask you for a self-assessment of your learning experience. How do you feel about your progress and understanding of the topics we've covered? Please share your thoughts."
 
-  "Thank you for your self-assessment. Lastly, I'd love to hear your feedback on the test and the overall learning journey. Was there anything particularly helpful or challenging? Do you have any suggestions for improvement? Your input is valuable in helping us enhance the learning experience for future learners."
+ "Thank you for your self-assessment. Lastly, I'd love to hear your feedback on the test and the overall learning journey. Was there anything particularly helpful or challenging? Do you have any suggestions for improvement? Your input is valuable in helping us enhance the learning experience for future learners."
 
 completion_condition: >
-  The learner has completed all assessments, provided a self-assessment, and given feedback on the learning experience.
+ The learner has completed all assessments, provided a self-assessment, and given feedback on the learning experience.
 
 next_stage: Completion
 next_stage_description: >
-  You have successfully completed your learning journey! Thank you for your dedication and hard work. We hope you found this experience valuable and that you'll apply your new knowledge and skills in your future endeavors.
+ You have successfully completed your learning journey! Thank you for your dedication and hard work. We hope you found this experience valuable and that you'll apply your new knowledge and skills in your future endeavors.

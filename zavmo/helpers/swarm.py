@@ -26,8 +26,6 @@ import logging
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-
-
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 
@@ -342,44 +340,3 @@ def run_step(agent: Agent, messages: List, context: Dict = {}) -> Response:
         context=context,
     )
     
-@with_context
-def run_agent(agent: Agent, messages: List, context: Dict = {}) -> Response:
-    """
-    Manages the conversation loop with an agent, breaking as soon as the agent switches.
-    """
-    active_agent = agent
-    history = copy.deepcopy(messages)
-    turns = 0
-    updated_context = copy.deepcopy(context)
-
-    while active_agent and turns < active_agent.max_turns:
-        logging.info(f"Running step {turns} with agent {active_agent.name}")
-        completion = fetch_agent_response(active_agent, history, context=updated_context)
-        message = completion.choices[0].message
-        message.sender = active_agent.name
-        history.append(json.loads(message.model_dump_json()))
-
-        if not message.tool_calls:
-            break
-
-        partial_response = execute_tool_calls(message.tool_calls, active_agent.functions, context=updated_context)
-        history.extend(partial_response.messages)
-        updated_context.update(copy.deepcopy(partial_response.context))
-        
-        logging.info(f"Updated context after tool calls: {updated_context}")
-
-        if partial_response.agent:
-            # If the agent has changed, break the loop
-            return Response(
-                messages=history[len(messages):],
-                agent=partial_response.agent,
-                context=updated_context,
-            )
-
-        turns += 1  # Increment the turn counter
-
-    return Response(
-        messages=history[len(messages):],
-        agent=active_agent,
-        context=updated_context,
-    )    
