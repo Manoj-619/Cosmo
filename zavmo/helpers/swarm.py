@@ -72,8 +72,7 @@ def execute_tool_calls(
             result = raw_result
         elif isinstance(raw_result, Agent):
             result = Result(
-                value=f"Successfully transferred to {raw_result.name}.",
-                context=context,
+                value=json.dumps({"assistant": raw_result.name}),
                 agent=raw_result
             )
         else:
