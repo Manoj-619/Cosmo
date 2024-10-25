@@ -208,9 +208,6 @@ def chat_view(request):
         }
             
     message_history = context.get('history', [])
-
-    # Rest of the function remains the same...
-    message_history = validate_message_history(message_history)
     if stage_name == 'completed':
         return Response({"type": "text",
                          "message": "You have finished all stages for the sequence.",
@@ -236,7 +233,9 @@ def chat_view(request):
             summaries.append(f"Demonstration: {sequence.demonstrate_stage.get_summary()}")
     
     summary_text = " | ".join(summaries)
+    
     if request.data.get('message'):
+        # Added user message to message history
         message_history.append({"role": "user", "content":request.data.get('message')})
     else:
         message_history.append({
@@ -257,10 +256,20 @@ def chat_view(request):
             max_turns=5
         )
     
+    # Check if there are any messages in the response
+    if not response.messages:
+        return Response({
+            "error": "No response generated from the agent",
+            "stage": stage_name,
+            "sequence_id": sequence_id
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
     last_message = response.messages[-1]
-    message_history.append(last_message)        
-    context['history'] = message_history
+    # Added agent response to message history
+    message_history.append(last_message)
     context.update(response.context)
+    context['history'] = message_history
+    
     
     stage_name = response.agent.id
     if response.agent != agent:
@@ -274,7 +283,8 @@ def chat_view(request):
                      "message": last_message['content'],
                      "stage": stage_name,
                      "sequence_id": sequence_id,
-                     "log_context": context
+                     "log_context": context,
+                     "log_history": message_history
                      })
     
     

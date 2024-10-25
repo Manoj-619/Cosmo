@@ -138,8 +138,10 @@ class DeliverStage(models.Model):
     def get_summary(self):
         """Get a summary of the user's profile."""
         summary = ""
-        for l, lesson in enumerate(self.lessons):
-            summary += f"**Lesson {l+1}**: {lesson}\n"
+        lessons = getattr(self, 'lessons', [])
+        if lessons:
+            for l, lesson in enumerate(lessons):
+                summary += f"**Lesson {l+1}**: {lesson}\n"
         return summary.strip()
     
 # Stage 4

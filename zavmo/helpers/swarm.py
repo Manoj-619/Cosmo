@@ -27,7 +27,7 @@ openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 def fetch_agent_response(agent: Agent, history: List, context: Dict) -> ChatCompletionMessage:
     """Fetches the response from an agent."""
     context      = defaultdict(str, context)
-    instructions = agent.instructions
+    instructions = agent.instructions    
     
     # Start with system message
     messages     = [{"role": "system", "content": instructions}] + history
@@ -139,10 +139,10 @@ def run_step(
     max_turns: int = 5
 ) -> Response:
     active_agent = agent
-    history      = copy.deepcopy(messages)
-    init_length  = len(history)
-    context      = copy.deepcopy(context)
-    turns        = 0
+    history = copy.deepcopy(messages)
+    init_length = len(history)
+    context = copy.deepcopy(context)
+    turns = 0
 
     while active_agent and turns < max_turns:
         logging.info(f"Running step {turns} with agent {active_agent.name}")
@@ -174,16 +174,15 @@ def run_step(
             active_agent = partial_response.agent
             context['stage'] = active_agent.id
             logging.info(f"Stage changed to: {active_agent.id}")
+            break  # Break after agent transfer to prevent duplicate messages
 
-            turns += 1
+        turns += 1
     
-    # Ensure final context has correct stage
+    # Clean up history and ensure final context has correct stage
     context['stage'] = active_agent.id
-    context['history'] = validate_message_history(history)
     
-
     return Response(
-        messages=history[init_length:],
+        messages=history,
         agent=active_agent,
         context=context,
     )
