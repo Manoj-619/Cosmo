@@ -12,8 +12,8 @@ import os
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field
 from typing import List, Dict
+from helpers.chat import filter_history, summarize_history, get_prompt
 from stage_app.models import DemonstrateStage
-from helpers.chat import get_prompt, summarize_history
 from helpers.swarm import Agent, Response, Result, Tool
 from .common import get_agent_instructions
 from openai import OpenAI
@@ -48,6 +48,14 @@ class request_question(Tool):
         
         return Result(value=str(model_result), context=context)
 
+class Evaluation(BaseModel):
+    question: str = Field(description="The question that was asked")
+    answer: str = Field(description="A concise summary of the learner's answer to the question")
+    evaluation: str = Field(description="An brief evaluation of the learner's answer to the question")
+    
+class Evaluations(BaseModel):
+    evaluations: List[Evaluation] = Field(description="A list of evaluations of the learner's answers to the questions")
+
 class update_demonstration_data(Tool):
     """Update the demonstration data with the questions and answers."""    
     understanding_level: int = Field(description="The learner's self assessment of their understanding level, from 1 to 4 (Beginner, Intermediate, Advanced, Expert)")
@@ -75,8 +83,10 @@ class update_demonstration_data(Tool):
         
         context['stage_data']['demonstrate'] = demonstrate_data
         
+        email       = context['email']
+        sequence_id = context['sequence_id']
         # Update the DemonstrateStage object
-        demonstrate_stage = DemonstrateStage.objects.get(sequence=context['sequence_id'])
+        demonstrate_stage = DemonstrateStage.objects.get(user__email=email, sequence__id=sequence_id)
         demonstrate_stage.evaluations = demonstrate_data['evaluations']
         demonstrate_stage.understanding_level = self.understanding_level
         demonstrate_stage.feedback_summary = self.feedback_summary

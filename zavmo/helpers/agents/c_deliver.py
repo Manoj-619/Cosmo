@@ -61,6 +61,9 @@ class request_lesson(Tool):
         else:
             context['stage_data']['deliver']['lessons'] = [lesson.model_dump()]
             
+        # Update the DeliverStage object
+        email       = context['email']
+        sequence_id = context['sequence_id']
         deliver_stage = DeliverStage.objects.get(user__email=email, sequence__id=sequence_id)
         lessons = context['stage_data']['deliver']['lessons']
         deliver_stage.lessons = lessons
