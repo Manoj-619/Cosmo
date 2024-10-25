@@ -144,7 +144,7 @@ def run_step(agent: Agent, messages: List, context: Dict = {}, max_turns: int = 
             active_agent = partial_response.agent
             context['stage'] = active_agent.id
             logging.info(f"Stage changed to: {active_agent.id}")
-            break  # Break after agent transfer to prevent duplicate messages
+#            break  # Break after agent transfer to prevent duplicate messages
 
         turns += 1
     
