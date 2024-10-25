@@ -55,11 +55,16 @@ class request_lesson(Tool):
             response_format=Lesson            
         )
         
-        lesson = response.choices[0].message.parsed
+        lesson = response.choices[0].message.parsed        
         if 'lessons' in context['stage_data']['deliver']:
             context['stage_data']['deliver']['lessons'].append(lesson.model_dump())            
         else:
             context['stage_data']['deliver']['lessons'] = [lesson.model_dump()]
+            
+        deliver_stage = DeliverStage.objects.get(user__email=email, sequence__id=sequence_id)
+        lessons = context['stage_data']['deliver']['lessons']
+        deliver_stage.lessons = lessons
+        deliver_stage.save()
             
         return Result(value=str(lesson), context=context)        
         
