@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field
 from typing import List
 from helpers.swarm import Agent
 
-def get_yaml_data(yaml_path, yaml_dir="assets/data"):
+def get_yaml_data(yaml_path, yaml_dir="/zavmo/assets/data"):
     """Load a YAML file containing field data.
 
     Args:
@@ -54,7 +54,7 @@ def get_agent_instructions(stage_name: str) -> str:
         str: Instructions for the agent.
     """
     conf_data       = get_yaml_data(stage_name.lower())
-    prompt_path     = os.path.join("assets/prompts/probe.md")
+    prompt_path     = os.path.join("/zavmo/assets/prompts/probe.md")
     prompt_template = open(prompt_path, "r", encoding="utf-8").read()
     system_content  = prompt_template.format(NAME=conf_data['name'],
                                             DESCRIPTION=conf_data['description'],
