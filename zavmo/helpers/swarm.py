@@ -55,68 +55,78 @@ def execute_tool_calls(
 
     for tool_call in tool_calls:
         name = tool_call.function.name
+        # Handle missing tool case
+        if name not in function_map:
+            logging.warning(f"Tool {name} not found in function map.")
+            partial_response.messages.append({
+                "role": "tool",
+                "tool_call_id": tool_call.id,
+                "name": name,
+                "content": f"Error: Tool {name} not found."
+            })
+            continue
+
         args = json.loads(tool_call.function.arguments)
-        func = function_map.get(name)
-        result = None  # Initialize result for each tool_call
+        func = function_map[name]
+        result = None
 
-        # Execute the function or tool
-        if inspect.isclass(func) and issubclass(func, Tool):
-            # Instantiate the Tool with arguments
-            tool_instance = func(**args)
-            raw_result    = tool_instance.execute(context=context)
-        else:
-            # Regular function
-            if 'context' in inspect.signature(func).parameters:
-                raw_result = func(**args, context=context)
+        try:
+            # Execute the function or tool
+            if inspect.isclass(func) and issubclass(func, Tool):
+                tool_instance = func(**args)
+                raw_result = tool_instance.execute(context=context)
             else:
-                raw_result = func(**args)
+                if 'context' in inspect.signature(func).parameters:
+                    raw_result = func(**args, context=context)
+                else:
+                    raw_result = func(**args)
 
-        # Process the result
-        if isinstance(raw_result, Result):
-            # Result type
-            result = raw_result
-            
-        elif isinstance(raw_result, Agent):
-            # Agent type
-            result = Result(
-                value=f"Successfully transferred to {raw_result.name}.",
-                context=context,
-                agent=raw_result,
-            )
-        else:
-            # Non-Result type
-            result = Result(value=str(raw_result), context=context)
+            # Process the result
+            if isinstance(raw_result, Result):
+                result = raw_result
+            elif isinstance(raw_result, Agent):
+                result = Result(
+                    value=f"Successfully transferred to {raw_result.name}.",
+                    context=context,
+                    agent=raw_result,
+                )
+            else:
+                result = Result(value=str(raw_result), context=context)
 
-        if result.value:
-            # Tool call message
+            # Always append both tool call and response messages
             tool_call_message = {
                 "role": "assistant",
-                "tool_calls":[
-                    {
-                        "id": tool_call.id,
-                        "type": "function",
-                        "function": {
-                            "arguments": json.dumps(tool_call.function.arguments),
-                            "name": name,
-                        },
-                    }
-                ]            
+                "tool_calls": [{
+                    "id": tool_call.id,
+                    "type": "function",
+                    "function": {
+                        "arguments": tool_call.function.arguments,  # Don't re-encode
+                        "name": name,
+                    },
+                }]
             }
-            # Tool response message
             tool_response = {
                 "role": "tool",
                 "tool_call_id": tool_call.id,
                 "name": name,
-                "content": json.dumps(result.value),
+                "content": str(result.value)  # Don't use json.dumps here
             }
             partial_response.messages.extend([tool_call_message, tool_response])
 
-        # Update context with the result context
-        if result.context:
-            partial_response.context.update(result.context)
+        except Exception as e:
+            logging.error(f"Error executing tool {name}: {str(e)}")
+            tool_response = {
+                "role": "tool",
+                "tool_call_id": tool_call.id,
+                "name": name,
+                "content": f"Error executing tool: {str(e)}"
+            }
+            partial_response.messages.append(tool_response)
 
-        # Update partial_response agent if necessary
-        if result.agent:
+        # Update context and agent if necessary
+        if result and result.context:
+            partial_response.context.update(result.context)
+        if result and result.agent:
             partial_response.agent = result.agent
             partial_response.context['stage'] = result.agent.id
 
@@ -166,9 +176,10 @@ def run_step(
             logging.info(f"Stage changed to: {active_agent.id}")
 
             turns += 1
+    
     # Ensure final context has correct stage
     context['stage'] = active_agent.id
-    context['history'] = history
+    context['history'] = validate_message_history(history)
     
 
     return Response(

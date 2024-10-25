@@ -178,13 +178,11 @@ def chat_view(request):
         'email': user.email,  # Initialize with email
         'sequence_id': sequence_id  # Add sequence_id to context
     }
-    message_history = []
     
     # Get the sequence object for the given sequence_id
     cache_key = f"{user.email}_{sequence_id}_{CONTEXT_SUFFIX}"
     if cache.get(cache_key):
         context = cache.get(cache_key)
-        message_history = context['history']
         stage_name = context['stage']  # Ensure current_stage is set from cached context
     
     profile = UserProfile.objects.filter(user=user).first()
@@ -208,26 +206,11 @@ def chat_view(request):
             'deliver': DeliverStageSerializer(sequence.deliver_stage).data if sequence.deliver_stage else {},
             'demonstrate': DemonstrateStageSerializer(sequence.demonstrate_stage).data if sequence.demonstrate_stage else {}
         }
+            
     message_history = context.get('history', [])
 
-    if request.data.get('message'):
-        # Clean the message history to ensure valid format
-        cleaned_history = []
-        for msg in message_history:
-            if msg['role'] not in ['user', 'assistant', 'system']:
-                continue
-            cleaned_history.append(msg)
-        message_history = cleaned_history
-        
-        message_history.append({"role": "user", "content": request.data.get('message')})
-    else:
-        message_history = [{
-            "role": "system",
-            "content": f'Send a personalized welcome message to the learner.'
-        }]
-
     # Rest of the function remains the same...
-
+    message_history = validate_message_history(message_history)
     if stage_name == 'completed':
         return Response({"type": "text",
                          "message": "You have finished all stages for the sequence.",
@@ -266,8 +249,6 @@ def chat_view(request):
     agent = agents[stage_name]
     agent.instructions = agent.instructions + "\n\nHere is the learning journey so far:\n\n" + summary_text
 
-
-    message_history = validate_message_history(message_history) 
     # Run the agent with the user's input and current message history
     response = run_step(
             agent=agent,
@@ -276,10 +257,9 @@ def chat_view(request):
             max_turns=5
         )
     
-    message_history.extend(response.messages)
-        
-    last_message    = message_history[-1]
-    context['history'] = validate_message_history(message_history)
+    last_message = response.messages[-1]
+    message_history.append(last_message)        
+    context['history'] = message_history
     context.update(response.context)
     
     stage_name = response.agent.id

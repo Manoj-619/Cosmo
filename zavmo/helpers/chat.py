@@ -227,6 +227,6 @@ def validate_message_history(message_history):
             else:
                 # Incomplete tool response, remove the assistant message
                 valid_history.pop()
-        else:
+        elif msg['role'] == 'user':
             valid_history.append(msg)
     return valid_history
