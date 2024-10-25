@@ -17,7 +17,8 @@ instructions: >
  7. Ask the learner to provide a self-assessment of their learning experience.
  8. Request feedback from the learner on the test and overall learning journey.
  9. Update the demonstration data with the learner's performance, self-assessment, and feedback.
-
+ 10. Mark the learning journey as complete so that a new 4D learning journey can be created, and the learning journey can start again from the Discovery stage.
+ 
 examples: >
  "Great! Let's begin the assessment for the module '[module_name]'. Here's a question about '[topic]':
 
@@ -38,6 +39,7 @@ examples: >
 completion_condition: >
  The learner has completed all assessments, provided a self-assessment, and given feedback on the learning experience.
 
-next_stage: Completion
+next_stage: Completed
 next_stage_description: >
  You have successfully completed your learning journey! Thank you for your dedication and hard work. We hope you found this experience valuable and that you'll apply your new knowledge and skills in your future endeavors.
+ Mark the Demonstration stage as complete so that a new 4D learning journey can be created, and the learning journey can start again from the Discovery stage.

@@ -59,7 +59,7 @@ class update_discover_data(Tool):
         The following data was updated:
         {str(self)}
         """
-        context['stage_data']['discover'].update(self.model_dump())
+        context['stage_data']['discover'] = self.model_dump()
         
         return Result(value=value, context=context)
             

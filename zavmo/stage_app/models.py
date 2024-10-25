@@ -117,7 +117,7 @@ class DeliverStage(models.Model):
     user      = models.ForeignKey(User, on_delete=models.CASCADE, related_name='deliver_stage')
     sequence  = models.OneToOneField('FourDSequence', on_delete=models.CASCADE, related_name='deliver_stage')
     
-    curriculum = models.JSONField(blank=True, null=True, verbose_name="Curriculum Plan")
+    # Lessons is a list of dictionaries, each representing a lesson
     lessons    = models.JSONField(blank=True, null=True, verbose_name="Lessons")
 
 # Stage 4
@@ -125,7 +125,7 @@ class DemonstrateStage(models.Model):
     user      = models.ForeignKey(User, on_delete=models.CASCADE, related_name='demonstrate_stage')
     sequence  = models.OneToOneField('FourDSequence', on_delete=models.CASCADE, related_name='demonstrate_stage')
     
-    curriculum = models.JSONField(blank=True, null=True, verbose_name="Curriculum Plan")
+    # Evaluations is a list of dictionaries, each representing an evaluation
     evaluations = models.JSONField(blank=True, null=True, verbose_name="Evaluations")
     understanding_levels = models.PositiveSmallIntegerField(
         choices=[

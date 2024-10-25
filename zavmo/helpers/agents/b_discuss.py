@@ -103,8 +103,13 @@ class update_discussion_data(Tool):
         value = f"""Discussion data updated successfully for {email} with sequence id {sequence_id}.
 
         **Discussion data:**         
+            
             {str(discuss_stage)}
         """
+        stage_data = discuss_stage.model_dump()
+        stage_data['curriculum'] = context['stage_data']['discuss']['curriculum']
+        context['stage_data']['discuss'] = stage_data
+        
         return Result(value=value, context=context)
          
 # Handoff Agent for the next stage
