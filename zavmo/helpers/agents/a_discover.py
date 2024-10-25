@@ -17,8 +17,7 @@ from .common import get_agent_instructions
 ### For handoff
 def transfer_to_discussion_agent():
     """Transfer to the Discussion Agent when the learner is satisfied with the summary of the information gathered."""
-    # return discuss_agent
-    return "will forward to discuss agent"
+    return discuss_agent
 
 ### For updating the data
 class update_discover_data(Tool):
