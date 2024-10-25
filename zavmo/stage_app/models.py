@@ -175,8 +175,10 @@ class DemonstrateStage(models.Model):
 
     def get_summary(self):
         """Get a summary of the user's profile."""
-        for evaluation in self.evaluations:
-            summary += f"**Evaluation**: {evaluation}\n"
+        summary = ""
+        if self.evaluations:  # Check if evaluations exists and is not None
+            for evaluation in self.evaluations:
+                summary += f"**Evaluation**: {evaluation}\n"
         summary += f"**Understanding Level**: {self.understanding_level_display}\n"
         summary += f"**Feedback Summary**: {self.feedback_summary}\n"
         return summary.strip()
