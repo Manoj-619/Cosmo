@@ -11,6 +11,7 @@ from dotenv import load_dotenv
 from pydantic import BaseModel, Field
 from typing import List, Dict
 from helpers.swarm import Agent, Response, Result, Tool
+from helpers.chat import filter_history, get_prompt
 from .common import get_agent_instructions
 from .d_demonstrate import demonstrate_agent
 from stage_app.models import DeliverStage
@@ -40,8 +41,9 @@ class request_lesson(Tool):
     def execute(self, context:Dict):
         openai_client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
         system_prompt = get_prompt("lesson")
-        messages = filter_history(context['history'], max_tokens=40000)
-        user_message = f"\n\nCurriculum: {context['stage_data']['discuss']['curriculum']}\n\n"
+        messages      = filter_history(context['history'], max_tokens=40000)
+        
+        user_message  = f"\n\nCurriculum: {context['stage_data']['discuss']['curriculum']}\n\n"
         user_message += f"Learning Objective: {self.learning_objective}\n\n"
         user_message += f"Instructions: {self.instructions}\n\n"
         
@@ -54,7 +56,7 @@ class request_lesson(Tool):
         )
         
         lesson = response.choices[0].message.parsed
-        if context['stage_data']['deliver']['lessons']:
+        if 'lessons' in context['stage_data']['deliver']:
             context['stage_data']['deliver']['lessons'].append(lesson.model_dump())            
         else:
             context['stage_data']['deliver']['lessons'] = [lesson.model_dump()]
