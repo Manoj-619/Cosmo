@@ -6,7 +6,7 @@ Fields:
 from pydantic import Field
 from typing import Literal, List, Optional, Dict
 from helpers.swarm import Agent, Response, Result, Tool
-# from stage_app.models import UserProfile
+from stage_app.models import UserProfile
 from .a_discover import discover_agent
 from .common import get_agent_instructions
 
@@ -32,31 +32,31 @@ class update_profile_data(Tool):
             string.append(f"{field}: {value}")
         return "\n".join(string)
     
-    # def execute(self, context: Dict):
-    #     # Get email and sequence_id from context
-    #     email       = context.get('email')
-    #     if not email:
-    #         raise ValueError("Email is required to update profile data.")
+    def execute(self, context: Dict):
+        # Get email and sequence_id from context
+        email       = context.get('email')
+        if not email:
+            raise ValueError("Email is required to update profile data.")
         
-    #     # Get the UserProfile object
-    #     profile = UserProfile.objects.get(user__email=email)
-    #     if not profile:
-    #         raise ValueError("UserProfile not found")
+        # Get the UserProfile object
+        profile = UserProfile.objects.get(user__email=email)
+        if not profile:
+            raise ValueError("UserProfile not found")
         
-    #     # Update the UserProfile object
-    #     profile.first_name = self.first_name
-    #     profile.last_name = self.last_name
-    #     profile.age = self.age
-    #     profile.edu_level = self.edu_level
-    #     profile.current_role = self.current_role
-    #     profile.save()
-    #     value = f"""Updated UserProfile for {email}.
-    #     The following data was updated:
-    #     {str(self)}
-    #     """
-    #     context['stage_data']['profile'] = self.model_dump()
+        # Update the UserProfile object
+        profile.first_name = self.first_name
+        profile.last_name = self.last_name
+        profile.age = self.age
+        profile.edu_level = self.edu_level
+        profile.current_role = self.current_role
+        profile.save()
+        value = f"""Updated UserProfile for {email}.
+        The following data was updated:
+        {str(self)}
+        """
+        context['stage_data']['profile'] = self.model_dump()
         
-    #     return Result(value=value, context=context)
+        return Result(value=value, context=context)
             
 profile_agent = Agent(
     name="Profile",

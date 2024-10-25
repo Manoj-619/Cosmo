@@ -10,8 +10,8 @@ Fields:
 from pydantic import Field
 from typing import Literal, List, Optional, Dict
 from helpers.swarm import Agent, Response, Result, Tool
-# from stage_app.models import DiscoverStage
-# from .b_discuss import discuss_agent
+from stage_app.models import DiscoverStage
+from .b_discuss import discuss_agent
 from .common import get_agent_instructions
 
 ### For handoff
@@ -35,34 +35,34 @@ class update_discover_data(Tool):
             string.append(f"{field}: {value}")
         return "\n".join(string)
     
-    # def execute(self, context: Dict):
-    #     # Get email and sequence_id from context
-    #     email = context.get('email')
-    #     sequence_id = context.get('sequence_id')
+    def execute(self, context: Dict):
+        # Get email and sequence_id from context
+        email = context.get('email')
+        sequence_id = context.get('sequence_id')
         
-    #     if not email or not sequence_id:
-    #         raise ValueError("Email and sequence ID are required to update discovery data.")
+        if not email or not sequence_id:
+            raise ValueError("Email and sequence ID are required to update discovery data.")
         
-    #     try:
-    #         # Attempt to get the DiscoverStage object
-    #         discover_stage = DiscoverStage.objects.get(user__email=email, sequence__id=sequence_id)
-    #     except DiscoverStage.DoesNotExist:
-    #         raise ValueError(f"DiscoverStage not found for email {email} and sequence ID {sequence_id}")
+        try:
+            # Attempt to get the DiscoverStage object
+            discover_stage = DiscoverStage.objects.get(user__email=email, sequence__id=sequence_id)
+        except DiscoverStage.DoesNotExist:
+            raise ValueError(f"DiscoverStage not found for email {email} and sequence ID {sequence_id}")
         
-    #     # Update the DiscoverStage object
-    #     discover_stage.learning_goals = self.learning_goals
-    #     discover_stage.learning_goal_rationale = self.learning_goal_rationale
-    #     discover_stage.knowledge_level = self.knowledge_level
-    #     discover_stage.application_area = self.application_area
-    #     discover_stage.save()
+        # Update the DiscoverStage object
+        discover_stage.learning_goals = self.learning_goals
+        discover_stage.learning_goal_rationale = self.learning_goal_rationale
+        discover_stage.knowledge_level = self.knowledge_level
+        discover_stage.application_area = self.application_area
+        discover_stage.save()
         
-    #     value = f"""Updated DiscoverStage for {email} with sequence ID {sequence_id}.
-    #     The following data was updated:
-    #     {str(self)}
-    #     """
-    #     context['stage_data']['discover'] = self.model_dump()
+        value = f"""Updated DiscoverStage for {email} with sequence ID {sequence_id}.
+        The following data was updated:
+        {str(self)}
+        """
+        context['stage_data']['discover'] = self.model_dump()
         
-    #     return Result(value=value, context=context)
+        return Result(value=value, context=context)
             
 discover_agent = Agent(
     name="Discovery",

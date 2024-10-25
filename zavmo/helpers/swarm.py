@@ -44,7 +44,6 @@ def fetch_agent_response(agent: Agent, history: List, context: Dict) -> ChatComp
         create_params["parallel_tool_calls"] = agent.parallel_tool_calls
     logging.debug(f"Messages being sent to OpenAI API: {json.dumps(messages, indent=2)}")
     return openai_client.chat.completions.create(**create_params)
-
 def execute_tool_calls(
     tool_calls: List[ChatCompletionMessageToolCall],
     functions: List[AgentFunction],
@@ -75,31 +74,18 @@ def execute_tool_calls(
             result = Result(
                 value=f"Successfully transferred to {raw_result.name}.",
                 context=context,
-                agent=raw_result,
+                agent=raw_result
             )
         else:
             result = Result(value=str(raw_result), context=context)
-        # Always append both tool call and response messages
-        tool_call_message = {
-            "role": "assistant",
-            "tool_calls": [
-                {
-                    "function": {
-                        "arguments": json.dumps(tool_call.function.arguments),
-                        "name": name,
-                    },
-                    "id": tool_call.id,
-                    "type": "function",
-                }
-            ]
-        }
+        # Only append the tool response message
         tool_response = {
             "role": "tool",
             "tool_call_id": tool_call.id,
-            "name": name,
+            "tool_name": name,
             "content": str(result.value)  # Don't use json.dumps here
         }
-        partial_response.messages.extend([tool_call_message, tool_response])
+        partial_response.messages.append(tool_response)
     except Exception as e:
         logging.error(f"Error executing tool {name}: {str(e)}")
         tool_response = {
@@ -115,6 +101,7 @@ def execute_tool_calls(
     # Update context and agent if necessary
     if result and result.context:
         partial_response.context.update(result.context)
+        
     if result and result.agent:
         partial_response.agent = result.agent
         partial_response.context['stage'] = result.agent.id
