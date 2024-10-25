@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
+import uuid
 
 class Org(models.Model):
     org_id   = models.CharField(max_length=50, primary_key=True)
@@ -39,10 +40,23 @@ class UserProfile(models.Model):
     
     def __str__(self):
         """Get a dump of the Django model as a string."""
-        string_value = ""
-        for key, value in self.__dict__.items():
-            string_value += f"\n**{key.replace('_', ' ').title()}**: {value}"
-        return string_value
+        return f"{self.user.email} - {self.first_name} {self.last_name} - {self.age} - {self.edu_level} - {self.current_role}"
+
+    @property
+    def edu_level_display(self):
+        if self.edu_level is None:
+            return None
+        # Get choices from the field definition, not the value
+        return dict(self._meta.get_field('edu_level').choices)[self.edu_level]
+    
+    def get_summary(self):
+        """Get a summary of the user's profile."""
+        return f"""
+        **Name**: {self.first_name} {self.last_name}
+        **Age**: {self.age}
+        **Education Level**: {self.edu_level_display}
+        **Current Role**: {self.current_role}
+        """
 
     def is_complete(self):
         """Check if the profile is complete."""
@@ -51,6 +65,7 @@ class UserProfile(models.Model):
 
 # Stage 1
 class DiscoverStage(models.Model):
+    user           = models.ForeignKey(User, on_delete=models.CASCADE, related_name='discover_stage')
     sequence       = models.OneToOneField('FourDSequence', on_delete=models.CASCADE, related_name='discover_stage')
     
     learning_goals = models.TextField(blank=True, null=True, verbose_name="Learning Goals")
@@ -67,6 +82,10 @@ class DiscoverStage(models.Model):
     )    
     application_area = models.TextField(blank=True, null=True, verbose_name="Application Area")
     
+    @property
+    def knowledge_level_display(self):
+        return dict(self._meta.get_field('knowledge_level').choices)[self.knowledge_level]
+    
     def __str__(self):
         """Get a dump of the Django model as a string."""
         string_value = ""
@@ -77,6 +96,7 @@ class DiscoverStage(models.Model):
 
 # Stage 2
 class DiscussStage(models.Model):
+    user           = models.ForeignKey(User, on_delete=models.CASCADE, related_name='discuss_stage')
     sequence = models.OneToOneField('FourDSequence', on_delete=models.CASCADE, related_name='discuss_stage')
     
     interest_areas = models.JSONField(blank=True, null=True, verbose_name="Interest Areas")
@@ -94,6 +114,7 @@ class DiscussStage(models.Model):
 
 # Stage 3
 class DeliverStage(models.Model):
+    user      = models.ForeignKey(User, on_delete=models.CASCADE, related_name='deliver_stage')
     sequence  = models.OneToOneField('FourDSequence', on_delete=models.CASCADE, related_name='deliver_stage')
     
     curriculum = models.JSONField(blank=True, null=True, verbose_name="Curriculum Plan")
@@ -101,7 +122,8 @@ class DeliverStage(models.Model):
 
 # Stage 4
 class DemonstrateStage(models.Model):
-    sequence = models.OneToOneField('FourDSequence', on_delete=models.CASCADE, related_name='demonstrate_stage')
+    user      = models.ForeignKey(User, on_delete=models.CASCADE, related_name='demonstrate_stage')
+    sequence  = models.OneToOneField('FourDSequence', on_delete=models.CASCADE, related_name='demonstrate_stage')
     
     curriculum = models.JSONField(blank=True, null=True, verbose_name="Curriculum Plan")
     evaluations = models.JSONField(blank=True, null=True, verbose_name="Evaluations")
@@ -116,6 +138,12 @@ class DemonstrateStage(models.Model):
         verbose_name="Understanding Level"
     )
     feedback_summary = models.TextField(blank=True, null=True, verbose_name="Feedback Summary")
+    
+    @property
+    def understanding_level_display(self):
+        if self.understanding_level is None:
+            return None
+        return dict(self.understanding_level.choices)[self.understanding_level]
 
 
 class FourDSequence(models.Model):
@@ -125,14 +153,14 @@ class FourDSequence(models.Model):
         DELIVER = 3, 'deliver'
         DEMONSTRATE = 4, 'demonstrate'
         COMPLETED = 5, 'completed'
-        
+    
+    # Use an automatically generated UUID for the id
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user        = models.ForeignKey(User, on_delete=models.CASCADE, related_name='four_d_sequences')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     current_stage = models.PositiveSmallIntegerField(choices=Stage.choices, default=Stage.DISCOVER)
 
-    def __str__(self):
-        return f"{self.user.email} - {self.created_at} - {self.stage_display}"
 
     @property
     def stage_display(self):
@@ -156,4 +184,6 @@ class FourDSequence(models.Model):
         for key, value in self.__dict__.items():
             string_value += f"\n**{key.replace('_', ' ').title()}**: {value}"
         return string_value
+
+
 

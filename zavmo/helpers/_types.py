@@ -25,6 +25,7 @@ class Agent(BaseModel):
         parallel_tool_calls (bool): Whether to allow parallel tool calls.
     """
     name: str = "Agent"
+    id: str = "agent"
     model: str = "gpt-4"
     instructions: Union[str, Callable[[], str]] = "You are a helpful agent."
     functions: List[AgentFunction] = []
@@ -82,9 +83,10 @@ def function_to_json(func) -> dict:
     if inspect.isclass(func) and issubclass(func, Tool):
         # Handle Pydantic model classes that inherit from Tool
         return openai.pydantic_function_tool(func)
-    elif isinstance(func, Tool):
+    elif inspect.isclass(func) and issubclass(func, BaseModel):
         # Handle instances of Tool or its subclasses
         return openai.pydantic_function_tool(func)
+    
     elif callable(func):
         # Standard function signature processing for non-tool functions
         type_map = {

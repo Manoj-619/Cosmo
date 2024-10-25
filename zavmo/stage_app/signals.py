@@ -10,8 +10,8 @@ logger = logging.getLogger(__name__)
 @receiver(post_save, sender=FourDSequence)
 def create_stage_models(sender, instance, created, **kwargs):
     if created:
-        DiscoverStage.objects.create(sequence=instance)
-        DiscussStage.objects.create(sequence=instance)
-        DeliverStage.objects.create(sequence=instance)
-        DemonstrateStage.objects.create(sequence=instance)
+        DiscoverStage.objects.create(user=instance.user, sequence=instance)
+        DiscussStage.objects.create(user=instance.user, sequence=instance)
+        DeliverStage.objects.create(user=instance.user, sequence=instance)
+        DemonstrateStage.objects.create(user=instance.user, sequence=instance)
         logger.info(f"4d sequence created for user {instance.user.username}")

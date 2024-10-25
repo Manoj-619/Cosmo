@@ -25,8 +25,8 @@ class BaseStageSerializer(serializers.ModelSerializer):
 
 class UserProfileSerializer(BaseStageSerializer):
     email    = serializers.CharField(source='user.email', read_only=True)
-    org_id   = serializers.PrimaryKeyRelatedField(source='user.org.org_id', read_only=True)
-    org_name = serializers.CharField(source='user.org.org_name', read_only=True)
+    org_id   = serializers.PrimaryKeyRelatedField(source='org.org_id', read_only=True)
+    org_name = serializers.CharField(source='org.org_name', read_only=True)
     class Meta:
         model = UserProfile
         fields = ['id', 'email', 'org_id', 'org_name', 'first_name', 'last_name', 'age', 'edu_level', 'current_role']
@@ -52,19 +52,10 @@ class DemonstrateStageSerializer(BaseStageSerializer):
         exclude = ('sequence',)
 
 class FourDSequenceSerializer(serializers.ModelSerializer):
-    stage_name = serializers.CharField(source='get_current_stage_display', read_only=True)
+    stage_name = serializers.CharField(source='stage_display', read_only=True)
     email      = serializers.CharField(source='user.email', read_only=True)
     org_id     = serializers.PrimaryKeyRelatedField(source='user.org', read_only=True)
     org_name   = serializers.CharField(source='user.org.org_name', read_only=True)
     class Meta:
         model = FourDSequence
-        fields = ['id', 'user', 'created_at', 'updated_at', 'current_stage', 'stage_name', 'email', 'org_id', 'org_name']
-
-class DetailedFourDSequenceSerializer(FourDSequenceSerializer):
-    discover_stage = DiscoverStageSerializer(read_only=True)
-    discuss_stage = DiscussStageSerializer(read_only=True)
-    deliver_stage = DeliverStageSerializer(read_only=True)
-    demonstrate_stage = DemonstrateStageSerializer(read_only=True)
-
-    class Meta(FourDSequenceSerializer.Meta):
-        fields = FourDSequenceSerializer.Meta.fields + ['discover_stage', 'discuss_stage', 'deliver_stage', 'demonstrate_stage']
+        fields = ['id', 'created_at', 'updated_at', 'stage_name', 'email', 'org_id', 'org_name']

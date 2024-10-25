@@ -14,6 +14,7 @@ from openai.types.chat import ChatCompletionMessage
 from openai.types.chat.chat_completion_message_tool_call import ChatCompletionMessageToolCall
 # Define a decorator to handle context uniformly
 import logging
+from helpers.chat import filter_history
 from helpers._types import Agent, Tool, Result, Response, AgentFunction, function_to_json
 from typing import List, Dict, Any
 from collections import defaultdict
@@ -23,33 +24,11 @@ redis_client = get_redis_connection()
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-
-def _tool_call(tool: Tool, messages: List[Dict[str, Any]], context: Dict = {}):
-    """Make a tool call to the given tool."""
-    response = openai_client.chat.completions.create(
-        model="gpt-4o",
-        messages=messages,
-        tools=[function_to_json(tool)],
-        tool_choice="required",
-        parallel_tool_calls=False,
-    )
-    return response
-
-def make_tool_call(tool: Tool, messages: List[Dict[str, Any]], context: Dict = {}):
-    """Make a tool call to the given tool."""
-    response = _tool_call(tool, messages, context=context)
-    try:
-        result = tool.model_validate_json(response.choices[0].message.tool_calls[0].function.arguments)
-    except Exception as e:
-        print(f"Error in {tool.__name__} Model Validation: {e}")
-        raise e
-    return result
-
 def fetch_agent_response(agent: Agent, history: List, context: Dict) -> ChatCompletionMessage:
     """Fetches the response from an agent."""
     context      = defaultdict(str, context)
     instructions = agent.instructions(context) if callable(agent.instructions) else agent.instructions
-    messages     = [{"role": "system", "content": instructions}] + history
+    messages     = [{"role": "system", "content": instructions}] + filter_history(history, max_tokens=60000)
 
     tools        = [function_to_json(f) for f in agent.functions]
 
@@ -62,99 +41,76 @@ def fetch_agent_response(agent: Agent, history: List, context: Dict) -> ChatComp
 
     if tools:
         create_params["parallel_tool_calls"] = agent.parallel_tool_calls
+    logging.debug(f"Messages being sent to OpenAI API: {json.dumps(messages, indent=2)}")
 
     return openai_client.chat.completions.create(**create_params)
 
-def process_function_result(result, context: Dict) -> Result:
-    """
-    Processes the result of an agent function or Tool.
-    """
-    if isinstance(result, Result):
-        return result
-    elif isinstance(result, Agent):
-        return Result(
-            value=json.dumps({"assistant": result.name}),
-            context=context,
-            agent=result,
-        )
-    elif isinstance(result, Tool):
-        # Handle the tool result via the execute method
-        return Result(value=str(result.execute(context=context)))
-    else:
-        try:
-            return Result(value=str(result), context=context)
-        except Exception as e:
-            error_message = f"Failed to cast response to string: {result}. Make sure agent functions return a string or Result object. Error: {str(e)}"
-            raise TypeError(error_message)
-
-def execute_tool_calls(tool_calls: List[ChatCompletionMessageToolCall], functions: List[AgentFunction], context: Dict) -> Response:
-    """
-    Executes tool calls from the agent and updates the context.
-    """
-    function_map = {}
-    for f in functions:
-        if inspect.isclass(f) and issubclass(f, Tool):
-            func_name = f.__name__
-        elif isinstance(f, Tool):
-            func_name = type(f).__name__
-        elif callable(f):
-            func_name = f.__name__
-        else:
-            continue  # Unsupported function type
-        function_map[func_name] = f
-
-    partial_response = Response(messages=[], agent=None, context=copy.deepcopy(context))
+def execute_tool_calls(tool_calls: List[ChatCompletionMessageToolCall], history: List, functions: List[AgentFunction], context: Dict) -> Response:
+    function_map     = {f.__name__: f for f in functions}
+    partial_response = Response(messages=history, context=copy.deepcopy(context))
 
     for tool_call in tool_calls:
         name = tool_call.function.name
-        if name not in function_map:
+        args = json.loads(tool_call.function.arguments)
+        func = function_map.get(name)
+
+        if func is None:
+            # Function not found
             partial_response.messages.append({
-                "role": "tool",
-                "tool_call_id": tool_call.id,
-                "tool_name": name,
+                "role": "function",
+                "name": name,
                 "content": f"Error: Tool {name} not found."
             })
             continue
 
-        args = json.loads(tool_call.function.arguments)
-        func = function_map[name]
-
-        # Detect if the function is a Tool, use its `execute` method
-        if inspect.isclass(func) and issubclass(func, Tool):
-            # Instantiate the Tool with arguments
-            tool_instance = func(**args)
-            raw_result    = tool_instance.execute(context=context)
-        elif isinstance(func, Tool):
-            raw_result = func.execute(context=context)
+        # Execute the function or tool
+        if isinstance(func, Tool) or (inspect.isclass(func) and issubclass(func, Tool)):
+            if inspect.isclass(func):
+                # Instantiate the Tool with arguments
+                tool_instance = func(**args)
+                raw_result = tool_instance.execute(context=context)
+            else:
+                raw_result = func.execute(context=context)
         else:
-            # Ensure context is passed to functions that require it
+            # Regular function
             if 'context' in inspect.signature(func).parameters:
                 raw_result = func(**args, context=context)
             else:
                 raw_result = func(**args)
 
-        # Process the result based on its type
-        result: Result = process_function_result(raw_result, context=context)
+        # Process the result
+        if isinstance(raw_result, Result):
+            result = raw_result
+            
+        elif isinstance(raw_result, Agent):
+            result = Result(
+                value=f"Successfully transferred to {raw_result.name}.",
+                context=context,
+                agent=raw_result,
+            )
+        else:
+            result = Result(value=str(raw_result), context=context)
 
-        # Add the result to the tool call response
+        # Append the function response message
         partial_response.messages.append({
             "role": "tool",
-            "tool_call_id": tool_call.id,
-            "tool_name": name,
-            "content": result.value,
+            "tool_call_id": tool_call.id,            
+            "name": name,
+            "content": json.dumps(result.value),            
         })
-        partial_response.context.update(copy.deepcopy(result.context))
-
-        if result.agent:
-            partial_response.agent = result.agent
-
-        logging.info(f"Updated context after {name} call: {partial_response.context}")
+        
+    if result.agent:
+        partial_response.agent = result.agent
+    
+    partial_response.context.update(result.context)
+    partial_response.context['history'] = partial_response.messages
 
     return partial_response
 
 def run_step(agent: Agent, messages: List, context: Dict = {}, max_turns: int = 5) -> Response:
     active_agent = agent
     history = copy.deepcopy(messages)
+    context = copy.deepcopy(context)
     turns = 0
 
     while active_agent and turns < max_turns:
@@ -162,26 +118,35 @@ def run_step(agent: Agent, messages: List, context: Dict = {}, max_turns: int = 
         completion = fetch_agent_response(active_agent, history, context=context)
         message = completion.choices[0].message
         message.sender = active_agent.name
-        history.append(json.loads(message.model_dump_json()))
 
+        # Convert the message to dict
+        message_dict = json.loads(message.model_dump_json())
+        history.append(message_dict)
+        
         if not message.tool_calls:
             break
 
-        partial_response = execute_tool_calls(message.tool_calls, active_agent.functions, context=context)
+        # Execute tool calls and get responses
+        partial_response = execute_tool_calls(message.tool_calls, history, active_agent.functions, context=context)
 
-        # Append tool response messages to history
-        history.extend(partial_response.messages)
+        # Update history and context
+        history = partial_response.messages
+        context.update(partial_response.context)
 
-        context.update(copy.deepcopy(partial_response.context))
-
-        if partial_response.agent:
+        # Update active_agent and stage if a new agent is returned
+        if partial_response.agent and partial_response.agent != active_agent:
             active_agent = partial_response.agent
+            context['stage'] = active_agent.id  # Ensure stage is updated
+            logging.info(f"Stage changed to: {active_agent.id}")
 
-        turns += 1  # Increment the turn counter
+        turns += 1
 
-    new_history = history[len(messages):]
+    # Important: Ensure final context has correct stage
+    context['stage'] = active_agent.id
+    context['history'] = history
+    
     return Response(
-        messages=new_history,
+        messages=history,
         agent=active_agent,
         context=context,
     )

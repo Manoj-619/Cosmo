@@ -16,7 +16,7 @@ from stage_app.models import Org, UserProfile, FourDSequence
 from stage_app.serializers import (
     UserDetailSerializer, UserProfileSerializer, 
     DiscoverStageSerializer, DiscussStageSerializer, DeliverStageSerializer, DemonstrateStageSerializer,
-    FourDSequenceSerializer, DetailedFourDSequenceSerializer
+    FourDSequenceSerializer
 )
 from helpers.constants import USER_PROFILE_SUFFIX, CONTEXT_SUFFIX
 
@@ -25,7 +25,7 @@ from helpers.agents import a_discover,b_discuss,c_deliver,d_demonstrate, profile
 
 agents = { 'profile': profile.profile_agent,
            'discover': a_discover.discover_agent,
-           'discussion': b_discuss.discuss_agent,
+           'discuss': b_discuss.discuss_agent,
            'deliver': c_deliver.deliver_agent,
            'demonstrate': d_demonstrate.demonstrate_agent,
         }
@@ -88,27 +88,27 @@ def sync_user(request):
             if created:
                 message = "User created successfully."
                 status_code = status.HTTP_201_CREATED
-                UserProfile.objects.create(user=user)
+                UserProfile.objects.create(user=user, org=org)
                 logger.info(f"UserProfile created for user {user.username}")
             else:
                 message = "User already exists."
                 status_code = status.HTTP_200_OK
-
-            # Get or create the latest 4D sequence
-            sequence, sequence_created = FourDSequence.objects.get_or_create(
-                user=user,
-                # defaults={'title': 'Default Sequence'}
-            )
-            if sequence_created:
-                logger.info(f"New FourDSequence created for user {user.username}")
+            # Check if there are any sequences for this user
+            sequences = FourDSequence.objects.filter(user=user)
+            if not sequences:
+                # Create a new sequence
+                sequence = FourDSequence(user=user)
+                sequence.save()
+            else:
+                sequence = sequences.order_by('-created_at').first()    # Initialize related stages with user_id
                 sequence.save()
 
             # Determine the stage_name
             profile = UserProfile.objects.filter(user=user).first()
-            if not profile:
+            if not profile or not profile.is_complete():
                 stage_name = 'profile'
             else:
-                stage_name = sequence.current_stage
+                stage_name = sequence.stage_display
 
             return Response({
                 "message": message,
@@ -137,38 +137,19 @@ def get_user_profile(request):
     sequences = FourDSequence.objects.filter(user=user)
     
     profile_data   = UserProfileSerializer(profile_stage).data
-    # NOTE: Perhaps we should just get some basic info about the last K sequences that have not been `completed`
+    # Check if there are any sequences for this user
     sequences_data = FourDSequenceSerializer(sequences, many=True).data
+    if profile_stage.is_complete():
+        stage = sequences.order_by('-created_at').first().current_stage
+    else:
+        stage = 'profile'
     
     return Response({
         'profile': profile_data,
+        'stage': stage,
         'sequences': sequences_data
     })
 
-@api_view(['POST'])
-@authentication_classes([CustomJWTAuthentication])
-@permission_classes([IsAuthenticated])
-def create_sequence(request):
-    """
-    Create a new 4D sequence for the user.
-    """
-    user = request.user
-    serializer = FourDSequenceSerializer(data=request.data)
-    if serializer.is_valid():
-        serializer.save(user=user)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-@api_view(['GET'])
-@authentication_classes([CustomJWTAuthentication])
-@permission_classes([IsAuthenticated])
-def get_sequence_detail(request, sequence_id):
-    """
-    Retrieve details of a specific 4D sequence.
-    """
-    sequence = get_object_or_404(FourDSequence, id=sequence_id, user=request.user)
-    serializer = DetailedFourDSequenceSerializer(sequence)
-    return Response(serializer.data)
 
 @api_view(['POST'])
 def delete_all_caches(request):
@@ -183,7 +164,12 @@ def delete_all_caches(request):
 def chat_view(request):
     """Handles chat sessions between a user and the AI assistant."""
     user        = request.user
-    sequence_id = request.data.get('sequence_id', 1)    
+    sequence_id = request.data.get('sequence_id')
+    if not sequence_id:
+        # Get first sequence for this user
+        sequence    = FourDSequence.objects.filter(user=user).order_by('-created_at').first()
+        sequence_id = sequence.id
+        
     # Initialize context variable
     context = {}
     # Get the sequence object for the given sequence_id
@@ -192,38 +178,39 @@ def chat_view(request):
         context = cache.get(cache_key)
         message_history = context['history']
         stage_name = context['stage']  # Ensure current_stage is set from cached context
-    else:
         # Check if user has a profile
-        profile = UserProfile.objects.filter(user=user).first()
-        if not profile or not profile.is_complete():  # Check if profile is empty
-            stage_name    = 'profile'
-            stage_data = {
+    
+    profile = UserProfile.objects.filter(user=user).first()
+    if not profile or not profile.is_complete():  # Check if profile is empty
+        stage_name    = 'profile'
+        stage_data = {
                 'profile': UserProfileSerializer(profile).data if profile else {},
                 'discover': {},
                 'discuss': {},
                 'deliver': {},
-                'demonstrate': {}
-            }
-        else:
-            sequence    = FourDSequence.objects.filter(user=user).order_by('-created_at').first()
-            stage_name  = sequence.current_stage
-            stage_data = {
-                'profile': UserProfileSerializer(profile).data if profile else {},
-                'discover': DiscoverStageSerializer(sequence.discover_stage).data if sequence else {},
-                'discuss': DiscussStageSerializer(sequence.discuss_stage).data if sequence else {},
-                'deliver': DeliverStageSerializer(sequence.deliver_stage).data if sequence else {},
-                'demonstrate': DemonstrateStageSerializer(sequence.demonstrate_stage).data if sequence else {}
-            }
-        message_history = context.get('history', [])
-        context = {
-            'sequence_id': sequence_id,
-            'stage': stage_name,
-            'user': profile.user.email if profile else '',
-            'email': profile.user.email if profile else '',
-            'stage_data': stage_data,
-            'history': message_history
+            'demonstrate': {}
         }
-        cache.set(cache_key, context)
+    else:
+        profile = UserProfile.objects.filter(user=user).first()
+        sequence    = FourDSequence.objects.filter(user=user).order_by('-created_at').first()
+        stage_name  = sequence.stage_display
+        stage_data = {
+            'profile': UserProfileSerializer(profile).data if profile else {},
+            'discover': DiscoverStageSerializer(sequence.discover_stage).data if sequence.discover_stage else {},
+            'discuss': DiscussStageSerializer(sequence.discuss_stage).data if sequence.discuss_stage else {},
+            'deliver': DeliverStageSerializer(sequence.deliver_stage).data if sequence.deliver_stage else {},
+            'demonstrate': DemonstrateStageSerializer(sequence.demonstrate_stage).data if sequence.demonstrate_stage else {}
+            }
+    message_history = context.get('history', [])
+    context = {
+        'sequence_id': sequence_id,
+        'stage': stage_name,
+        'user': profile.user.email if profile else '',
+        'email': profile.user.email if profile else '',
+        'stage_data': stage_data,
+        'history': message_history
+    }
+    cache.set(cache_key, context)
        
        
     if stage_name == 'completed':
@@ -235,11 +222,15 @@ def chat_view(request):
     if request.data.get('message'):
         message_history.append({"role": "user","content": request.data.get('message')})
     else:
-        message_history.append({"role": "system","content": f'Send a personalized welcome message to the learner.'})
-
+        if profile.is_complete():
+            user_summary = profile.get_summary()
+            message_history.append({"role": "system","content": f'Send a personalized welcome message to the learner. Here is some information about the learner: {user_summary}'})
+        else:
+            message_history.append({"role": "system","content": f'Send a personalized welcome message to the learner.'})
 
     # Initialize the agent
     agent = agents[stage_name]
+
 
     # Run the agent with the user's input and current message history
     response = run_step(
@@ -248,16 +239,23 @@ def chat_view(request):
             context=context,
             max_turns=5
         )
-    new_messages = response.messages
+    messages = response.context['history']
         
-    message_history.extend(new_messages)
-    last_message = new_messages[-1]
+    message_history = messages
+    last_message    = messages[-1]
     context.update(response.context)
-    if response.agent!= agent:
+    context['history'] = messages
+    if response.agent != agent:
         logger.info(f"Stage changed from {agent.id} to {response.agent.id}.")
         stage_name = response.agent.id
         context['stage'] = stage_name
-    
+        # Update the sequence stage
+        sequence.advance_stage()
+        sequence.save()
+    else:
+        # Ensure we maintain the current stage if no explicit change
+        context['stage'] = stage_name
+            
     cache.set(cache_key, context)
     
     return Response({"type": "text",

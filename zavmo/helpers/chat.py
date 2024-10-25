@@ -15,6 +15,20 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 logger = logging.getLogger(__name__)
 
+def log_tokens(func: Callable[..., Any]) -> Callable[..., Any]:
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        response = func(*args, **kwargs)
+        
+        if hasattr(response, 'usage'):
+            print(f"Input tokens: {response.usage.prompt_tokens}")
+            print(f"Output tokens: {response.usage.completion_tokens}")
+            print(f"Total tokens: {response.usage.total_tokens}")
+        else:
+            print("No usage information available in the response.")
+        
+        return response
+    return wrapper
 
 def log_tokens(func):
     """Log the token usage of the decorated function"""
@@ -112,71 +126,7 @@ def get_claude_response(sys_mssg,messages,model="claude-3-opus-20240229"):
     )
     return message.content[0].text
 
-### TODO: Create a separate function for making tool calls, with automatic tool choice and parallel execution
-
-
-@log_tokens
-def force_tool_call(tools: Union[List[BaseModel], BaseModel],
-                   messages, 
-                   model='gpt-4o-mini', 
-                   tool_choice='required', # NOTE: Forcing tool to be called here
-                   parallel_tool_calls=True,
-                   **kwargs
-                   ):
-    """
-    Make tool calls and return the parsed response.
-    # IMPORTANT: Always specify these kwargs: `tool_choice`, and `parallel_tool_calls`
-    """
-    is_single_tool = not isinstance(tools, list)
-    tools_list = [tools] if is_single_tool else tools
-
-    response = client.chat.completions.create(
-        model=model,
-        messages=messages,
-        tools=[openai.pydantic_function_tool(t) for t in tools_list],
-        tool_choice=tool_choice,
-        parallel_tool_calls=parallel_tool_calls,
-        **kwargs
-    )    
-    message    = response.choices[0].message
-    tool_calls = response.choices[0].message.tool_calls
-    parsed_tools = []
-    for tool_call in tool_calls:
-        tool_call_func = tool_call.function
-        tool_name, tool_args = tool_call_func.name, tool_call_func.arguments
-        # Get the pydantic model from the tools list that has the name of the tool call
-        tool_model = next((tool for tool in tools_list if tool.__name__ == tool_name), None)
-        try:
-            parsed_tool = tool_model.model_validate_json(tool_args)
-            parsed_tools.append(parsed_tool)
-        except Exception as e:
-            logger.debug(f"Error parsing tool call: {e}")
-            # Log the error, but don't raise it
-    
-    return parsed_tools[0] if is_single_tool else parsed_tools
-        
- 
-
-def make_structured_call(tool:BaseModel, messages, model='gpt-4o-mini', **kwargs):
-    """Make a structured output call with OpenAI API, with pydantic models."""
-    try:
-        completion = client.beta.chat.completions.parse(
-            model=model,
-            messages=messages,
-            response_format=tool,
-            **kwargs
-        )
-        message = completion.choices[0].message
-        if message.parsed:
-            return message.parsed
-        elif message.refusal:
-            print(message.refusal)
-            return None
-    except Exception as e:
-        print(e)
-        return None
-
-
+### TODO: Crea
 
 def create_message_payload(user_content=None, system_message=None, messages=[], max_tokens=20000):  # IMPORTANT
     """Create a message payload for the conversation.
@@ -212,20 +162,18 @@ def create_message_payload(user_content=None, system_message=None, messages=[], 
     
     return message_history
 
-def log_tokens(func: Callable[..., Any]) -> Callable[..., Any]:
-    @functools.wraps(func)
-    def wrapper(*args, **kwargs):
-        response = func(*args, **kwargs)
-        
-        if hasattr(response, 'usage'):
-            print(f"Input tokens: {response.usage.prompt_tokens}")
-            print(f"Output tokens: {response.usage.completion_tokens}")
-            print(f"Total tokens: {response.usage.total_tokens}")
+def filter_history(history, max_tokens=84000):
+    """Filter the history to a maximum number of tokens."""
+    message_history = []
+    total_tokens = 0
+    for message in reversed(history):
+        message_tokens = count_tokens([message])
+        if total_tokens + message_tokens <= max_tokens:
+            total_tokens += message_tokens
+            message_history.insert(0, message)
         else:
-            print("No usage information available in the response.")
-        
-        return response
-    return wrapper
+            break
+    return message_history
 
 
 def summarize_stage_data(stage_data, stage_name):
@@ -240,16 +188,6 @@ def summarize_stage_data(stage_data, stage_name):
             summary += f"**{key}**: {value}\n"
     return summary.strip()
 
-def summarize_profile(profile_data):
-    """
-    Get a markdown summary of the profile data.
-    """
-    summary = f"**Learner's Profile**\n\n"
-    summary += f"The learner is at the **{profile_data['stage_name']}** stage.\n\n"
-    stage_names = profile_data['stage_data'].keys()
-    for stage_name in stage_names:
-        summary  += summarize_stage_data(profile_data['stage_data'][stage_name], stage_name)
-    return summary.strip()
 
 def summarize_history(history):
     """
@@ -257,6 +195,11 @@ def summarize_history(history):
     """
     summary = f"**Conversation History**\n\n"
     for message in history:
-        role = 'Zavmo' if message['role'] == 'assistant' else 'Learner'
+        if message['role'] == 'assistant':  
+            role = 'Zavmo'
+        elif message['role'] == 'user':
+            role = 'Learner'
+        else:
+            continue
         summary += f"**{role}**: {message['content']}\n\n"
     return summary.strip()

@@ -24,7 +24,7 @@ class update_discover_data(Tool):
     """Update the learner's information gathered during the Discovery stage."""
     learning_goals: str = Field(description="The learner's learning goals.")
     learning_goal_rationale: str = Field(description="The learner's rationale for their learning goals.")
-    knowledge_level: Literal["Beginner", "Intermediate", "Advanced", "Expert"] = Field(description="The learner's self-assessed knowledge level in their chosen area of study.")
+    knowledge_level: int = Field(description="The learner's self-assessed knowledge level in their chosen area of study. 1=Beginner, 2=Intermediate, 3=Advanced, 4=Expert")
     application_area: str = Field(description="A specific area or context where the learner plans to apply their new knowledge and skills.")
     
     def __str__(self):
@@ -36,15 +36,17 @@ class update_discover_data(Tool):
     
     def execute(self, context: Dict):
         # Get email and sequence_id from context
-        email       = context.get('email')
+        email = context.get('email')
         sequence_id = context.get('sequence_id')
+        
         if not email or not sequence_id:
             raise ValueError("Email and sequence ID are required to update discovery data.")
         
-        # Get the DiscoverStage object
-        discover_stage = DiscoverStage.objects.get(user_email=email, sequence_id=sequence_id)
-        if not discover_stage:
-            raise ValueError("DiscoverStage not found")
+        try:
+            # Attempt to get the DiscoverStage object
+            discover_stage = DiscoverStage.objects.get(user__email=email, sequence__id=sequence_id)
+        except DiscoverStage.DoesNotExist:
+            raise ValueError(f"DiscoverStage not found for email {email} and sequence ID {sequence_id}")
         
         # Update the DiscoverStage object
         discover_stage.learning_goals = self.learning_goals
@@ -52,6 +54,7 @@ class update_discover_data(Tool):
         discover_stage.knowledge_level = self.knowledge_level
         discover_stage.application_area = self.application_area
         discover_stage.save()
+        
         value = f"""Updated DiscoverStage for {email} with sequence ID {sequence_id}.
         The following data was updated:
         {str(self)}
