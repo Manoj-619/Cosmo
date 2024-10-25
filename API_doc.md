@@ -1,141 +1,106 @@
 # API Documentation
 
+## Table of Contents
+- [Endpoints](#endpoints)
+  - [1. Create Org](#1-create-organization)
+  - [2. Sync User](#2-sync-user)
+  - [3. User Profile](#3-user-profile)
+  - [4. Chat View](#4-chat)
+
+## Authentication
+Most endpoints require authentication using a JWT token in the Authorization header:
+```
+Authorization: Bearer <JWT_TOKEN>
+```
+
 ## Endpoints
 
-### 1. Chat API
+### 1. Create Organization
+This API creates a new organisation.
 
-**POST** `/api/zavmo/chat/`
+**Endpoint:** `POST /api/org/create/`
 
-#### Request Headers
-
-- `Authorization: Bearer <JWT_TOKEN>` (required)  
-  The JWT token used for authenticating the user.
-
-#### Request Body
-
+**Request Body:**
 ```json
 {
-    "message": "Your message here"  // Optional, used to send a message to the chat
+  "org_id": "org_id",
+  "org_name": "org_name"
 }
 ```
 
-#### Response
-
-- **201 Created** (on new session creation)
-
+**Response:**
 ```json
 {
-    "type": "text",  // Response type
-    "message": "Hello! I'm here to assist you.",  // AI's initial message
-    "stage": <current_stage_value>  // Numeric value representing the user's current stage
+  "org_id": 123,
+  "org_name": "org_name"
 }
 ```
 
-#### Response
+### 2. Sync User
+Creates a new user or returns existing user data.
 
-- **200 OK** (on existing session)
+**Endpoint:** `POST /api/user/sync/`
 
+**Request Body:**
 ```json
 {
-    "type": "text",  // Response type
-    "message": "",  // Empty message for ongoing session
-    "stage": <current_stage_value>  // Numeric value representing the user's current stage
+  "org_id": "org_id",
+  "email": "name@example.com"
 }
 ```
 
----
+**Response:**
+- Returns user data 
 
-### 2. Create_Org API
+### 3. User Profile
+Retrieves user profile data and all 4D sequences.
 
-**POST** `/api/create_org`
+**Endpoint:** `GET /api/user/profile`
 
-#### Description
-This API creates a new organisation. It accepts an organisation name in the request body and returns the `org_id` upon successful creation.
-
-#### Headers
-```
-Content-Type: application/json
-```
-
-#### Input
-**Request Format:**
-```json
-{
-  "name": "org_name"
-}
-```
-
-#### Output
-**Response Format:**
-```json
-{ 
-  "org_id": 123, 
-  "name": "org_name" 
-}
-```
-
----
-
-### 3. Create_User API
-
-**POST** `/api/create_user`
-
-#### Description
-This API allows clients to create a new user by sending a POST request with the user's details. It returns the user's data upon successful creation or error messages if the input is invalid.
-
-#### Headers
-```
-Content-Type: application/json
-Authorization: Bearer <token> (if required, depending on your app’s auth system)
-```
-
-#### Input
-**Request Format:**
-```json
-{
-  "username": "john_doe",
-  "email": "john.doe@example.com"
-}
-```
-
-#### Output
-**Response Format:**
-```json
-{
-  "id": 1,
-  "username": "john_doe",
-  "email": "john.doe@example.com"
-}
-```
-
----
-
-### 4. UserProfileView API
-
-**GET** `/api/user_profile`
-
-#### Description
-This API retrieves the complete profile data of the authenticated user.
-
-#### Headers
+**Headers:**
 ```
 Content-Type: application/json
 Authorization: Bearer <token>
 ```
 
-#### Input
-No input data is required in the request body. The profile data is fetched based on the authenticated user.
+**Request Body:**
+None required
 
-#### Output
-**Response Format:**
+**Response:**
+- Returns user profile data and 4D sequences (format not specified in original documentation)
+
+### 4. Chat View
+Handles chat interactions 
+
+**Endpoint:** `POST /api/zavmo/chat/`
+
+**Headers:**
+```
+Authorization: Bearer <JWT_TOKEN>
+```
+
+**Request Body:**
 ```json
 {
-  "id": 1,
-  "username": "john_doe",
-  "email": "john.doe@example.com",
-  "first_name": "John",
-  "last_name": "Doe",
-  "role": "Software Developer at Tech Innovators",
-  "learning_profile": ""
+    "message": "Your message here"
 }
 ```
+
+**Response - New Session (201 Created):**
+```json
+{
+    "type": "text",
+    "message": "Hello! I'm here to assist you.",
+    "stage": "<current_stage_value>"
+}
+```
+
+**Response - Existing Session (200 OK):**
+```json
+{
+    "type": "text",
+    "message": "",
+    "stage": "<current_stage_value>"
+}
+```
+
