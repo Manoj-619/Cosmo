@@ -158,7 +158,7 @@ def delete_all_caches(request):
     return Response({"message": "All caches cleared successfully"}, status=status.HTTP_200_OK)
     
 
-@api_view(['POST'])
+@api_view(['POST','OPTIONS'])
 @authentication_classes([CustomJWTAuthentication])
 @permission_classes([IsAuthenticated])
 def chat_view(request):
