@@ -98,12 +98,11 @@ class update_demonstration_data(Tool):
 
 def mark_completed(context:Dict):
     """Mark the Demonstration stage as complete so that a new 4D learning journey can be created."""
-    user = context['email']
-    sequence_id = context['sequence_id']
-    if not user or not sequence_id:
-        raise ValueError("Email and sequence id are required to mark the Demonstration stage as complete.")
-    sequence = FourDSequence.objects.create(user=user, name=f"4D Sequence {sequence_id}")  
-    return "New 4D Sequence created. Restart the learning journey once again."
+    email       = context['email']
+    if not email:
+        raise ValueError("Email is required to mark the Demonstration stage as complete.")
+    sequence = FourDSequence.objects.create(user__email=email)  
+    return f"4D Sequence {sequence.id} marked as completed. New 4D learning journey created."
     
 
 demonstrate_agent = Agent(
