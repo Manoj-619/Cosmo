@@ -39,7 +39,7 @@ def fetch_agent_response(agent: Agent, history: List, context: Dict) -> ChatComp
         "tools": tools or None,
         "tool_choice": agent.tool_choice if tools else "auto"
     }
-
+    logging.info(f"\n\nLogging from - fetch_agent_response\nmessages passed:\n{messages}\n\n")
     if tools:
         create_params["parallel_tool_calls"] = agent.parallel_tool_calls
     logging.debug(f"Messages being sent to OpenAI API: {json.dumps(messages, indent=2)}")
@@ -52,92 +52,75 @@ def execute_tool_calls(
 ) -> Response:
     function_map = {f.__name__: f for f in functions}
     partial_response = Response(messages=[], context=copy.deepcopy(context))
-
-    for tool_call in tool_calls:
-        name = tool_call.function.name
-        # Handle missing tool case
-        if name not in function_map:
-            logging.warning(f"Tool {name} not found in function map.")
-            partial_response.messages.append({
-                "role": "tool",
-                "tool_call_id": tool_call.id,
-                "name": name,
-                "content": f"Error: Tool {name} not found."
-            })
-            continue
-
-        args = json.loads(tool_call.function.arguments)
-        func = function_map[name]
-        result = None
-
-        try:
-            # Execute the function or tool
-            if inspect.isclass(func) and issubclass(func, Tool):
-                tool_instance = func(**args)
-                raw_result = tool_instance.execute(context=context)
+    tool_call = tool_calls[0]
+    name = tool_call.function.name
+    # Handle missing tool case
+    args = json.loads(tool_call.function.arguments)
+    func = function_map[name]
+    result = None
+    try:
+        # Execute the function or tool
+        if inspect.isclass(func) and issubclass(func, Tool):
+            tool_instance = func(**args)
+            raw_result = tool_instance.execute(context=context)
+        else:
+            if 'context' in inspect.signature(func).parameters:
+                raw_result = func(**args, context=context)
             else:
-                if 'context' in inspect.signature(func).parameters:
-                    raw_result = func(**args, context=context)
-                else:
-                    raw_result = func(**args)
-
-            # Process the result
-            if isinstance(raw_result, Result):
-                result = raw_result
-            elif isinstance(raw_result, Agent):
-                result = Result(
-                    value=f"Successfully transferred to {raw_result.name}.",
-                    context=context,
-                    agent=raw_result,
-                )
-            else:
-                result = Result(value=str(raw_result), context=context)
-
-            # Always append both tool call and response messages
-            tool_call_message = {
-                "role": "assistant",
-                "tool_calls": [{
-                    "id": tool_call.id,
-                    "type": "function",
+                raw_result = func(**args)
+        # Process the result
+        if isinstance(raw_result, Result):
+            result = raw_result
+        elif isinstance(raw_result, Agent):
+            result = Result(
+                value=f"Successfully transferred to {raw_result.name}.",
+                context=context,
+                agent=raw_result,
+            )
+        else:
+            result = Result(value=str(raw_result), context=context)
+        # Always append both tool call and response messages
+        tool_call_message = {
+            "role": "assistant",
+            "tool_calls": [
+                {
                     "function": {
-                        "arguments": tool_call.function.arguments,  # Don't re-encode
+                        "arguments": json.dumps(tool_call.function.arguments),
                         "name": name,
                     },
-                }]
-            }
-            tool_response = {
-                "role": "tool",
-                "tool_call_id": tool_call.id,
-                "name": name,
-                "content": str(result.value)  # Don't use json.dumps here
-            }
-            partial_response.messages.extend([tool_call_message, tool_response])
+                    "id": tool_call.id,
+                    "type": "function",
+                }
+            ]
+        }
+        tool_response = {
+            "role": "tool",
+            "tool_call_id": tool_call.id,
+            "name": name,
+            "content": str(result.value)  # Don't use json.dumps here
+        }
+        partial_response.messages.extend([tool_call_message, tool_response])
+    except Exception as e:
+        logging.error(f"Error executing tool {name}: {str(e)}")
+        tool_response = {
+            "role": "tool",
+            "tool_call_id": tool_call.id,
+            "name": name,
+            "content": f"Error executing tool: {str(e)}"
+        }
+        partial_response.messages.append(tool_response)
 
-        except Exception as e:
-            logging.error(f"Error executing tool {name}: {str(e)}")
-            tool_response = {
-                "role": "tool",
-                "tool_call_id": tool_call.id,
-                "name": name,
-                "content": f"Error executing tool: {str(e)}"
-            }
-            partial_response.messages.append(tool_response)
+    logging.info(f"\n\nLogging from - execute_tool_calls\nPartial Response\n{partial_response}\n\n")
 
-        # Update context and agent if necessary
-        if result and result.context:
-            partial_response.context.update(result.context)
-        if result and result.agent:
-            partial_response.agent = result.agent
-            partial_response.context['stage'] = result.agent.id
-
+    # Update context and agent if necessary
+    if result and result.context:
+        partial_response.context.update(result.context)
+    if result and result.agent:
+        partial_response.agent = result.agent
+        partial_response.context['stage'] = result.agent.id
     return partial_response
 
-def run_step(
-    agent: Agent,
-    messages: List,
-    context: Dict = {},
-    max_turns: int = 5
-) -> Response:
+def run_step(agent: Agent, messages: List, context: Dict = {}, max_turns: int = 5) -> Response:
     active_agent = agent
     history = copy.deepcopy(messages)
     init_length = len(history)
@@ -145,11 +128,12 @@ def run_step(
     turns = 0
 
     while active_agent and turns < max_turns:
+        logging.info(f"\n\nLogging from - run_step\nPassing history\n{history}\n")
         logging.info(f"Running step {turns} with agent {active_agent.name}")
         completion = fetch_agent_response(active_agent, history, context=context)
         message = completion.choices[0].message
         message.sender = active_agent.name
-
+        logging.info(f"Logging from - run_step\nCompletion message: {message}")
         # Convert the message to dict and add to history
         message_dict = json.loads(message.model_dump_json())
         
@@ -159,7 +143,7 @@ def run_step(
             break
 
         # Execute tool calls and get responses
-        partial_response = execute_tool_calls(message.tool_calls, active_agent.functions, context=context)
+        partial_response = execute_tool_calls(message.tool_calls, active_agent.functions, context=context) 
 
         # Append assistant message and tool responses together
         history.append(message_dict)
