@@ -1,3 +1,4 @@
+import uuid  # Add this import at the top
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from .models import UserProfile, DiscoverStage, DiscussStage, DeliverStage, DemonstrateStage, Org, FourDSequence
@@ -19,8 +20,12 @@ class UserDetailSerializer(serializers.ModelSerializer):
 class BaseStageSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         result = super().to_representation(instance)
-        filtered_result = {k: v for k, v in result.items() if (v is not None) and (k != 'id')}
-    
+        # Convert UUID to string and filter out None values
+        filtered_result = {
+            k: str(v) if isinstance(v, uuid.UUID) else v 
+            for k, v in result.items() 
+            if (v is not None) and (k != 'id')
+        }
         return filtered_result
 
 class UserProfileSerializer(BaseStageSerializer):
@@ -52,10 +57,21 @@ class DemonstrateStageSerializer(BaseStageSerializer):
         exclude = ('sequence',)
 
 class FourDSequenceSerializer(serializers.ModelSerializer):
+    uuid_str = serializers.SerializerMethodField()
     stage_name = serializers.CharField(source='stage_display', read_only=True)
-    email      = serializers.CharField(source='user.email', read_only=True)
-    org_id     = serializers.PrimaryKeyRelatedField(source='user.org', read_only=True)
-    org_name   = serializers.CharField(source='user.org.org_name', read_only=True)
+    email = serializers.CharField(source='user.email', read_only=True)
+    org_id = serializers.SerializerMethodField()  # Changed to SerializerMethodField
+    org_name = serializers.CharField(source='user.userprofile.org.org_name', read_only=True)
+
+    def get_uuid_str(self, obj):
+        return str(obj.id)  # Ensure UUID is converted to string
+    
+    def get_org_id(self, obj):
+        try:
+            return str(obj.user.userprofile.org.org_id)
+        except AttributeError:
+            return None
+
     class Meta:
         model = FourDSequence
-        fields = ['id', 'created_at', 'updated_at', 'stage_name', 'email', 'org_id', 'org_name']
+        fields = ['uuid_str', 'created_at', 'updated_at', 'stage_name', 'email', 'org_id', 'org_name']

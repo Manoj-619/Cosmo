@@ -19,7 +19,7 @@ from stage_app.serializers import (
     FourDSequenceSerializer
 )
 from helpers.constants import USER_PROFILE_SUFFIX, CONTEXT_SUFFIX
-
+from helpers.chat import validate_message_history
 from helpers.swarm import run_step
 from helpers.agents import a_discover,b_discuss,c_deliver,d_demonstrate, profile
 
@@ -163,75 +163,111 @@ def delete_all_caches(request):
 @permission_classes([IsAuthenticated])
 def chat_view(request):
     """Handles chat sessions between a user and the AI assistant."""
-    user        = request.user
+    # Define the stage order at the start of the function
+    stage_order = ['profile', 'discover', 'discuss', 'deliver', 'demonstrate']
+    
+    user = request.user
     sequence_id = request.data.get('sequence_id')
     if not sequence_id:
         # Get first sequence for this user
-        sequence    = FourDSequence.objects.filter(user=user).order_by('-created_at').first()
+        sequence = FourDSequence.objects.filter(user=user).order_by('-created_at').first()
         sequence_id = sequence.id
         
-    # Initialize context variable
-    context = {}
+    # Initialize context and message_history
+    context = {
+        'email': user.email,  # Initialize with email
+        'sequence_id': sequence_id  # Add sequence_id to context
+    }
+    message_history = []
+    
     # Get the sequence object for the given sequence_id
     cache_key = f"{user.email}_{sequence_id}_{CONTEXT_SUFFIX}"
     if cache.get(cache_key):
         context = cache.get(cache_key)
         message_history = context['history']
         stage_name = context['stage']  # Ensure current_stage is set from cached context
-        # Check if user has a profile
     
     profile = UserProfile.objects.filter(user=user).first()
     if not profile or not profile.is_complete():  # Check if profile is empty
-        stage_name    = 'profile'
-        stage_data = {
-                'profile': UserProfileSerializer(profile).data if profile else {},
-                'discover': {},
-                'discuss': {},
-                'deliver': {},
+        stage_name = 'profile'
+        context['stage_data'] = {
+            'profile': UserProfileSerializer(profile).data if profile else {},
+            'discover': {},
+            'discuss': {},
+            'deliver': {},
             'demonstrate': {}
         }
     else:
         profile = UserProfile.objects.filter(user=user).first()
-        sequence    = FourDSequence.objects.filter(user=user).order_by('-created_at').first()
-        stage_name  = sequence.stage_display
-        stage_data = {
+        sequence = FourDSequence.objects.filter(user=user).order_by('-created_at').first()
+        stage_name = sequence.stage_display
+        context['stage_data'] = {
             'profile': UserProfileSerializer(profile).data if profile else {},
             'discover': DiscoverStageSerializer(sequence.discover_stage).data if sequence.discover_stage else {},
             'discuss': DiscussStageSerializer(sequence.discuss_stage).data if sequence.discuss_stage else {},
             'deliver': DeliverStageSerializer(sequence.deliver_stage).data if sequence.deliver_stage else {},
             'demonstrate': DemonstrateStageSerializer(sequence.demonstrate_stage).data if sequence.demonstrate_stage else {}
-            }
+        }
     message_history = context.get('history', [])
-    context = {
-        'sequence_id': sequence_id,
-        'stage': stage_name,
-        'user': profile.user.email if profile else '',
-        'email': profile.user.email if profile else '',
-        'stage_data': stage_data,
-        'history': message_history
-    }
-    cache.set(cache_key, context)
-       
-       
+
+    if request.data.get('message'):
+        # Clean the message history to ensure valid format
+        cleaned_history = []
+        for msg in message_history:
+            if msg['role'] not in ['user', 'assistant', 'system']:
+                continue
+            cleaned_history.append(msg)
+        message_history = cleaned_history
+        
+        message_history.append({"role": "user", "content": request.data.get('message')})
+    else:
+        message_history = [{
+            "role": "system",
+            "content": f'Send a personalized welcome message to the learner.'
+        }]
+
+    # Rest of the function remains the same...
+
     if stage_name == 'completed':
         return Response({"type": "text",
                          "message": "You have finished all stages for the sequence.",
                          "stage": stage_name,
                          })
 
+    # Collect summaries from all previous stages including current
+    summaries = []
+    
+    # Get current stage index
+    current_stage_index = stage_order.index(stage_name)
+    
+    for stage in stage_order[:current_stage_index + 1]:
+        if stage == 'profile' and profile and profile.is_complete():
+            summaries.append(f"Profile: {profile.get_summary()}")
+        elif stage == 'discover' and sequence.discover_stage:
+            summaries.append(f"Discovery: {sequence.discover_stage.get_summary()}")
+        elif stage == 'discuss' and sequence.discuss_stage:
+            summaries.append(f"Discussion: {sequence.discuss_stage.get_summary()}")
+        elif stage == 'deliver' and sequence.deliver_stage:
+            summaries.append(f"Delivery: {sequence.deliver_stage.get_summary()}")
+        elif stage == 'demonstrate' and sequence.demonstrate_stage:
+            summaries.append(f"Demonstration: {sequence.demonstrate_stage.get_summary()}")
+    
+    summary_text = " | ".join(summaries)
     if request.data.get('message'):
-        message_history.append({"role": "user","content": request.data.get('message')})
+        message_history.append({"role": "user", "content":request.data.get('message')})
     else:
-        if profile.is_complete():
-            user_summary = profile.get_summary()
-            message_history.append({"role": "system","content": f'Send a personalized welcome message to the learner. Here is some information about the learner: {user_summary}'})
-        else:
-            message_history.append({"role": "system","content": f'Send a personalized welcome message to the learner.'})
+        message_history.append({
+            "role": "system",
+            "content": f'Send a personalized welcome message to the learner.'
+        })
+    
 
     # Initialize the agent
     agent = agents[stage_name]
+    agent.instructions = agent.instructions + "\n\nHere is the learning journey so far:\n\n" + summary_text
 
 
+    message_history = validate_message_history(message_history) 
     # Run the agent with the user's input and current message history
     response = run_step(
             agent=agent,
@@ -239,23 +275,19 @@ def chat_view(request):
             context=context,
             max_turns=5
         )
-    messages = response.context['history']
+    
+    message_history.extend(response.messages)
         
-    message_history = messages
-    last_message    = messages[-1]
+    last_message    = message_history[-1]
+    context['history'] = validate_message_history(message_history)
     context.update(response.context)
-    context['history'] = messages
+    
+    stage_name = response.agent.id
     if response.agent != agent:
         logger.info(f"Stage changed from {agent.id} to {response.agent.id}.")
-        stage_name = response.agent.id
-        context['stage'] = stage_name
-        # Update the sequence stage
-        sequence.advance_stage()
-        sequence.save()
-    else:
-        # Ensure we maintain the current stage if no explicit change
-        context['stage'] = stage_name
-            
+        sequence.update_stage(stage_name)
+        
+    context['stage'] = response.agent.id
     cache.set(cache_key, context)
     
     return Response({"type": "text",
@@ -268,3 +300,5 @@ def chat_view(request):
     
     
     
+
+

@@ -84,14 +84,21 @@ class DiscoverStage(models.Model):
     
     @property
     def knowledge_level_display(self):
+        if self.knowledge_level is None:
+            return "Unknown"
         return dict(self._meta.get_field('knowledge_level').choices)[self.knowledge_level]
     
-    def __str__(self):
-        """Get a dump of the Django model as a string."""
-        string_value = ""
-        for key, value in self.__dict__.items():
-            string_value += f"\n**{key.replace('_', ' ').title()}**: {value}"
-        return string_value
+    def get_summary(self):
+        """Get a summary of the user's profile."""
+        return f"""
+        **Learning Goals**: {self.learning_goals}
+        **Learning Goal Rationale**: {self.learning_goal_rationale}
+        **Knowledge Level**: {self.knowledge_level_display}
+        **Application Area**: {self.application_area}
+        """
+    
+    def is_complete(self):
+        return self.learning_goals and self.learning_goal_rationale and self.knowledge_level and self.application_area
 
 
 # Stage 2
@@ -104,12 +111,17 @@ class DiscussStage(models.Model):
     available_time = models.IntegerField(blank=True, null=True, verbose_name="Available Time (hours per week)")
     curriculum     = models.JSONField(blank=True, null=True, verbose_name="Curriculum Plan")
     
-    def __str__(self):
-        """Get a dump of the Django model as a string."""
-        string_value = ""
-        for key, value in self.__dict__.items():
-            string_value += f"\n**{key.replace('_', ' ').title()}**: {value}"
-        return string_value
+    def get_summary(self):
+        """Get a summary of the user's profile."""
+        return f"""
+        **Interest Areas**: {self.interest_areas}
+        **Learning Style**: {self.learning_style}
+        **Available Time**: {self.available_time}
+        **Curriculum Plan**: {self.curriculum}
+        """
+    
+    def is_complete(self):
+        return self.interest_areas and self.learning_style and self.available_time and self.curriculum
 
 
 # Stage 3
@@ -119,7 +131,17 @@ class DeliverStage(models.Model):
     
     # Lessons is a list of dictionaries, each representing a lesson
     lessons    = models.JSONField(blank=True, null=True, verbose_name="Lessons")
-
+    def is_complete(self):
+        return self.lessons
+    
+    
+    def get_summary(self):
+        """Get a summary of the user's profile."""
+        summary = ""
+        for l, lesson in enumerate(self.lessons):
+            summary += f"**Lesson {l+1}**: {lesson}\n"
+        return summary.strip()
+    
 # Stage 4
 class DemonstrateStage(models.Model):
     user      = models.ForeignKey(User, on_delete=models.CASCADE, related_name='demonstrate_stage')
@@ -141,10 +163,21 @@ class DemonstrateStage(models.Model):
     
     @property
     def understanding_level_display(self):
-        if self.understanding_level is None:
-            return None
-        return dict(self.understanding_level.choices)[self.understanding_level]
+        if self.understanding_levels is None:  # Fix variable name from understanding_level to understanding_levels
+            return 'Unknown'
+        return dict(self._meta.get_field('understanding_levels').choices)[self.understanding_levels]  # Fix field name and variable
+    
+    def is_complete(self):
+        return self.evaluations and self.understanding_levels and self.feedback_summary
+    
 
+    def get_summary(self):
+        """Get a summary of the user's profile."""
+        for evaluation in self.evaluations:
+            summary += f"**Evaluation**: {evaluation}\n"
+        summary += f"**Understanding Level**: {self.understanding_level_display}\n"
+        summary += f"**Feedback Summary**: {self.feedback_summary}\n"
+        return summary.strip()
 
 class FourDSequence(models.Model):
     class Stage(models.IntegerChoices):
@@ -163,27 +196,23 @@ class FourDSequence(models.Model):
 
 
     @property
+    def uuid_str(self):
+        """Return the UUID as a string."""
+        return str(self.id)
+
+    @property
     def stage_display(self):
         return dict(self.Stage.choices)[self.current_stage]
-    
-    def advance_stage(self):
+
+    def update_stage(self, stage_name):
         """
-        Advance to the next stage after updating the current stage.
+        Update stage using stage name, not id.
+        Stage names should be: 'discover', 'discuss', 'deliver', 'demonstrate', 'completed'
         """
-        # Check if the current stage is less than COMPLETED
-        if self.current_stage < self.Stage.COMPLETED:
-            # Increment the stage to the next one
-            self.current_stage += 1
+        stage_dict = {name.lower(): value for value, name in self.Stage.choices}
+        if stage_name.lower() in stage_dict:
+            self.current_stage = stage_dict[stage_name.lower()]
             self.save()
         else:
-            raise ValueError("The sequence is already completed and cannot be advanced.")
-        
-    def __str__(self):
-        """Get a dump of the Django model as a string."""
-        string_value = ""
-        for key, value in self.__dict__.items():
-            string_value += f"\n**{key.replace('_', ' ').title()}**: {value}"
-        return string_value
-
-
-
+            valid_stages = list(stage_dict.keys())
+            raise ValueError(f"Invalid stage name: {stage_name}. Valid stages are: {valid_stages}")

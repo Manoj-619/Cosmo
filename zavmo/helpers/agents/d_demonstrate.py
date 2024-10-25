@@ -18,7 +18,7 @@ from helpers.swarm import Agent, Response, Result, Tool
 from .common import get_agent_instructions
 from openai import OpenAI
 from stage_app.models import FourDSequence
-from .a_discover import discuss_agent
+# from .a_discover import discuss_agent
 
 class Question(BaseModel):
     question: str = Field(description="The question to be answered")
@@ -93,7 +93,7 @@ def mark_completed(context:Dict):
     if not user or not sequence_id:
         raise ValueError("Email and sequence id are required to mark the Demonstration stage as complete.")
     sequence = FourDSequence.objects.create(user=user, name=f"4D Sequence {sequence_id}")  
-    return discuss_agent
+    return "New 4D Sequence created. Restart the learning journey once again."
     
 
 demonstrate_agent = Agent(
@@ -103,7 +103,7 @@ demonstrate_agent = Agent(
     functions=[
         request_question,
         update_demonstration_data,
-        transfer_to_completion_agent
+        mark_completed
     ],
     parallel_tool_calls=False,
     tool_choice='auto',

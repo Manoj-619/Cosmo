@@ -73,10 +73,11 @@ def count_tokens_str(doc, model="cl100k_base"):
         doc (str): String to count tokens for.
     Returns:
         int: number of tokens in the string
-
     """
+    if doc is None:
+        return 0
     encoder = tiktoken.get_encoding(model)  # BPE encoder # type: ignore
-    return len(encoder.encode(doc, disallowed_special=()))
+    return len(encoder.encode(str(doc), disallowed_special=()))
 
 def count_tokens(messages):
     """
@@ -93,10 +94,11 @@ def count_tokens(messages):
         # every message follows <im_start>{role/name}\n{content}<im_end>\n
         num_tokens += 4
         for key, value in message.items():
-            num_tokens += count_tokens_str(value)
-            if key == "name":  # if there's a name, the role is omitted
-                num_tokens += -1  # role is always required and always 1 token
-    num_tokens += 2  # every reply is primed with <im_start>assistant
+            if value is not None:  # Only count tokens if value is not None
+                num_tokens += count_tokens_str(value)
+                if key == "name":  # if there's a name, the role is omitted
+                    num_tokens += -1  # role is always required and always 1 token
+    num_tokens += 2  # every reply is primed with 
     return num_tokens
 
 def get_openai_completion(messages, model="gpt-4o-mini", **kwargs):
@@ -167,12 +169,14 @@ def filter_history(history, max_tokens=84000):
     message_history = []
     total_tokens = 0
     for message in reversed(history):
+        # Skip messages with None or empty content
+        if not message.get('content'):
+            continue
+            
         message_tokens = count_tokens([message])
         if total_tokens + message_tokens <= max_tokens:
             total_tokens += message_tokens
             message_history.insert(0, message)
-        else:
-            break
     return message_history
 
 
@@ -203,3 +207,26 @@ def summarize_history(history):
             continue
         summary += f"**{role}**: {message['content']}\n\n"
     return summary.strip()
+
+
+def validate_message_history(message_history):
+    """
+    Ensure that assistant messages with tool_calls are immediately followed by tool responses.
+    """
+    valid_history = []
+    skip_next = False
+    for i, msg in enumerate(message_history):
+        if skip_next:
+            skip_next = False
+            continue
+        valid_history.append(msg)
+        if msg['role'] == 'assistant' and 'tool_calls' in msg:
+            if i + 1 < len(message_history) and message_history[i + 1]['role'] == 'tool':
+                valid_history.append(message_history[i + 1])
+                skip_next = True
+            else:
+                # Incomplete tool response, remove the assistant message
+                valid_history.pop()
+        else:
+            valid_history.append(msg)
+    return valid_history

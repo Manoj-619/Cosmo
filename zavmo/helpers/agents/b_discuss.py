@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 from openai import OpenAI
 from pydantic import BaseModel, Field
 from typing import List, Dict, Literal, Optional
-from helpers.chat import get_prompt, summarize_history
+from helpers.chat import get_prompt, summarize_history, filter_history
 from helpers.swarm import Agent, Result, Tool, Response
 from stage_app.models import DiscussStage
 from .common import get_agent_instructions
@@ -41,8 +41,20 @@ class Curriculum(BaseModel):
     prerequisites: List[str] = Field(description="Any prerequisites needed to undertake this curriculum")
     modules: List[Module] = Field(description="List of modules included in the curriculum")
     def __str__(self):
-        """Return a tabular representation of the Curriculum object."""
-        return tabulate(self.__dict__, headers="keys", tablefmt="grid")
+        """Return a markdowntabular representation of the Curriculum object."""
+        table = ""
+        table += f"**{self.title}**\n"
+        table += f"**Subject**: {self.subject}\n"
+        table += f"**Level**: {self.level}\n"
+        table += f"**Prerequisites**: {self.prerequisites}\n"
+        
+        for module in self.modules:
+            table += f"**{module.title}**\n"
+            table += f"**Duration**: {module.duration} hours\n"
+            table += f"**Learning Outcomes**: {module.learning_outcomes}\n"
+            table += f"**Lessons**: {module.lessons}\n"
+            table += "\n"            
+        return table
 
 class request_curriculum(Tool):
     """Request a curriculum from the curriculum design team."""
@@ -72,6 +84,12 @@ class request_curriculum(Tool):
         )
         model_result = response.choices[0].message.parsed
         
+        # Save the curriculum to the database
+        discuss_stage = DiscussStage.objects.get(user__email=context['email'], sequence_id=context['sequence_id'])
+        discuss_stage.curriculum = model_result.model_dump()
+        discuss_stage.save()
+        
+        # Update the context
         context['stage_data']['discuss']['curriculum'] = model_result.model_dump()
         curriculum_text = str(model_result)
         value = f"Curriculum generated successfully:\n\n{curriculum_text}"
@@ -79,7 +97,6 @@ class request_curriculum(Tool):
         
 
 class update_discussion_data(Tool):
-                           
     """Update the discussion data after the learner has agreed to the curriculum."""
     interest_areas: str = Field(description="The learner's interest areas")
     learning_style: str = Field(description="The learner's learning style")
@@ -104,14 +121,19 @@ class update_discussion_data(Tool):
 
         **Discussion data:**         
             
-            {str(discuss_stage)}
+            {discuss_stage.get_summary()}
         """
-        stage_data = discuss_stage.model_dump()
-        stage_data['curriculum'] = context['stage_data']['discuss']['curriculum']
-        context['stage_data']['discuss'] = stage_data
+        
+        # Update context with the current stage data
+        context['stage_data']['discuss'] = {
+            'interest_areas': self.interest_areas,
+            'learning_style': self.learning_style,
+            'curriculum': context['stage_data']['discuss']['curriculum'],
+            'timeline': self.timeline
+        }
         
         return Result(value=value, context=context)
-         
+            
 # Handoff Agent for the next stage
 def transfer_to_delivery_agent():
     """Transfer to the Delivery Agent once the Discussion stage is complete."""
