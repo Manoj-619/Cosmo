@@ -18,6 +18,7 @@ from helpers.swarm import Agent, Response, Result, Tool
 from .common import get_agent_instructions
 from openai import OpenAI
 from stage_app.models import FourDSequence
+from django.contrib.auth.models import User
 # from .a_discover import discuss_agent
 
 class Question(BaseModel):
@@ -98,10 +99,14 @@ class update_demonstration_data(Tool):
 
 def mark_completed(context:Dict):
     """Mark the Demonstration stage as complete so that a new 4D learning journey can be created."""
-    email       = context['email']
+    email = context['email']
     if not email:
         raise ValueError("Email is required to mark the Demonstration stage as complete.")
-    sequence = FourDSequence.objects.create(user__email=email)  
+    
+    # Get the user first, then create sequence
+    user = User.objects.get(email=email)
+    sequence = FourDSequence.objects.create(user=user)  # Fix: use user=user instead of user__email
+    
     return f"4D Sequence {sequence.id} marked as completed. New 4D learning journey created."
     
 
