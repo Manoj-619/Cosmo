@@ -39,7 +39,7 @@ def fetch_agent_response(agent: Agent, history: List, context: Dict) -> ChatComp
         "tools": tools or None,
         "tool_choice": agent.tool_choice if tools else "auto"
     }
-    logging.info(f"\n\nLogging from - fetch_agent_response\nmessages passed:\n{messages}\n\n")
+    # logging.info(f"\n\nLogging from - fetch_agent_response\nmessages passed:\n{messages}\n\n")
     if tools:
         create_params["parallel_tool_calls"] = agent.parallel_tool_calls
     logging.debug(f"Messages being sent to OpenAI API: {json.dumps(messages, indent=2)}")
@@ -95,7 +95,7 @@ def execute_tool_calls(
         }
         partial_response.messages.append(tool_response)
 
-    logging.info(f"\n\nLogging from - execute_tool_calls\nPartial Response\n{partial_response}\n\n")
+    # logging.info(f"\n\nLogging from - execute_tool_calls\nPartial Response\n{partial_response}\n\n")
 
     # Update context and agent if necessary
     if result and result.context:
@@ -119,7 +119,7 @@ def run_step(agent: Agent, messages: List, context: Dict = {}, max_turns: int = 
         completion = fetch_agent_response(active_agent, history, context=context)
         message = completion.choices[0].message
         message.sender = active_agent.name
-        logging.info(f"Logging from - run_step\nCompletion message: {message}")
+        # logging.info(f"Logging from - run_step\nCompletion message: {message}")
         # Convert the message to dict and add to history
         message_dict = json.loads(message.model_dump_json())
         
