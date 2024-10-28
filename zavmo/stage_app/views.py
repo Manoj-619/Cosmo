@@ -2,7 +2,6 @@
 Contains views for the stage app.
 """
 import json
-import copy
 import logging
 from rest_framework import status
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
@@ -10,7 +9,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from zavmo.authentication import CustomJWTAuthentication
-from django.db import IntegrityError, transaction
+from django.db import IntegrityError
 from django.core.cache import cache
 from django.contrib.auth.models import User
 from stage_app.models import Org, UserProfile, FourDSequence
@@ -158,36 +157,29 @@ def delete_all_caches(request):
     cache.clear()
     return Response({"message": "All caches cleared successfully"}, status=status.HTTP_200_OK)
     
-
-
-@api_view(['POST', 'OPTIONS'])
+@api_view(['POST','OPTIONS'])
 @authentication_classes([CustomJWTAuthentication])
 @permission_classes([IsAuthenticated])
-@transaction.non_atomic_requests  # Prevent this view from running in a transaction
 def chat_view(request):
     """Handles chat sessions between a user and the AI assistant."""
     # Define the stage order at the start of the function
     stage_order = ['profile', 'discover', 'discuss', 'deliver', 'demonstrate']
-    
     user = request.user
     sequence_id = request.data.get('sequence_id')
     if not sequence_id:
         # Get first sequence for this user
         sequence = FourDSequence.objects.filter(user=user).order_by('-created_at').first()
         sequence_id = sequence.id
-        
     # Initialize context and message_history
     context = {
         'email': user.email,  # Initialize with email
         'sequence_id': sequence_id  # Add sequence_id to context
     }
-    
     # Get the sequence object for the given sequence_id
     cache_key = f"{user.email}_{sequence_id}_{CONTEXT_SUFFIX}"
     if cache.get(cache_key):
         context = cache.get(cache_key)
         stage_name = context['stage']  # Ensure current_stage is set from cached context
-    
     profile = UserProfile.objects.filter(user=user).first()
     if not profile or not profile.is_complete():  # Check if profile is empty
         stage_name = 'profile'
@@ -199,6 +191,7 @@ def chat_view(request):
             'demonstrate': {}
         }
     else:
+        profile = UserProfile.objects.filter(user=user).first()
         sequence = FourDSequence.objects.filter(user=user).order_by('-created_at').first()
         stage_name = sequence.stage_display
         context['stage_data'] = {
@@ -208,21 +201,18 @@ def chat_view(request):
             'deliver': DeliverStageSerializer(sequence.deliver_stage).data if sequence.deliver_stage else {},
             'demonstrate': DemonstrateStageSerializer(sequence.demonstrate_stage).data if sequence.demonstrate_stage else {}
         }
-
-    logger.info(f"\nContext passed for {user.email}\n\n{context}\n")
+    # logger.info(f"\nContext passed for {user.email}\n{context['stage_data']}\n")
+    logger.info(f"\n\nContext passed for {user.email}\n\n{context}\n\n")
     message_history = context.get('history', [])
     if stage_name == 'completed':
         return Response({"type": "text",
                          "message": "You have finished all stages for the sequence.",
                          "stage": stage_name,
                          })
-
     # Collect summaries from all previous stages including current
     summaries = []
-    
     # Get current stage index
     current_stage_index = stage_order.index(stage_name)
-
     for stage in stage_order[:current_stage_index + 1]:
         if stage == 'profile' and profile and profile.is_complete():
             summaries.append(f"Profile: {profile.get_summary()}")
@@ -234,39 +224,28 @@ def chat_view(request):
             summaries.append(f"Delivery: {sequence.deliver_stage.get_summary()}")
         elif stage == 'demonstrate' and sequence.demonstrate_stage:
             summaries.append(f"Demonstration: {sequence.demonstrate_stage.get_summary()}")
-
     summary_text = " | ".join(summaries)
-    
     if request.data.get('message'):
         # Added user message to message history
-        message_history.append({"role": "user", "content": request.data.get('message')})
+        message_history.append({"role": "user", "content":request.data.get('message')})
     else:
         message_history.append({
             "role": "system",
             "content": f'Send a personalized welcome message to the learner.'
         })
-    
-
     # Initialize the agent
     agent = agents[stage_name]
-
-    # Create a new instance of the agent to avoid state issues
-    agent_instance = copy.deepcopy(agent)
-
     agent.instructions = agent.instructions + "\n\nHere is the learning journey so far:\n\n" + summary_text
-    
     logger.info("\nInstructions and summary passed:")
     logger.info(agent.instructions)
     logger.info("\n")
-
     # Run the agent with the user's input and current message history
     response = run_step(
-            agent=agent_instance,
+            agent=agent,
             messages=message_history,
             context=context,
             max_turns=5
         )
-    
     # Check if there are any messages in the response
     if not response.messages:
         return Response({
@@ -274,21 +253,17 @@ def chat_view(request):
             "stage": stage_name,
             "sequence_id": sequence_id
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    
     last_message = response.messages[-1]
     # Added agent response to message history
     message_history.append(last_message)
     context.update(response.context)
     context['history'] = message_history
-    
     stage_name = response.agent.id
     if response.agent != agent:
         logger.info(f"Stage changed from {agent.id} to {response.agent.id}.")
         sequence.update_stage(stage_name)
-        
     context['stage'] = response.agent.id
     cache.set(cache_key, context)
-    
     return Response({"type": "text",
                      "message": last_message['content'],
                      "stage": stage_name,
@@ -296,10 +271,4 @@ def chat_view(request):
                      "log_context": context,
                      "log_history": message_history
                      })
-
-    
-    
-    
-    
-
 
