@@ -248,6 +248,10 @@ def chat_view(request):
     agent = agents[stage_name]
     agent.instructions = agent.instructions + "\n\nHere is the learning journey so far:\n\n" + summary_text
 
+    logger.info("\nInstructions and summary passed:")
+    logger.info(agent.instructions + "\n\nHere is the learning journey so far:\n\n" + summary_text)
+    logger.info("\n")
+    
     # Run the agent with the user's input and current message history
     response = run_step(
             agent=agent,
