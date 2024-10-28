@@ -2,6 +2,7 @@
 Contains views for the stage app.
 """
 import json
+import copy
 import logging
 from rest_framework import status
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
@@ -248,14 +249,19 @@ def chat_view(request):
 
     # Initialize the agent
     agent = agents[stage_name]
+
+    # Create a new instance of the agent to avoid state issues
+    agent_instance = copy.deepcopy(agent)
+
     agent.instructions = agent.instructions + "\n\nHere is the learning journey so far:\n\n" + summary_text
+    
     logger.info("\nInstructions and summary passed:")
     logger.info(agent.instructions)
     logger.info("\n")
-    
+
     # Run the agent with the user's input and current message history
     response = run_step(
-            agent=agent,
+            agent=agent_instance,
             messages=message_history,
             context=context,
             max_turns=5
