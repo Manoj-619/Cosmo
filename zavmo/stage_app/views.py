@@ -206,7 +206,7 @@ def chat_view(request):
             'deliver': DeliverStageSerializer(sequence.deliver_stage).data if sequence.deliver_stage else {},
             'demonstrate': DemonstrateStageSerializer(sequence.demonstrate_stage).data if sequence.demonstrate_stage else {}
         }
-            
+    logger.info(f"\nContext passed for {user.email}\n{context['stage_data']}\n")        
     message_history = context.get('history', [])
     if stage_name == 'completed':
         return Response({"type": "text",
