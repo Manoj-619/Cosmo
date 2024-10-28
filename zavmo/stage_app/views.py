@@ -219,7 +219,7 @@ def chat_view(request):
     
     # Get current stage index
     current_stage_index = stage_order.index(stage_name)
-    
+    logger.info(profile.user, user.email)
     for stage in stage_order[:current_stage_index + 1]:
         if stage == 'profile' and profile and profile.is_complete():
             summaries.append(f"Profile: {profile.get_summary()}")
