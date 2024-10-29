@@ -269,6 +269,7 @@ def chat_view(request):
                      "stage": stage_name,
                      "sequence_id": sequence_id,
                      "log_context": context,
-                     "log_history": message_history
+                     "log_history": message_history,
+                     "summary_text":summary_text
                      })
 
