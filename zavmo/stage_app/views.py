@@ -175,12 +175,15 @@ def chat_view(request):
         'email': user.email,  # Initialize with email
         'sequence_id': sequence_id  # Add sequence_id to context
     }
+    
     # Get the sequence object for the given sequence_id
     cache_key = f"{user.email}_{sequence_id}_{CONTEXT_SUFFIX}"
     if cache.get(cache_key):
         context = cache.get(cache_key)
         stage_name = context['stage']  # Ensure current_stage is set from cached context
+        
     profile = UserProfile.objects.get(user=user)
+    
     if (not profile) or (not profile.is_complete()):  # Check if profile is empty
         stage_name = 'profile'
         context['stage_data'] = {
@@ -191,8 +194,8 @@ def chat_view(request):
             'demonstrate': {}
         }
     else:
-        profile = UserProfile.objects.filter(user=user).first()
-        sequence = FourDSequence.objects.filter(user=user).order_by('-created_at').first()
+        # profile = UserProfile.objects.filter(user=user).first()
+        sequence   = FourDSequence.objects.filter(user=user).order_by('-created_at').first()
         stage_name = sequence.stage_display
         context['stage_data'] = {
             'profile': UserProfileSerializer(profile).data if profile else {},
@@ -257,6 +260,7 @@ def chat_view(request):
     # Added agent response to message history
     message_history.append(last_message)
     context.update(response.context)
+    
     context['history'] = message_history
     stage_name = response.agent.id
     if response.agent != agent:
