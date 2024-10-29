@@ -180,8 +180,8 @@ def chat_view(request):
     if cache.get(cache_key):
         context = cache.get(cache_key)
         stage_name = context['stage']  # Ensure current_stage is set from cached context
-    profile = UserProfile.objects.filter(user=user).first()
-    if not profile or not profile.is_complete():  # Check if profile is empty
+    profile = UserProfile.objects.get(user=user)
+    if (not profile) or (not profile.is_complete()):  # Check if profile is empty
         stage_name = 'profile'
         context['stage_data'] = {
             'profile': UserProfileSerializer(profile).data if profile else {},
