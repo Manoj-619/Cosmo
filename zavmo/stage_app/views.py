@@ -186,6 +186,7 @@ def chat_view(request):
         stage_name = context['stage']  # Ensure current_stage is set from cached context
         
     profile = UserProfile.objects.get(user=user)
+    print(profile.user)
     if (not profile) or (not profile.is_complete()):  # Check if profile is empty
         stage_name = 'profile'
         context['stage_data'] = {
