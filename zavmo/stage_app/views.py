@@ -253,6 +253,7 @@ def chat_view(request):
     logger.info("\nInstructions and summary passed:")
     logger.info(agent.instructions)
     logger.info("\n")
+    logger.info(f"\nSummary passed:{summary_text}")
     
     # Run the agent with the user's input and current message history
     response = run_step(
