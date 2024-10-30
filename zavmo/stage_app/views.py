@@ -185,7 +185,7 @@ def chat_view(request):
         context = cache.get(cache_key)
         stage_name = context['stage']  # Ensure current_stage is set from cached context
         
-    profile = UserProfile.objects.get(user=user);
+    profile = UserProfile.objects.get(email=user.email);
     
     logger.info(f"User Object Passed:")  # Log the user Object
     logger.info(f"{user}")
