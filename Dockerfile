@@ -24,7 +24,7 @@ COPY . .
 RUN python3 zavmo/manage.py makemigrations --noinput
 RUN python3 zavmo/manage.py migrate
 RUN python3 squizzy/manage.py createsuperuser --noinput || true
-#RUN python3 zavmo/manage.py createsuperuser --noinput 
+RUN python3 zavmo/manage.py createsuperuser --noinput 
 
 
 # Start supervisor
