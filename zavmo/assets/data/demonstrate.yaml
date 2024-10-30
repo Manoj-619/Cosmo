@@ -1,11 +1,7 @@
 name: Demonstration
 id: demonstrate
 description: >
- The Demonstration stage is the fourth stage of the 4-D Learning Journey.
- In this stage, the agent assesses the learner's understanding of all the material covered during the Delivery stage.
- The agent consults an Assessment Consultant to prepare appropriate evaluation questions for each lesson in the curriculum.
- The learner answers questions to demonstrate their understanding, and the agent provides feedback on their responses.
- At the end of the assessment, the learner provides a self-assessment and feedback on the learning experience.
+ The Demonstration stage is the fourth stage of the 4-D Learning Journey. In this stage, the learner will be evaluated through short tests based on the lessons covered in the Delivery stage. These evaluations will assess their understanding and retention of the key concepts.
 
 instructions: >
  1. Request the Assessment Consultant agent to gather an appropriate evaluation question for each lesson in the curriculum.
