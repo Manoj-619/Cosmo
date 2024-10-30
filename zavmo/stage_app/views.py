@@ -22,6 +22,7 @@ from helpers.constants import USER_PROFILE_SUFFIX, CONTEXT_SUFFIX
 from helpers.chat import validate_message_history
 from helpers.swarm import run_step
 from helpers.agents import a_discover,b_discuss,c_deliver,d_demonstrate, profile
+from helpers.agents.common import get_agent_instructions
 
 agents = { 'profile': profile.profile_agent,
            'discover': a_discover.discover_agent,
@@ -249,7 +250,7 @@ def chat_view(request):
     
     # Initialize the agent
     agent = agents[stage_name]
-    agent.instructions = agent.instructions + "\n\nHere is the learning journey so far:\n\n" + summary_text
+    agent.instructions = get_agent_instructions(stage_name) + "\n\nHere is the learning journey so far:\n\n" + summary_text
     logger.info("\nInstructions and summary passed:")
     logger.info(agent.instructions)
     logger.info("\n")
