@@ -185,7 +185,10 @@ def chat_view(request):
         context = cache.get(cache_key)
         stage_name = context['stage']  # Ensure current_stage is set from cached context
         
-    profile = UserProfile.objects.get(user=user)
+    profile = UserProfile.objects.get(user=user);
+    
+    logger.info(f"User Object Passed:")  # Log the user Object
+    logger.info(f"{user}")
     print(profile.user)
     if (not profile) or (not profile.is_complete()):  # Check if profile is empty
         stage_name = 'profile'
