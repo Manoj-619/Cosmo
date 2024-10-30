@@ -189,7 +189,8 @@ def chat_view(request):
     
     logger.info(f"User Object Passed:")  # Log the user Object
     logger.info(f"{user}")
-    print(profile.user)
+    logger.info(f"user_email:{user.email}")
+    
     if (not profile) or (not profile.is_complete()):  # Check if profile is empty
         stage_name = 'profile'
         context['stage_data'] = {
