@@ -202,7 +202,6 @@ def chat_view(request):
             'demonstrate': {}
         }
     else:
-        profile = UserProfile.objects.filter(user=user).first()
         sequence = FourDSequence.objects.filter(user=user).order_by('-created_at').first()
         stage_name = sequence.stage_display
         context['stage_data'] = {
