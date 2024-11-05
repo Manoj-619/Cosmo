@@ -100,7 +100,7 @@ class update_discussion_data(Tool):
     """Update the discussion data after the learner has agreed to the curriculum."""
     interest_areas: str = Field(description="The learner's interest areas")
     learning_style: str = Field(description="The learner's learning style")
-    timeline: str = Field(description="The learner's timeline for completing the curriculum")
+    timeline: int = Field(description="The learner's timeline for completing the curriculum")
     
     def execute(self, context: Dict):
         # Get email and sequence id from context

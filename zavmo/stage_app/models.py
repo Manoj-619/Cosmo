@@ -108,7 +108,7 @@ class DiscussStage(models.Model):
     
     interest_areas = models.JSONField(blank=True, null=True, verbose_name="Interest Areas")
     learning_style = models.TextField(blank=True, null=True, verbose_name="Learning Style")
-    available_time = models.IntegerField(blank=True, null=True, verbose_name="Available Time (hours per week)")
+    timeline =  models.IntegerField(blank=True, null=True, verbose_name="Available Time (hours per week)")
     curriculum     = models.JSONField(blank=True, null=True, verbose_name="Curriculum Plan")
     
     def get_summary(self):
@@ -116,7 +116,7 @@ class DiscussStage(models.Model):
         return f"""
         **Interest Areas**: {self.interest_areas}
         **Learning Style**: {self.learning_style}
-        **Available Time**: {self.available_time}
+        **Available Time**: {self.timeline}
         **Curriculum Plan**: {self.curriculum}
         """
     
