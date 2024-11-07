@@ -94,38 +94,47 @@ WSGI_APPLICATION = 'zavmo.wsgi.application'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
 
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.sqlite3',
-#         'NAME': BASE_DIR / 'db.sqlite3',
-#     }
-# }
-# TODO: Configure the PostgreSQL database settings
-
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': config('POSTGRES_DB'),
-        'USER': config('POSTGRES_USERNAME'),
-        'PASSWORD': config('POSTGRES_PASSWORD'),
-        'HOST': config('POSTGRES_HOST'),
-        'PORT': config('POSTGRES_PORT', default='5432'),
-    "OPTIONS": {
-        "pool": True,
-    },    
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
+    }
 }
-}
+# TODO: Configure the PostgreSQL database settings
+
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql',
+#         'NAME': config('POSTGRES_DB'),
+#         'USER': config('POSTGRES_USERNAME'),
+#         'PASSWORD': config('POSTGRES_PASSWORD'),
+#         'HOST': config('POSTGRES_HOST'),
+#         'PORT': config('POSTGRES_PORT', default='5432'),
+#     "OPTIONS": {
+#         "pool": True,
+#     },    
+# }
+# }
 ### Redis settings
 
 CACHES = {
     'default': {
-        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "BACKEND": "django_redis.cache.RedisCache",
+        # Redis server address
         'LOCATION': f'redis://{config("REDIS_HOST")}:{config("REDIS_PORT")}',
-        'KEY_PREFIX': 'zavmo-',  # Prefix for all cache keys
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            "PICKLE_VERSION": -1,
+            "SOCKET_CONNECT_TIMEOUT": 10,  # Timeout for connnection to be established
+            # Timeout for operations on the socket, after connection is established
+            "SOCKET_TIMEOUT": 10,
+            "CONNECTION_POOL_ARGS": {
+                "max_connections": 1000,
+                "retry_on_timeout": True
+            },
+        }
     }
 }
-
-
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
