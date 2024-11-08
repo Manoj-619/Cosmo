@@ -47,7 +47,7 @@ class TransferToDemonstrationStage(StrictTool):
         return Result(agent=demonstrate_agent, context=context)
 
 class Lesson(StrictTool):
-    """A lesson from the Lesson Specialist."""
+    """Generate a lesson for a module to be delivered to the learner."""
     title: str = Field(description="The title of the lesson")
     lesson: str = Field(description="The lesson")
     content: str = Field(description="The content of the lesson")
@@ -62,53 +62,10 @@ class Lesson(StrictTool):
         else:
             context['stage_data']['deliver']['lessons'] = [lesson]
         return Result(value=str(self), context=context)
-        
-# class request_lesson(StrictTool):
-#     """Request a new lesson from the Lesson Specialist."""
-    
-#     learning_objective: str = Field(description="The learning objective for the lesson")
-#     instructions: str = Field(description="The instructions for the lesson specialist")
-    
-#     def execute(self, context:Dict):
-#         openai_client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
-#         system_prompt = get_prompt("lesson")
-#         messages      = filter_history(context['history'], max_tokens=40000)
-        
-#         user_message  = f"\n\nCurriculum: {context['stage_data']['discuss']['curriculum']}\n\n"
-#         user_message += f"Learning Objective: {self.learning_objective}\n\n"
-#         user_message += f"Instructions: {self.instructions}\n\n"
-        
-#         messages.append({"role": "user", "content": user_message})
-        
-#         response = openai_client.beta.chat.completions.parse(
-#             model="gpt-4o",
-#             messages=messages,
-#             response_format=Lesson            
-#         )
-        
-#         lesson = response.choices[0].message.parsed        
-#         if 'lessons' in context['stage_data']['deliver']:
-#             context['stage_data']['deliver']['lessons'].append(lesson.model_dump())            
-#         else:
-#             context['stage_data']['deliver']['lessons'] = [lesson.model_dump()]
 
-        
-#         logging.debug("Current deliver lessons in context: %s", context['stage_data']['deliver']['lessons'])
-
-            
-#         # Update the DeliverStage object
-#         email       = context['email']
-#         sequence_id = context['sequence_id']
-#         deliver_stage = DeliverStage.objects.get(user__email=email, sequence__id=sequence_id)
-#         lessons = context['stage_data']['deliver']['lessons']
-#         deliver_stage.lessons = lessons
-#         deliver_stage.save()
-            
-#         return Result(value=str(lesson), context=context)        
-        
     
 class UpdateDeliverData(StrictTool):
-    """Update the DeliverStage after all lessons have been delivered."""
+    """Update the DeliverStage after each lesson."""
     
     def execute(self, context:Dict):        
         # Update the DeliverStage object
@@ -117,7 +74,12 @@ class UpdateDeliverData(StrictTool):
         if not email or not sequence_id:
             raise ValueError("Email and sequence id are required to update deliver data.")
         
-        lessons = context['stage_data']['deliver']['lessons']
+        deliver_data = context['stage_data']['deliver']
+        if 'lessons' not in deliver_data:
+            raise ValueError("Lessons are required to update deliver data.")
+        
+        lessons = deliver_data['lessons']
+        
         if not lessons:
             raise ValueError("Lessons are required to update deliver data.")
         

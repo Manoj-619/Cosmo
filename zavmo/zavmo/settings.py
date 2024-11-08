@@ -120,22 +120,21 @@ DATABASES = {
 CACHES = {
     'default': {
         "BACKEND": "django_redis.cache.RedisCache",
-        # Redis server address
         'LOCATION': f'redis://{config("REDIS_HOST")}:{config("REDIS_PORT")}',
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
-            "PICKLE_VERSION": -1,
-            "SOCKET_CONNECT_TIMEOUT": 10,  # Timeout for connnection to be established
-            # Timeout for operations on the socket, after connection is established
+            "SERIALIZER": "django_redis.serializers.json.JSONSerializer",
+            "PICKLE_VERSION": -1,  # You can remove this as it's not needed with JSON serializer
+            "SOCKET_CONNECT_TIMEOUT": 10,
             "SOCKET_TIMEOUT": 10,
             "CONNECTION_POOL_ARGS": {
                 "max_connections": 1000,
                 "retry_on_timeout": True
             },
-        }
+        },
+        "KEY_PREFIX": "json_"  # Optional: helps identify JSON-serialized keys
     }
 }
-
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
 

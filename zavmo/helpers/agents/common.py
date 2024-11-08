@@ -52,15 +52,8 @@ def get_agent_instructions(stage_name: str) -> str:
         str: Instructions for the agent.
     """
     conf_data       = get_yaml_data(stage_name.lower())
-    prompt_context = {
-        'NAME': conf_data['name'],
-        'DESCRIPTION': conf_data['description'],
-        'INSTRUCTIONS': conf_data['instructions'],
-        'EXAMPLES': conf_data['examples'],
-        'COMPLETION_CONDITION': conf_data['completion_condition'],
-        'NEXT_STAGE': conf_data['next_stage'],
-        'NEXT_STAGE_DESCRIPTION': conf_data['next_stage_description']
-    }
+    agent_keys      = ['name', 'description', 'instructions', 'examples', 'completion_condition', 'next_stage', 'next_stage_description']
+    prompt_context  = {k:v for k,v in conf_data.items() if k in agent_keys}
     system_content  = get_prompt('probe.md', 
                                  context=prompt_context,
                                  prompt_dir="assets/prompts")
