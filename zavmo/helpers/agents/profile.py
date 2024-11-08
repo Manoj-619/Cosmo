@@ -4,28 +4,41 @@ Fields:
 """
 
 from pydantic import Field
-from typing import Literal, List, Optional, Dict
-from helpers.swarm import Agent, Response, Result, Tool
+from typing import Dict
+from helpers._types import (
+    Agent,
+    StrictTool,
+    PermissiveTool,
+    Result,
+    Response,
+    AgentFunction,
+    function_to_json,
+)
 from stage_app.models import UserProfile
 from .a_discover import discover_agent
 from .common import get_agent_instructions
 
 ### For handoff
-def transfer_to_discover_agent():
-    """Transfer to the Discovery Agent when the learner has completed the Profile stage."""
-    return discover_agent
+
+class TransferToDiscoverStage(StrictTool):
+    """Transfer to the Discovery stage when the learner has completed the Profile stage."""
+    def execute(self, context: Dict):
+        """Transfer to the Discovery stage when the learner has completed the Profile stage."""
+        
+        return Result(agent=discover_agent, context=context)
 
 
 ### For updating the data
 
-class update_profile_data(Tool):
+class UpdateProfileData(StrictTool):
     """Update the learner's information gathered during the Profile stage."""
+    
     first_name: str = Field(description="The learner's first name.")
-    last_name: str  = Field(description="The learner's last name.")
-    age: int = Field(description="The learner's age.")  
-    edu_level: int    = Field(description="The learner's education level, represented as an integer. 1: Primary School, 2: Middle School, 3: High School, 4: Associate Degree, 5: Bachelor's Degree, 6: Master's Degree, 7: PhD")
-    current_role: str = Field(description="The learner's current role.")
-    current_industry: str    = Field(description="The industry in which the learner is currently working in.")
+    last_name: str        = Field(description="The learner's last name.")
+    age: int              = Field(description="The learner's age.")  
+    edu_level: int        = Field(description="The learner's education level, represented as an integer. 1: Primary School, 2: Middle School, 3: High School, 4: Associate Degree, 5: Bachelor's Degree, 6: Master's Degree, 7: PhD")
+    current_role: str     = Field(description="The learner's current role.")
+    current_industry: str = Field(description="The industry in which the learner is currently working in.")
     years_of_experience: int = Field(description="The number of years the learner has worked in their current industry.")
 
 
@@ -70,8 +83,8 @@ profile_agent = Agent(
     model="gpt-4o",
     instructions=get_agent_instructions('profile'),
     functions=[
-        update_profile_data,
-        transfer_to_discover_agent
+        UpdateProfileData,
+        TransferToDiscoverStage
     ],
     tool_choice="auto",
     parallel_tool_calls=False

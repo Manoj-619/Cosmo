@@ -5,19 +5,12 @@ import simplejson as json
 import hashlib
 import logging
 import jwt
-from redis import Redis, ConnectionPool
-from django.conf import settings
 from dotenv import load_dotenv
 from django.core.cache import cache
-from cryptography.hazmat.primitives.asymmetric import rsa
-from cryptography.hazmat.primitives import serialization
 from datetime import datetime, timedelta, UTC
 
 load_dotenv()
 
-def get_redis_connection():
-    """Get a Redis connection. with redis HOST and PORT"""
-    return Redis(host=os.environ.get('REDIS_HOST'), port=os.environ.get('REDIS_PORT'))
 
 def timer(func):
     """Print the runtime of the decorated function"""
