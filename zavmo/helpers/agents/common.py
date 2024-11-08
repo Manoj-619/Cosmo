@@ -3,7 +3,7 @@ import codecs
 import yaml
 from helpers.chat import get_prompt
 
-def get_yaml_data(yaml_path, yaml_dir="/zavmo/assets/data"):
+def get_yaml_data(yaml_path, yaml_dir="assets/data"):
     """Load a YAML file containing field data.
 
     Args:

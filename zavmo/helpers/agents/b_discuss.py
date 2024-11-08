@@ -122,7 +122,11 @@ class UpdateDiscussionData(StrictTool):
         if not email or not sequence_id:
             raise ValueError("Email and sequence id are required to update discussion data.")
         
-        curriculum = context['stage_data']['discuss']['curriculum']
+        # Safely get curriculum from context
+        stage_data = context.get('stage_data', {})
+        discuss_data = stage_data.get('discuss', {})
+        curriculum = discuss_data.get('curriculum')
+        
         if not curriculum:
             raise ValueError("Curriculum is required to update discussion data. Please generate a curriculum first.")
         
