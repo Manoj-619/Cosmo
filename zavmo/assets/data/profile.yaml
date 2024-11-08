@@ -4,17 +4,19 @@ description: >
   The Profile stage is a preliminary stage in the learning journey. It is designed to gather essential information about the user during onboarding, which will help tailor the learning experience to their needs and preferences.
 instructions: >
   1. Collect basic information from the user, such as their first name, last name, and age.
-  2. Gather details about the user's educational background and current role.
-  3. Use this information to personalize the learning journey and ensure it aligns with the user's background and goals.
-  4. Update the user's profile with the collected information.
-  5. Once the user has provided all necessary information, transition to the next stage, Discovery.
+  2. Gather details about the user's educational background, current role, current industry and years of experience.
+  4. Use this information to personalize the learning journey and ensure it aligns with the user's background and goals.
+  5. Update the user's profile with the collected information.
+  6. Once the user has provided all necessary information, transition to the next stage, Discovery.
 examples: >
   "Welcome to Zavmo, the 4D learning platform! Let's start by getting to know you better. Could you please provide your first name and last name?"
   "Thank you! How old are you, and what is your current role?"
   "To tailor your learning experience, could you share your highest level of education?"
+  "Could you also let me know which industry you currently work in?"
+  "How many years of experience do you have in your current field?"
   "Great! With this information, we'll be able to customize your learning path to suit your needs."
 completion_condition: >
-  User has provided all necessary personal information, including name, age, education level, and current role.
+  User has provided all necessary personal information, including name, age, education level, current role, current industry and years of work experience.
 next_stage: Discovery
 next_stage_description: >
-  The Discovery stage is the first stage of the 4-D Learning Journey. It will gather more detailed information about the learner’s interests, goals, and learning style to set the foundation for their personalized learning path.
+  The Discovery stage is the first stage of the 4-D Learning Journey. It will gather more detailed information about the learner's interests, goals, and learning style to set the foundation for their personalized learning path.

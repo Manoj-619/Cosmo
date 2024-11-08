@@ -10,6 +10,7 @@ class Org(models.Model):
         return self.org_name
 
 # NOTE: USED ONLY ONCE PER USER, DURING ONBOARDING
+
 class UserProfile(models.Model):
     """
     Profile stage model.
@@ -36,11 +37,13 @@ class UserProfile(models.Model):
         blank=True, null=True,
         verbose_name="Education Level"
     )
-    current_role = models.CharField(max_length=100, blank=True, null=True, verbose_name="Current Role")
+    current_role        = models.CharField(max_length=100, blank=True, null=True, verbose_name="Current Role")
+    current_industry    = models.CharField(max_length=100, blank=True, null=True, verbose_name="Current Industry") 
+    years_of_experience = models.PositiveIntegerField(null=True, blank=True, verbose_name="Years of experience") 
     
     def __str__(self):
         """Get a dump of the Django model as a string."""
-        return f"{self.user.email} - {self.first_name} {self.last_name} - {self.age} - {self.edu_level} - {self.current_role}"
+        return f"{self.user.email} - {self.first_name} {self.last_name} - {self.age} - {self.edu_level} - {self.current_role} - {self.current_industry} - {self.years_of_experience}"
 
     @property
     def edu_level_display(self):
@@ -56,12 +59,13 @@ class UserProfile(models.Model):
         **Age**: {self.age}
         **Education Level**: {self.edu_level_display}
         **Current Role**: {self.current_role}
+        **Current Industry**: {self.current_industry}
+        **Years of experience**: {self.years_of_experience}
         """
 
     def is_complete(self):
         """Check if the profile is complete."""
-        return self.first_name and self.last_name and self.age and self.edu_level and self.current_role
-
+        return self.first_name and self.last_name and self.age and self.edu_level and self.current_role and self.current_industry and self.years_of_experience
 
 # Stage 1
 class DiscoverStage(models.Model):
