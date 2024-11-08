@@ -6,6 +6,7 @@ Fields:
     current_module: str
     current_lesson: str
 """
+
 import os
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field
@@ -16,6 +17,9 @@ from .common import get_agent_instructions
 from .d_demonstrate import demonstrate_agent
 from stage_app.models import DeliverStage
 from openai import OpenAI
+import logging
+
+logging.basicConfig(level=logging.DEBUG)
 
 load_dotenv()
 
@@ -60,6 +64,10 @@ class request_lesson(Tool):
             context['stage_data']['deliver']['lessons'].append(lesson.model_dump())            
         else:
             context['stage_data']['deliver']['lessons'] = [lesson.model_dump()]
+
+        
+        logging.debug("Current deliver lessons in context: %s", context['stage_data']['deliver']['lessons'])
+
             
         # Update the DeliverStage object
         email       = context['email']
@@ -109,4 +117,3 @@ deliver_agent = Agent(
     tool_choice='auto',
     model="gpt-4o"
 )
-
