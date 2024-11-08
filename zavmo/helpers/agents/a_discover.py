@@ -21,16 +21,24 @@ from helpers._types import (
 from stage_app.models import DiscoverStage
 from .b_discuss import discuss_agent
 from .common import get_agent_instructions
+from helpers.utils import get_logger
+
+logger = get_logger(__name__)
 
 ### For handoff
 class TransferToDiscussionStage(StrictTool):
     """Transfer to the Discussion stage when the learner approves the summary of the information gathered."""
     def execute(self, context: Dict):
-        return Result(agent=discuss_agent, context=context)
+        logger.info(f"Transferred to the Discussion stage for {context['email']}.")
+        return Result(
+            value="Transferred to the Discussion stage.",
+            agent=discuss_agent, 
+            context=context)
 
 ### For updating the data
 class UpdateDiscoverData(StrictTool):
     """Update the learner's information gathered during the Discovery stage."""
+    
     learning_goals: str = Field(description="The learner's learning goals.")
     learning_goal_rationale: str = Field(description="The learner's rationale for their learning goals.")
     knowledge_level: int = Field(description="The learner's self-assessed knowledge level in their chosen area of study. 1=Beginner, 2=Intermediate, 3=Advanced, 4=Expert")
@@ -50,12 +58,8 @@ class UpdateDiscoverData(StrictTool):
         
         if not email or not sequence_id:
             raise ValueError("Email and sequence ID are required to update discovery data.")        
-        try:
-            # Attempt to get the DiscoverStage object
-            discover_stage = DiscoverStage.objects.get(user__email=email, sequence__id=sequence_id)
-        except DiscoverStage.DoesNotExist:
-            raise ValueError(f"DiscoverStage not found for email {email} and sequence ID {sequence_id}")
-        
+        # Attempt to get the DiscoverStage object
+        discover_stage = DiscoverStage.objects.get(user__email=email, sequence__id=sequence_id)
         # Update the DiscoverStage object
         discover_stage.learning_goals = self.learning_goals
         discover_stage.learning_goal_rationale = self.learning_goal_rationale
@@ -63,12 +67,11 @@ class UpdateDiscoverData(StrictTool):
         discover_stage.application_area = self.application_area
         discover_stage.save()
         
-        value = f"""Updated DiscoverStage for {email} and sequence ID {sequence_id}.
-        The following data was updated:
-        {str(self)}
-        """
+        value = f"Updated DiscoverStage Data for {email}. The following data was updated:\n\n{str(self)}"
         context['stage_data']['discover'] = self.model_dump() # JSON dump of pydantic model
-        return Result(value=value, context=context)
+        logger.info(f"Updated DiscoverStage Data for {email}. The following data was updated:\n\n{str(self)}")
+        return Result(value=value,
+                      context=context)
             
 discover_agent = Agent(
     name="Discovery",

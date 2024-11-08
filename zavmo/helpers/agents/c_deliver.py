@@ -21,6 +21,7 @@ from helpers._types import (
     function_to_json,
 )
 from helpers.chat import filter_history, get_prompt
+from helpers.utils import get_logger
 from .common import get_agent_instructions
 from .d_demonstrate import demonstrate_agent
 from stage_app.models import DeliverStage
@@ -34,34 +35,39 @@ from helpers._types import (
     function_to_json,
 )
 
-from openai import OpenAI
-import logging
-
-logging.basicConfig(level=logging.DEBUG)
-
 load_dotenv()
+
+logger = get_logger(__name__)
+
 
 class TransferToDemonstrationStage(StrictTool):
     """Once all lessons have been delivered, and the DeliverStage is updated, transfer to the Demonstration stage."""
     def execute(self, context: Dict):
-        return Result(agent=demonstrate_agent, context=context)
+        logger.info(f"Transferred to the Demonstration stage for {context['email']}.")
+        return Result(
+            value="Transferred to the Demonstration stage.",
+            agent=demonstrate_agent, 
+            context=context
+        )
 
 class Lesson(StrictTool):
     """Generate a lesson for a module to be delivered to the learner."""
-    title: str = Field(description="The title of the lesson")
-    lesson: str = Field(description="The lesson")
-    content: str = Field(description="The content of the lesson")
-    
-    def __str__(self):
-        return f"**Title**: {self.title}\n**Lesson**: {self.lesson}\n**Content**: {self.content}"
-    
+    module: str = Field(description="The module that the lesson belongs to")
+    learning_objective: str = Field(description="The learning objective of the lesson")
+    title: str   = Field(description="The title of the lesson")
+    lesson: str = Field(description="A concise summary of the lesson")
+        
     def execute(self, context: Dict):
+        logger.info(f"Generated lesson:\n\n{str(self)}")
         lesson = self.model_dump()
         if 'lessons' in context['stage_data']['deliver']:
             context['stage_data']['deliver']['lessons'].append(lesson)
         else:
             context['stage_data']['deliver']['lessons'] = [lesson]
-        return Result(value=str(self), context=context)
+        return Result(
+            value=str(self.model_dump()),
+            context=context
+        )
 
     
 class UpdateDeliverData(StrictTool):
@@ -69,7 +75,8 @@ class UpdateDeliverData(StrictTool):
     
     def execute(self, context:Dict):        
         # Update the DeliverStage object
-        email      = context['email']
+        logger.info(f"Updating DeliverStage data for {context['email']}.")
+        email       = context['email']
         sequence_id = context['sequence_id']
         if not email or not sequence_id:
             raise ValueError("Email and sequence id are required to update deliver data.")
@@ -85,14 +92,15 @@ class UpdateDeliverData(StrictTool):
         
         deliver_stage = DeliverStage.objects.get(
             user__email=email, 
-            sequence__id=sequence_id
+            sequence_id=sequence_id
         )
         deliver_stage.lessons = lessons
         deliver_stage.save()
-        
-        value = f"Delivery stage updated successfully for learner"
-            
-        return Result(value=value, context=context)
+    
+        return Result(
+            value=f"Delivery stage updated successfully for learner", 
+            context=context
+        )
     
 
 deliver_agent = Agent(
