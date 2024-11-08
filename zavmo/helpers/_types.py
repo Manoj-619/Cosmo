@@ -1,15 +1,16 @@
-from pydantic import BaseModel, Field
-from collections import defaultdict
-from collections.abc import Callable
-from typing import List, Dict, Union, Optional, Any, ForwardRef
 import inspect
 import openai
+from pydantic import BaseModel
+from collections.abc import Callable
+from typing import List, Dict, Union, Optional, Any, ForwardRef
 
 # Define forward references
 AgentRef = ForwardRef('Agent')
-ToolRef = ForwardRef('Tool')
+StrictToolRef = ForwardRef('StrictTool')
+PermissiveToolRef = ForwardRef('PermissiveTool')
 # Define the agent function type
-AgentFunction = Union[Callable[..., Union[str, AgentRef, dict]], ToolRef]
+AgentFunction = Union[Callable[..., Union[str,
+                                          AgentRef, dict]], StrictToolRef, PermissiveToolRef]
 
 
 class Agent(BaseModel):
@@ -26,16 +27,25 @@ class Agent(BaseModel):
     """
     name: str = "Agent"
     id: str = "agent"
-    model: str = "gpt-4"
+    model: str = "gpt-4o-mini"
     instructions: Union[str, Callable[[], str]] = "You are a helpful agent."
     functions: List[AgentFunction] = []
     tool_choice: str = None
     parallel_tool_calls: bool = True
 
 
-class Tool(BaseModel):
+class StrictTool(BaseModel):
     """
-    A base class for tools that can be used by agents.
+    A base class for tools that can be used by agents with strict schema validation.
+    """
+
+    def execute(self, context: Dict = {}) -> Any:
+        raise NotImplementedError("Subclasses must implement execute method")
+
+
+class PermissiveTool(BaseModel):
+    """
+    A base class for tools that can be used by agents with permissive schema validation.
     """
 
     def execute(self, context: Dict = {}) -> Any:
@@ -44,7 +54,8 @@ class Tool(BaseModel):
 
 # Update forward references
 Agent.update_forward_refs()
-AgentFunction = Union[Callable[..., Union[str, Agent, dict]], Tool]
+AgentFunction = Union[Callable[..., Union[str,
+                                          Agent, dict]], StrictTool, PermissiveTool]
 
 
 class Response(BaseModel):
@@ -55,10 +66,14 @@ class Response(BaseModel):
         messages (List): A list of messages - New messages from the agent.
         agent (Agent): The agent instance, if applicable.
         context (dict): A dictionary of context variables.
+        usage (Dict): A dictionary containing the number of input and output tokens used in the completion.
+        stop: bool = False (Whether to stop the agent chain)
     """
     messages: List = []
     agent: Optional[Agent] = None
     context: dict = {}
+    usage: Dict = {}
+    stop: bool = False
 
 
 class Result(BaseModel):
@@ -69,10 +84,14 @@ class Result(BaseModel):
         value (str): The result value as a string.
         agent (Agent): The agent instance, if applicable.
         context (dict): A dictionary of context variables.
+        stop: bool = False (Whether to stop the agent chain)
+        usage: Dict = {} (A dictionary containing the number of input and output tokens used in the completion)
     """
     value: str = ""
     agent: Optional[Agent] = None
     context: dict = {}
+    usage: Dict = {}
+    stop: bool = False
 
 
 def function_to_json(func) -> dict:
@@ -80,13 +99,23 @@ def function_to_json(func) -> dict:
     Converts a Python function or Tool into a JSON-serializable dictionary
     that describes the function's signature, including its name, description, and parameters.
     """
-    if inspect.isclass(func) and issubclass(func, Tool):
+    if inspect.isclass(func) and issubclass(func, StrictTool):
         # Handle Pydantic model classes that inherit from Tool
-        return openai.pydantic_function_tool(func)
+        schema = openai.pydantic_function_tool(func)
+        schema["function"]["strict"] = True
+        return schema
+    elif inspect.isclass(func) and issubclass(func, PermissiveTool):
+        # Handle instances of PermissiveTool or its subclasses
+        schema = openai.pydantic_function_tool(func)
+        schema["function"]["strict"] = False
+        return schema
+
     elif inspect.isclass(func) and issubclass(func, BaseModel):
-        # Handle instances of Tool or its subclasses
-        return openai.pydantic_function_tool(func)
-    
+        # Handle instances of StrictTool or PermissiveTool
+        schema = openai.pydantic_function_tool(func)
+        schema["function"]["strict"] = False
+        return schema
+
     elif callable(func):
         # Standard function signature processing for non-tool functions
         type_map = {

@@ -11,7 +11,7 @@ instructions: >
   6. If the learner is satisfied, confirm the information and transfer to the Discussion Agent.
   7. If the learner is not satisfied, repeat the above steps until the learner is satisfied with the summary.
 examples: >
-  "What specific topics would you like to learn about, {learner_name}? 🎯"  
+  "What specific topics would you like to learn about, [learner_name]? 🎯"  
   "Can you share your top learning goals with me? 📚"  
   "How would you rate your current knowledge level in these areas? (1: Beginner to 4: Expert) 📊"
   "In what areas of your life or work do you plan to apply your new knowledge? 🌍"

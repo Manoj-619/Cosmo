@@ -12,11 +12,18 @@ from openai import OpenAI
 from pydantic import BaseModel, Field
 from typing import List, Dict, Literal, Optional
 from helpers.chat import get_prompt, summarize_history, filter_history
-from helpers.swarm import Agent, Result, Tool, Response
+from helpers._types import (
+    Agent,
+    StrictTool,
+    PermissiveTool,
+    Result,
+    Response,
+    AgentFunction,
+    function_to_json,
+)
 from stage_app.models import DiscussStage
 from .common import get_agent_instructions
 from .c_deliver import deliver_agent
-from tabulate import tabulate
 
 class LearningOutcome(BaseModel):
     description: str = Field(..., description="Description of the learning outcome")
@@ -34,69 +41,75 @@ class Module(BaseModel):
     lessons: List[str] = Field(description="List of lessons in this module")
     duration: int = Field(description="The total duration of the module in hours")
 
-class Curriculum(BaseModel):
+class Curriculum(StrictTool):
+    """Generate a detailed curriculum for the learner."""
     title: str = Field(description="The title of the curriculum")
     subject: str = Field(description="The main subject area of the curriculum")
     level: str = Field(description="The difficulty level of the curriculum (e.g., beginner, intermediate, advanced)")
     prerequisites: List[str] = Field(description="Any prerequisites needed to undertake this curriculum")
     modules: List[Module] = Field(description="List of modules included in the curriculum")
-    def __str__(self):
-        """Return a markdowntabular representation of the Curriculum object."""
-        table = ""
-        table += f"**{self.title}**\n"
-        table += f"**Subject**: {self.subject}\n"
-        table += f"**Level**: {self.level}\n"
-        table += f"**Prerequisites**: {self.prerequisites}\n"
+    
+    # def __str__(self):
+    #     """Return a markdowntabular representation of the Curriculum object."""
+    #     table = ""
+    #     table += f"**{self.title}**\n"
+    #     table += f"**Subject**: {self.subject}\n"
+    #     table += f"**Level**: {self.level}\n"
+    #     table += f"**Prerequisites**: {self.prerequisites}\n"
         
-        for module in self.modules:
-            table += f"**{module.title}**\n"
-            table += f"**Duration**: {module.duration} hours\n"
-            table += f"**Learning Outcomes**: {module.learning_outcomes}\n"
-            table += f"**Lessons**: {module.lessons}\n"
-            table += "\n"            
-        return table
-
-class request_curriculum(Tool):
-    """Request a curriculum from the curriculum design team."""
-    instructions: str = Field(description="Instructions for generating the curriculum")
-    learning_objectives: str = Field(description="The learner's learning objectives")
-    interest_areas: str = Field(description="The learner's interest areas")
-    time_available: str = Field(description="The time available for the learner to study per week")
+    #     for module in self.modules:
+    #         table += f"**{module.title}**\n"
+    #         table += f"**Duration**: {module.duration} hours\n"
+    #         table += f"**Learning Outcomes**: {module.learning_outcomes}\n"
+    #         table += f"**Lessons**: {module.lessons}\n"
+    #         table += "\n"
+    #     return table
     
     def execute(self, context: Dict):
-        print(f"Curriculum request received for {context['email']} with sequence id {context['sequence_id']}")
-        conversation_summary = summarize_history(filter_history(context['history'], max_tokens=60000))
-        user_prompt  = f"Here is a summary of the conversation so far: {conversation_summary}\n\n"
-        user_prompt += f"Learning objectives: {self.learning_objectives}\n\n"
-        user_prompt += f"Interest areas: {self.interest_areas}\n\n"
-        user_prompt += f"Time available per week: {self.time_available}\n\n"
-        user_prompt += f"Instructions: {self.instructions}"
+        context['stage_data']['discuss']['curriculum'] = self.model_dump()
+        return Result(value=str(self.model_dump()), context=context)
+
+# class request_curriculum(StrictTool):
+#     """Request a curriculum from the curriculum design team."""
+#     instructions: str = Field(description="Instructions for generating the curriculum")
+#     learning_objectives: str = Field(description="The learner's learning objectives")
+#     interest_areas: str = Field(description="The learner's interest areas")
+#     time_available: str = Field(description="The time available for the learner to study per week")
+    
+#     def execute(self, context: Dict):
+#         print(f"Curriculum request received for {context['email']} with sequence id {context['sequence_id']}")
+#         conversation_summary = summarize_history(filter_history(context['history'], max_tokens=60000))
+#         user_prompt  = f"Here is a summary of the conversation so far: {conversation_summary}\n\n"
+#         user_prompt += f"Learning objectives: {self.learning_objectives}\n\n"
+#         user_prompt += f"Interest areas: {self.interest_areas}\n\n"
+#         user_prompt += f"Time available per week: {self.time_available}\n\n"
+#         user_prompt += f"Instructions: {self.instructions}"
         
-        messages = [
-            {"role": "system", "content": get_prompt('curriculum')},
-            {"role": "user", "content": user_prompt}
-        ]
-        openai_client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
-        response = openai_client.beta.chat.completions.parse(
-            model="gpt-4o",
-            messages=messages,
-            response_format=Curriculum
-        )
-        model_result = response.choices[0].message.parsed
+#         messages = [
+#             {"role": "system", "content": get_prompt('curriculum')},
+#             {"role": "user", "content": user_prompt}
+#         ]
+#         openai_client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+#         response = openai_client.beta.chat.completions.parse(
+#             model="gpt-4o",
+#             messages=messages,
+#             response_format=Curriculum
+#         )
+#         model_result = response.choices[0].message.parsed
         
-        # Save the curriculum to the database
-        discuss_stage = DiscussStage.objects.get(user__email=context['email'], sequence_id=context['sequence_id'])
-        discuss_stage.curriculum = model_result.model_dump()
-        discuss_stage.save()
+#         # Save the curriculum to the database
+#         discuss_stage = DiscussStage.objects.get(user__email=context['email'], sequence_id=context['sequence_id'])
+#         discuss_stage.curriculum = model_result.model_dump()
+#         discuss_stage.save()
         
-        # Update the context
-        context['stage_data']['discuss']['curriculum'] = model_result.model_dump()
-        curriculum_text = str(model_result)
-        value = f"Curriculum generated successfully:\n\n{curriculum_text}"
-        return Result(value=value, context=context)
+#         # Update the context
+#         context['stage_data']['discuss']['curriculum'] = model_result.model_dump()
+#         curriculum_text = str(model_result)
+#         value = f"Curriculum generated successfully:\n\n{curriculum_text}"
+#         return Result(value=value, context=context)
         
 
-class update_discussion_data(Tool):
+class UpdateDiscussionData(StrictTool):
     """Update the discussion data after the learner has agreed to the curriculum."""
     interest_areas: str = Field(description="The learner's interest areas")
     learning_style: str = Field(description="The learner's learning style")
@@ -104,40 +117,48 @@ class update_discussion_data(Tool):
     
     def execute(self, context: Dict):
         # Get email and sequence id from context
-        email = context['email']
+        email       = context['email']
         sequence_id = context['sequence_id']
         if not email or not sequence_id:
             raise ValueError("Email and sequence id are required to update discussion data.")
-    
+        
+        # Safely get curriculum from context
+        stage_data = context.get('stage_data', {})
+        discuss_data = stage_data.get('discuss', {})
+        curriculum = discuss_data.get('curriculum')
+        
+        if not curriculum:
+            raise ValueError("Curriculum is required to update discussion data. Please generate a curriculum first.")
+        
         # Get the DiscussStage object
         discuss_stage = DiscussStage.objects.get(user__email=email, sequence_id=sequence_id)
-        discuss_stage.interest_areas = self.interest_areas
-        discuss_stage.learning_style = self.learning_style
-        discuss_stage.curriculum = context['stage_data']['discuss']['curriculum']
-        discuss_stage.timeline = self.timeline
+        discuss_stage.interest_areas  = self.interest_areas
+        discuss_stage.learning_style  = self.learning_style
+        discuss_stage.curriculum      = curriculum
+        discuss_stage.timeline        = self.timeline
         discuss_stage.save()
         
-        value = f"""Discussion data updated successfully for {email} with sequence id {sequence_id}.
-
-        **Discussion data:**         
-            
+        value = f"""Discussion data updated successfully for {email}
+        
+        **Discussion data:**
             {discuss_stage.get_summary()}
         """
         
         # Update context with the current stage data
         context['stage_data']['discuss'] = {
-            'interest_areas': self.interest_areas,
-            'learning_style': self.learning_style,
-            'curriculum': context['stage_data']['discuss']['curriculum'],
-            'timeline': self.timeline
+            "interest_areas": self.interest_areas,
+            "learning_style": self.learning_style,
+            "timeline": self.timeline,
+            "curriculum": curriculum
         }
         
         return Result(value=value, context=context)
             
 # Handoff Agent for the next stage
-def transfer_to_delivery_agent():
-    """Transfer to the Delivery Agent once the Discussion stage is complete."""
-    return deliver_agent
+class TransferToDeliveryStage(StrictTool):
+    """Transfer to the Delivery stage once the Discussion stage is complete."""
+    def execute(self, context: Dict):
+        return Result(agent=deliver_agent, context=context)
 
 
 discuss_agent = Agent(
@@ -145,9 +166,9 @@ discuss_agent = Agent(
     id="discuss",
     instructions=get_agent_instructions('discuss'),
     functions=[
-        request_curriculum,
-        update_discussion_data,        
-        transfer_to_delivery_agent
+        Curriculum,
+        UpdateDiscussionData,        
+        TransferToDeliveryStage
     ],
     parallel_tool_calls=False,
     tool_choice='auto',

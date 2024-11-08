@@ -8,19 +8,28 @@ Fields:
 """
 
 from pydantic import Field
-from typing import Literal, List, Optional, Dict
-from helpers.swarm import Agent, Response, Result, Tool
+from typing import Dict
+from helpers._types import (
+    Agent,
+    StrictTool,
+    PermissiveTool,
+    Result,
+    Response,
+    AgentFunction,
+    function_to_json,
+)
 from stage_app.models import DiscoverStage
 from .b_discuss import discuss_agent
 from .common import get_agent_instructions
 
 ### For handoff
-def transfer_to_discussion_agent():
-    """Transfer to the Discussion Agent when the learner is satisfied with the summary of the information gathered."""
-    return discuss_agent
+class TransferToDiscussionStage(StrictTool):
+    """Transfer to the Discussion stage when the learner approves the summary of the information gathered."""
+    def execute(self, context: Dict):
+        return Result(agent=discuss_agent, context=context)
 
 ### For updating the data
-class update_discover_data(Tool):
+class UpdateDiscoverData(StrictTool):
     """Update the learner's information gathered during the Discovery stage."""
     learning_goals: str = Field(description="The learner's learning goals.")
     learning_goal_rationale: str = Field(description="The learner's rationale for their learning goals.")
@@ -36,12 +45,11 @@ class update_discover_data(Tool):
     
     def execute(self, context: Dict):
         # Get email and sequence_id from context
-        email = context.get('email')
+        email       = context.get('email')
         sequence_id = context.get('sequence_id')
         
         if not email or not sequence_id:
-            raise ValueError("Email and sequence ID are required to update discovery data.")
-        
+            raise ValueError("Email and sequence ID are required to update discovery data.")        
         try:
             # Attempt to get the DiscoverStage object
             discover_stage = DiscoverStage.objects.get(user__email=email, sequence__id=sequence_id)
@@ -55,12 +63,11 @@ class update_discover_data(Tool):
         discover_stage.application_area = self.application_area
         discover_stage.save()
         
-        value = f"""Updated DiscoverStage for {email} with sequence ID {sequence_id}.
+        value = f"""Updated DiscoverStage for {email} and sequence ID {sequence_id}.
         The following data was updated:
         {str(self)}
         """
-        context['stage_data']['discover'] = self.model_dump()
-        
+        context['stage_data']['discover'] = self.model_dump() # JSON dump of pydantic model
         return Result(value=value, context=context)
             
 discover_agent = Agent(
@@ -69,8 +76,8 @@ discover_agent = Agent(
     model="gpt-4o",
     instructions=get_agent_instructions('discover'),
     functions=[
-        update_discover_data,
-        transfer_to_discussion_agent
+        UpdateDiscoverData,
+        TransferToDiscussionStage
     ],
     tool_choice="auto",
     parallel_tool_calls=False

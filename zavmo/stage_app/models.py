@@ -135,10 +135,7 @@ class DeliverStage(models.Model):
     
     # Lessons is a list of dictionaries, each representing a lesson
     lessons    = models.JSONField(blank=True, null=True, verbose_name="Lessons")
-    def is_complete(self):
-        return self.lessons
-    
-    
+        
     def get_summary(self):
         """Get a summary of the user's profile."""
         summary = ""

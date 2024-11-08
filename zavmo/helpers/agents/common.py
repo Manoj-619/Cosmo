@@ -1,11 +1,9 @@
 import os
 import codecs
 import yaml
-from pydantic import BaseModel, Field
-from typing import List
-from helpers.swarm import Agent
+from helpers.chat import get_prompt
 
-def get_yaml_data(yaml_path, yaml_dir="/zavmo/assets/data"):
+def get_yaml_data(yaml_path, yaml_dir="assets/data"):
     """Load a YAML file containing field data.
 
     Args:
@@ -40,7 +38,7 @@ def get_yaml_data(yaml_path, yaml_dir="/zavmo/assets/data"):
         raise
     
 
-###### Curriculum Schema ######
+###### Agent Instructions ######
 
 
 def get_agent_instructions(stage_name: str) -> str:
@@ -54,14 +52,9 @@ def get_agent_instructions(stage_name: str) -> str:
         str: Instructions for the agent.
     """
     conf_data       = get_yaml_data(stage_name.lower())
-    prompt_path     = os.path.join("/zavmo/assets/prompts/probe.md")
-    prompt_template = open(prompt_path, "r", encoding="utf-8").read()
-    system_content  = prompt_template.format(NAME=conf_data['name'],
-                                            DESCRIPTION=conf_data['description'],
-                                            INSTRUCTIONS=conf_data['instructions'],
-                                            EXAMPLES=conf_data['examples'],
-                                            COMPLETION_CONDITION=conf_data['completion_condition'],
-                                            NEXT_STAGE=conf_data['next_stage'],
-                                            NEXT_STAGE_DESCRIPTION=conf_data['next_stage_description']
-                                            )
-    return system_content
+    agent_keys      = ['name', 'description', 'instructions', 'examples', 'completion_condition', 'next_stage', 'next_stage_description']
+    prompt_context  = {k:v for k,v in conf_data.items() if k in agent_keys}
+    system_content  = get_prompt('probe.md', 
+                                 context=prompt_context,
+                                 prompt_dir="assets/prompts")
+    return system_content   
