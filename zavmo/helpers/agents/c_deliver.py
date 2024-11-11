@@ -58,12 +58,23 @@ class Lesson(StrictTool):
     lesson: str = Field(description="A concise summary of the lesson")
         
     def execute(self, context: Dict):
+        email = context['email']
+        sequence_id = context['sequence_id']
         logger.info(f"Generated lesson:\n\n{str(self)}")
+        logger.info(f"Context before lesson addition: {context.get('stage_data', {}).get('deliver', {})}")
         lesson = self.model_dump()
-        if 'lessons' in context['stage_data']['deliver']:
-            context['stage_data']['deliver']['lessons'].append(lesson)
+        
+        deliver_stage = DeliverStage.objects.get(
+            user__email=email, 
+            sequence_id=sequence_id
+        )
+        if deliver_stage.lessons:
+            deliver_stage.lessons.append(lesson)
         else:
-            context['stage_data']['deliver']['lessons'] = [lesson]
+            deliver_stage.lessons = [lesson]
+        deliver_stage.save()
+
+        logger.info(f"Context after lesson addition: {context['stage_data']['deliver']}")
         return Result(
             value=str(self.model_dump()),
             context=context
@@ -74,29 +85,23 @@ class UpdateDeliverData(StrictTool):
     """Update the DeliverStage after each lesson."""
     
     def execute(self, context:Dict):        
-        # Update the DeliverStage object
-        logger.info(f"Updating DeliverStage data for {context['email']}.")
-        email       = context['email']
+        logger.info(f"Context at start of UpdateDeliverData: {context.get('stage_data', {}).get('deliver', {})}")
+        
+        email = context['email']
         sequence_id = context['sequence_id']
-        if not email or not sequence_id:
-            raise ValueError("Email and sequence id are required to update deliver data.")
-        
-        deliver_data = context['stage_data']['deliver']
-        if 'lessons' not in deliver_data:
-            raise ValueError("Lessons are required to update deliver data.")
-        
-        lessons = deliver_data['lessons']
-        
-        if not lessons:
-            raise ValueError("Lessons are required to update deliver data.")
         
         deliver_stage = DeliverStage.objects.get(
             user__email=email, 
             sequence_id=sequence_id
         )
-        deliver_stage.lessons = lessons
-        deliver_stage.save()
-    
+        # check if lessons is a list
+        if not isinstance(deliver_stage.lessons, list):
+            # Check size of lessons
+            if len(deliver_stage.lessons) == 0:
+                raise ValueError("No lessons found in deliver data")
+            else:
+                raise ValueError("Lessons is not a list")
+        # TODO: Check if lessons match curriculum from previous stage
         return Result(
             value=f"Delivery stage updated successfully for learner", 
             context=context

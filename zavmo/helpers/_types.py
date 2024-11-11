@@ -29,6 +29,7 @@ class Agent(BaseModel):
     id: str = "agent"
     model: str = "gpt-4o-mini"
     instructions: Union[str, Callable[[], str]] = "You are a helpful agent."
+    # TODO: Add an Optional Initial message - to save history
     functions: List[AgentFunction] = []
     tool_choice: str = None
     parallel_tool_calls: bool = True
