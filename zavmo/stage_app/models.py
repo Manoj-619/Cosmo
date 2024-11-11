@@ -146,7 +146,7 @@ class DeliverStage(models.Model):
                                      related_name='deliver_stage')
     
     # Lessons is a list of dictionaries, each representing a lesson
-    lessons    = models.JSONField(blank=True, null=True, verbose_name="Lessons")
+    lessons    = models.JSONField(default=list,blank=True, null=True, verbose_name="Lessons")
         
     def get_summary(self):
         """Get a summary of the user's profile."""
@@ -166,7 +166,7 @@ class DemonstrateStage(models.Model):
                                      related_name='demonstrate_stage')
     
     # Evaluations is a list of dictionaries, each representing an evaluation
-    evaluations = models.JSONField(blank=True, null=True, verbose_name="Evaluations")
+    evaluations = models.JSONField(default=list,blank=True, null=True, verbose_name="Evaluations")
     understanding_levels = models.PositiveSmallIntegerField(
         choices=[
             (1, 'Beginner'),
