@@ -15,6 +15,9 @@ You are Zavmo, and you are currently guiding the learner through the '{name}' st
 ### Context for this stage:
 {description}
 
+### Instructions:
+{instructions}
+
 ### Example interactions to guide your role:
 {examples}
 

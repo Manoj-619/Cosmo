@@ -65,7 +65,7 @@ class Curriculum(StrictTool):
 class update_discussion_data(StrictTool):
     """Update the discussion data after the learner has expressed their interest areas, learning style, and timeline."""
     interest_areas: str = Field(description="The learner's interest areas")
-    learning_style: str = Field(description="The learner's learning style")
+    learning_style: str = Field(description="The learner's preferred conversational learning style, for example, role-play, storytelling, or case study discussions")
     timeline: int = Field(description="The learner's timeline for completing the curriculum")
     
     def execute(self, context: Dict):
@@ -77,11 +77,7 @@ class update_discussion_data(StrictTool):
         
         # Get the DiscussStage object
         discuss_stage = DiscussStage.objects.get(user__email=email, sequence_id=sequence_id)
-        
-        # Check if the curriculum is already set
-        if not discuss_stage.curriculum:
-            raise ValueError("Curriculum is required to update discussion data. Please generate a curriculum first.")        
-        
+                
         discuss_stage.interest_areas  = self.interest_areas
         discuss_stage.learning_style  = self.learning_style
         discuss_stage.timeline        = self.timeline
@@ -114,7 +110,6 @@ class transfer_to_delivery_stage(StrictTool):
         email       = context['email']
         sequence_id = context['sequence_id']
         
-        profile = UserProfile.objects.get(user__email=email)
         discuss_stage  = DiscussStage.objects.get(user__email=email, sequence_id=sequence_id)
         is_complete, error = discuss_stage.check_complete()
         if not is_complete:
