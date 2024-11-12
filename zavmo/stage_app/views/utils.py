@@ -1,17 +1,18 @@
 from helpers.utils import get_logger
 from django.core.cache import cache
-from stage_app.models import UserProfile, FourDSequence
+from stage_app.models import UserProfile, FourDSequence, DeliverStage, DiscoverStage, DiscussStage, DemonstrateStage
 from stage_app.serializers import (
     DiscoverStageSerializer, DiscussStageSerializer, DeliverStageSerializer, DemonstrateStageSerializer,
     UserProfileSerializer
 )
 from helpers.chat import filter_history
 from helpers.agents import a_discover, b_discuss,c_deliver,d_demonstrate, profile
-from stage_app.models import FourDSequence
+
 from helpers.constants import CONTEXT_SUFFIX, HISTORY_SUFFIX, DEFAULT_CACHE_TIMEOUT
 from helpers.swarm import run_step
 
 stage_order = ['profile', 'discover', 'discuss', 'deliver', 'demonstrate']
+stage_models = [UserProfile, DiscoverStage, DiscussStage, DeliverStage, DemonstrateStage]
 
 agents = { 'profile': profile.profile_agent,
            'discover': a_discover.discover_agent,
@@ -99,14 +100,19 @@ def _process_agent_response(stage_name, message_history, context, max_turns=10):
     """Process agent response with given context and messages."""
     agent = agents[stage_name]
     email = context['email']
+    sequence_id = context['sequence_id']
     profile = UserProfile.objects.get(user__email=email)
-    summary = profile.get_summary()
     
-    agent.start_message += f"""
-    **User Profile:**
-    
-    {summary}
-    """
+    stage_level = stage_order.index(stage_name) + 1
+    for i in range(stage_level):
+        stage_model = stage_models[i]
+        stage_object = stage_model.objects.get(user__email=email, sequence_id=sequence_id)
+        summary = stage_object.summary
+        agent.start_message += f"""
+        **{stage_order[i].capitalize()}:**
+        
+        {summary}        
+        """        
     return run_step(
         agent=agent,
         messages=message_history,
