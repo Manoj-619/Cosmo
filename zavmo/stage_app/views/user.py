@@ -118,7 +118,9 @@ def get_user_profile(request):
     profile_data   = UserProfileSerializer(profile_stage).data
     # Check if there are any sequences for this user
     sequences_data = FourDSequenceSerializer(sequences, many=True).data
-    if profile_stage.is_complete():
+    
+    is_complete, error = profile_stage.check_complete()
+    if is_complete:
         stage = sequences.order_by('-created_at').first().current_stage
     else:
         stage = 'profile'
