@@ -1,7 +1,9 @@
 from helpers.utils import get_logger
 from django.core.cache import cache
+from stage_app.models import UserProfile, FourDSequence
 from stage_app.serializers import (
     DiscoverStageSerializer, DiscussStageSerializer, DeliverStageSerializer, DemonstrateStageSerializer,
+    UserProfileSerializer
 )
 from helpers.agents import a_discover,b_discuss,c_deliver,d_demonstrate, profile
 from stage_app.models import FourDSequence

@@ -1,7 +1,8 @@
 from rest_framework.response import Response as DRFResponse
 from rest_framework import status
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
-from stage_app.models import Org, User, UserProfile, FourDSequence
+from django.contrib.auth.models import User
+from stage_app.models import Org, UserProfile, FourDSequence
 from stage_app.serializers import UserDetailSerializer, UserProfileSerializer, FourDSequenceSerializer
 from zavmo.authentication import CustomJWTAuthentication
 from rest_framework.permissions import IsAuthenticated
