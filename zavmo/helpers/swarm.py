@@ -41,7 +41,7 @@ def fetch_agent_response(agent: Agent, history: List, context: Dict) -> ChatComp
     if agent.start_message:
         init_messages.append({"role": "user", "content": agent.start_message})
     
-    messages = init_messages + filter_history(history, max_tokens=64000)
+    messages = init_messages + history
     tools = [function_to_json(f) for f in agent.functions]
 
     create_params = {
@@ -52,7 +52,8 @@ def fetch_agent_response(agent: Agent, history: List, context: Dict) -> ChatComp
     }
     if tools:
         create_params["parallel_tool_calls"] = agent.parallel_tool_calls
-
+    logging.info('Logging from fetch_agent response')    
+    logging.info(messages)
     return openai_client.chat.completions.create(**create_params)
 
 
