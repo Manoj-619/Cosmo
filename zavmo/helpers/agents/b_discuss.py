@@ -13,16 +13,12 @@ from typing import List, Dict, Literal, Optional
 from helpers._types import (
     Agent,
     StrictTool,
-    PermissiveTool,
     Result,
-    Response,
-    AgentFunction,
-    function_to_json,
 )
 from helpers.utils import get_logger
-from stage_app.models import DiscussStage
-from .common import get_agent_instructions
-from .c_deliver import deliver_agent
+from stage_app.models import DiscussStage, UserProfile
+from helpers.agents.common import get_agent_instructions
+from helpers.agents.c_deliver import deliver_agent
 
 logger = get_logger(__name__)
 
@@ -66,8 +62,8 @@ class Curriculum(StrictTool):
         return Result(value=str(self.model_dump()), context=context)
     
 
-class UpdateDiscussionData(StrictTool):
-    """Update the discussion data after the learner has agreed to the curriculum."""
+class update_discussion_data(StrictTool):
+    """Update the discussion data after the learner has expressed their interest areas, learning style, and timeline."""
     interest_areas: str = Field(description="The learner's interest areas")
     learning_style: str = Field(description="The learner's learning style")
     timeline: int = Field(description="The learner's timeline for completing the curriculum")
@@ -109,7 +105,7 @@ class UpdateDiscussionData(StrictTool):
         return Result(value=value, context=context)
             
 # Handoff Agent for the next stage
-class TransferToDeliveryStage(StrictTool):
+class transfer_to_delivery_stage(StrictTool):
     """Transfer to the Delivery stage once the Discussion stage is complete."""
 
     def execute(self, context: Dict):        
@@ -117,15 +113,22 @@ class TransferToDeliveryStage(StrictTool):
         # Get discussion data from DB
         email       = context['email']
         sequence_id = context['sequence_id']
-        discuss_stage = DiscussStage.objects.get(user__email=email, sequence_id=sequence_id)
-        discuss_data = discuss_stage.get_summary()
         
+        profile = UserProfile.objects.get(user__email=email)
+        discuss_stage  = DiscussStage.objects.get(user__email=email, sequence_id=sequence_id)
+        is_complete, error = discuss_stage.check_complete()
+        if not is_complete:
+            raise ValueError(error)
+        
+        discuss_data   = discuss_stage.get_summary()    
         # Get the DeliverStage object
         agent = deliver_agent
-        
         # Create the start message for the Delivery agent
         agent.start_message = f"""
-        Discussion Data Summary:
+        **User Profile:**
+        {profile.get_summary()}
+        
+        **Discussion Data:**
         {discuss_data}
         
         Greet the learner and introduce the Delivery stage.
@@ -144,8 +147,8 @@ discuss_agent = Agent(
     instructions=get_agent_instructions('discuss'),
     functions=[
         Curriculum,
-        UpdateDiscussionData,
-        TransferToDeliveryStage
+        update_discussion_data,
+        transfer_to_delivery_stage
     ],
     parallel_tool_calls=False,
     tool_choice='auto',

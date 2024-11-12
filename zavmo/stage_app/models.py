@@ -68,7 +68,21 @@ class UserProfile(models.Model):
 
     def is_complete(self):
         """Check if the profile is complete."""
-        return self.first_name and self.last_name and self.age and self.edu_level and self.current_role and self.current_industry and self.years_of_experience
+        if not self.first_name:
+            return False, "First name is required"
+        if not self.last_name:
+            return False, "Last name is required"
+        if not self.age:
+            return False, "Age is required"
+        if not self.edu_level:
+            return False, "Education level is required"
+        if not self.current_role:
+            return False, "Current role is required"
+        if not self.current_industry:
+            return False, "Current industry is required"
+        if not self.years_of_experience:
+            return False, "Years of experience is required"
+        return True, None
 
 # Stage 1
 class DiscoverStage(models.Model):
@@ -107,8 +121,16 @@ class DiscoverStage(models.Model):
         **Application Area**: {self.application_area}
         """
     
-    def is_complete(self):
-        return self.learning_goals and self.learning_goal_rationale and self.knowledge_level and self.application_area
+    def check_complete(self):
+        if not self.learning_goals:
+            return False, "Learning goals are required"
+        if not self.learning_goal_rationale:
+            return False, "Learning goal rationale is required"
+        if not self.knowledge_level:
+            return False, "Knowledge level is required"
+        if not self.application_area:
+            return False, "Application area is required"
+        return True, None
 
 
 # Stage 2
@@ -123,6 +145,17 @@ class DiscussStage(models.Model):
     learning_style = models.TextField(blank=True, null=True, verbose_name="Learning Style")
     timeline =  models.IntegerField(blank=True, null=True, verbose_name="Available Time (hours per week)")
     curriculum     = models.JSONField(blank=True, null=True, verbose_name="Curriculum Plan")
+    
+    def check_complete(self):
+        if not self.interest_areas:
+            return False, "Interest areas are required"
+        if not self.learning_style:
+            return False, "Learning style is required"
+        if not self.timeline:
+            return False, "Timeline is required"
+        if not self.curriculum:
+            return False, "Curriculum is required"
+        return True, None
     
     def get_summary(self):
         """Get a summary of the user's profile."""

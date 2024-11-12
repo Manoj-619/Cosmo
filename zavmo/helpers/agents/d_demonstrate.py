@@ -87,18 +87,14 @@ class update_self_assessment_and_feedback(StrictTool):
     
 
 class mark_completed(StrictTool):
-    """Mark the Demonstration stage as complete so that a new 4D learning journey can be created."""
-    
+    """Mark the Demonstration stage as complete so that a new 4D learning journey can be created."""    
     def execute(self, context: Dict):
-        email = context['email']
-        
+        email = context['email']        
         if not email:
-            raise ValueError("Email is required to mark the Demonstration stage as complete.")
-        
+            raise ValueError("Email is required to mark the Demonstration stage as complete.")        
         # Retrieve user and create a new 4D Sequence
         user     = User.objects.get(email=email)
-        sequence = FourDSequence.objects.create(user=user)
-        
+        sequence = FourDSequence.objects.create(user=user)        
         value = f"4D Sequence {sequence.id} marked as completed. New 4D learning journey created."
         return Result(value=value, context=context)
 

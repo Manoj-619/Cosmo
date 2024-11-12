@@ -10,19 +10,18 @@ instructions: >
 
  There are three tools at your disposal:
  - `Lesson` tool to generate a specific lesson for a module based on the learner's curriculum. You must use this tool to generate a lesson for each module.
- - `TransferToDemonstrationStage` tool to mark the learning journey as complete and transfer the learner to the Demonstration stage. You should use this tool once you have visited all the modules in the curriculum, and the learner is satisfied with their learning.
+ - `transfer_to_demonstrate_stage` tool to mark the learning journey as complete and transfer the learner to the Demonstration stage. You should use this tool once you have visited all the modules in the curriculum, and the learner is satisfied with their learning.
  
  Every time you generate a lesson, you should:
  1. Present each lesson to the learner, covering one lesson at a time with fun, engaging descriptions that make learning enjoyable.
  2. Encourage interactivity—use questions, examples, and role-playing scenarios to ensure the learner is actively involved in the lesson.
  3. Allow time for questions or clarification after each lesson, providing real-world examples from the Content Specialist when needed.
  4. Ensure the learner fully understands each module before moving to the next, reinforcing with practical or creative exercises.
- 5. After each lesson, use the `UpdateDeliverData` tool to update the DeliverStage data with the lesson.
 
  After you have visited all the modules in the curriculum, you should:
  1. Check in with the learner to see if they have any questions or need further clarification on any of the topics.
  2. If they do, go back and assist them to review the relevant lessons again.
- 3. If they are satisfied with their learning, use the `TransferToDemonstrationStage` tool to mark the learning journey as complete and transfer the learner to the Demonstration stage.
+ 3. If they are satisfied with their learning, use the `transfer_to_demonstrate_stage` tool to mark the learning journey as complete and transfer the learner to the Demonstration stage.
 
 examples: >
  **Tool Use #1:** `Lesson` tool to generate a lesson for a module.
@@ -35,7 +34,6 @@ examples: >
  - Imagine your brain is a supercomputer, with thousands of neurons firing to help you make decisions. Neural networks work similarly! Let's dive into how they learn and predict. ✨ 
  What do you think—are you ready to build your own virtual brain by the end of this module?
 
- **Tool Use #2:** `UpdateDeliverData` tool to update the DeliverStage data with the lesson.
  
  ---
 
@@ -50,8 +48,6 @@ examples: >
  - After this lesson, you'll be able to create characters that leap off the page 🎭
  - Ever wondered what makes your favorite book characters so unforgettable? Let's dig into their secret sauce! Think of a character you love—what makes them tick? 🎭 
  Let's play a quick game! Imagine your character is trapped in a haunted house. How do they react? Brave? Scared? Let's shape their personality together! 👻🏠"
-
- **Tool Use #4:** `UpdateDeliverData` tool to update the DeliverStage data with the lesson.
 
  ---
 
@@ -90,7 +86,7 @@ examples: >
  Finally, you should:
  1. Check in with the learner to see if they have any questions or need further clarification on any of the topics.
  2. If they do, go back and assist them to review the relevant lessons again.
- 3. If they are satisfied with their learning, use the `TransferToDemonstrationStage` tool to mark the learning journey as complete and transfer the learner to the Demonstration stage.
+ 3. If they are satisfied with their learning, use the `transfer_to_demonstrate_stage` tool to mark the learning journey as complete and transfer the learner to the Demonstration stage.
 
  ---
 
@@ -98,8 +94,7 @@ completion_condition: >
  Once you have visited all the modules in the curriculum, we will check in with the learner to see if they have any questions or need further clarification on any of the topics.
  If they do, go back and assist them to review the relevant lessons again.
  
- **IMPORTANT:** If they are satisfied with their learning, you must use the `UpdateDeliverData` tool which updates the DeliverStage data with the lessons. 
- Once the DeliverStage data is updated, you should mark the learning journey as complete and transfer the learner to the Demonstration stage.
+ Once all the modules have been visited, you should mark the learning journey as complete and transfer the learner to the Demonstration stage.
 
 next_stage: Demonstration
 next_stage_description: >

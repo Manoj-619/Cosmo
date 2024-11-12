@@ -21,7 +21,15 @@ class transfer_to_discover_stage(StrictTool):
     
     def execute(self, context: Dict):
         """Transfer to the Discovery stage when the learner has completed the Profile stage."""        
-        return Result(agent=discover_agent, context=context)
+        profile = UserProfile.objects.get(user__email=context['email'])
+        is_complete, error = profile.check_complete()
+        if not is_complete:
+            raise ValueError(error)
+        summary = profile.get_summary()
+        agent = discover_agent
+        agent.start_message = f"Here is the learner's profile: {summary}"
+        
+        return Result(agent=agent, context=context)
 
 
 ### For updating the data
@@ -37,13 +45,6 @@ class update_profile_data(StrictTool):
     current_industry: str = Field(description="The industry in which the learner is currently working in.")
     years_of_experience: int = Field(description="The number of years the learner has worked in their current industry.")
 
-
-    def __str__(self):
-        """Return a string representation of the UpdateDiscoverData object."""
-        string = []
-        for field, value in self.__dict__.items():
-            string.append(f"{field}: {value}")
-        return "\n".join(string)
     
     def execute(self, context: Dict):
         # Get email and sequence_id from context

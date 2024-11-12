@@ -16,9 +16,9 @@ from helpers._types import (
     Result,
 )
 from helpers.utils import get_logger
-from .common import get_agent_instructions
-from .d_demonstrate import demonstrate_agent
-from stage_app.models import DeliverStage, DiscussStage
+from helpers.agents.common import get_agent_instructions
+from helpers.agents.d_demonstrate import demonstrate_agent
+from stage_app.models import DeliverStage, DiscussStage, UserProfile
 
 
 load_dotenv()
@@ -26,7 +26,7 @@ load_dotenv()
 logger = get_logger(__name__)
 
 
-class TransferToDemonstrationStage(StrictTool):
+class transfer_to_demonstrate_stage(StrictTool):
     """Once all lessons have been delivered, and the DeliverStage is updated, transfer to the Demonstration stage."""
     is_complete: bool = Field(description="Whether all lessons have been delivered and the DeliverStage is updated.")
     
@@ -38,6 +38,8 @@ class TransferToDemonstrationStage(StrictTool):
         if not email or not sequence_id:
             raise ValueError("Email and sequence id are required to transfer to the Demonstration stage.")
         
+        profile = UserProfile.objects.get(user__email=email)
+        
         # Get the DeliverStage object
         deliver_stage             = DeliverStage.objects.get(user__email=email, sequence_id=sequence_id)
         deliver_stage.is_complete = self.is_complete
@@ -47,7 +49,10 @@ class TransferToDemonstrationStage(StrictTool):
         
         # Create the start message for the Demonstration agent
         agent.start_message = f"""
-        **Deliver Stage Summary:**
+        **User Profile:**
+        {profile.get_summary()}
+        
+        **Deliver Stage:**
         {deliver_stage.get_summary()}
         
         Greet the learner and introduce the Demonstration stage.
@@ -110,7 +115,7 @@ deliver_agent = Agent(
     instructions=get_agent_instructions('deliver'),
     functions=[
         Lesson,
-        TransferToDemonstrationStage
+        transfer_to_demonstrate_stage
     ],
     parallel_tool_calls=False,
     tool_choice='auto',
