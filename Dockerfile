@@ -20,11 +20,14 @@ RUN python3 -m pip install -r requirements.txt
 
 # Copy application code
 COPY . .
+
+# Change working directory to zavmo before running Django commands
+WORKDIR /zavmo
+
 # Run django's python manage.py and migrate commands
-RUN python3 zavmo/manage.py makemigrations --noinput
-RUN python3 zavmo/manage.py migrate
-RUN python3 zavmo/manage.py createsuperuser --noinput || true
-#RUN python3 zavmo/manage.py createsuperuser --noinput 
+RUN python3 manage.py makemigrations --noinput
+RUN python3 manage.py migrate
+RUN python3 manage.py createsuperuser --noinput || true
 
 
 # Start supervisor
