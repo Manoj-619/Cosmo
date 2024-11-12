@@ -101,13 +101,14 @@ def _process_agent_response(stage_name, message_history, context, max_turns=10):
     agent = agents[stage_name]
     email = context['email']
     sequence_id = context['sequence_id']
-    profile = UserProfile.objects.get(user__email=email)
     
     stage_level = stage_order.index(stage_name) + 1
     for i in range(stage_level):
-        stage_model = stage_models[i]
-        stage_object = stage_model.objects.get(user__email=email, sequence_id=sequence_id)
-        summary = stage_object.summary
+        if i == 0:
+            stage_model = UserProfile.objects.get(user__email=email)
+        else:
+            stage_model = stage_models[i].objects.get(user__email=email, sequence_id=sequence_id)
+        summary = stage_model.get_summary()
         agent.start_message += f"""
         **{stage_order[i].capitalize()}:**
         
