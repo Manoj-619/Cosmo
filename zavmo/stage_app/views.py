@@ -1,7 +1,6 @@
 """ 
 Contains views for the stage app.
 """
-import json
 import logging
 from rest_framework import status
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
@@ -194,7 +193,7 @@ def chat_view(request):
     
     if (not profile) or (not profile.is_complete()):  # Check if profile is empty
         stage_name = 'profile'
-        context['stage_data'] = {
+        context= {
             'profile': UserProfileSerializer(profile).data if profile else {},
             'discover': {},
             'discuss': {},
@@ -204,7 +203,7 @@ def chat_view(request):
     else:
         sequence = FourDSequence.objects.filter(user=user).order_by('-created_at').first()
         stage_name = sequence.stage_display
-        context['stage_data'] = {
+        context= {
             'profile': UserProfileSerializer(profile).data if profile else {},
             'discover': DiscoverStageSerializer(sequence.discover_stage).data if sequence.discover_stage else {},
             'discuss': DiscussStageSerializer(sequence.discuss_stage).data if sequence.discuss_stage else {},
