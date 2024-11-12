@@ -93,6 +93,10 @@ class mark_completed(StrictTool):
         if not email:
             raise ValueError("Email is required to mark the Demonstration stage as complete.")        
         # Retrieve user and create a new 4D Sequence
+        demonstrate_stage = DemonstrateStage.objects.get(user__email=email)
+        is_complete, error = demonstrate_stage.check_complete()
+        if not is_complete:
+            raise ValueError(error)        
         user     = User.objects.get(email=email)
         sequence = FourDSequence.objects.create(user=user)        
         value = f"4D Sequence {sequence.id} marked as completed. New 4D learning journey created."

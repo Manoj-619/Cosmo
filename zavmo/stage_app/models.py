@@ -66,7 +66,7 @@ class UserProfile(models.Model):
         **Years of experience**: {self.years_of_experience}
         """
 
-    def is_complete(self):
+    def check_complete(self):
         """Check if the profile is complete."""
         if not self.first_name:
             return False, "First name is required"
@@ -215,8 +215,14 @@ class DemonstrateStage(models.Model):
             return 'Unknown'
         return dict(self._meta.get_field('understanding_levels').choices)[self.understanding_levels]  # Fix field name and variable
     
-    def is_complete(self):
-        return self.evaluations and self.understanding_levels and self.feedback_summary
+    def check_complete(self):
+        if not self.evaluations:
+            return False, "Evaluations are required"
+        if not self.understanding_levels:
+            return False, "Understanding levels are required"
+        if not self.feedback_summary:
+            return False, "Feedback summary is required"
+        return True, None
 
     def get_summary(self):
         """Get a summary of the user's profile."""

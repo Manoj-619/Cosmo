@@ -5,7 +5,8 @@ from stage_app.serializers import (
     DiscoverStageSerializer, DiscussStageSerializer, DeliverStageSerializer, DemonstrateStageSerializer,
     UserProfileSerializer
 )
-from helpers.agents import a_discover,b_discuss,c_deliver,d_demonstrate, profile
+from helpers.chat import filter_history
+from helpers.agents import a_discover, b_discuss,c_deliver,d_demonstrate, profile
 from stage_app.models import FourDSequence
 from helpers.constants import CONTEXT_SUFFIX, HISTORY_SUFFIX, DEFAULT_CACHE_TIMEOUT
 from helpers.swarm import run_step
@@ -47,7 +48,8 @@ def _determine_stage(user, context):
     """Determine current stage and update context."""
     profile = UserProfile.objects.get(user__email=user.email)
     
-    if not profile or not profile.is_complete():
+    is_complete, error = profile.check_complete()
+    if not is_complete:
         context.update(_create_empty_context(user.email, context['sequence_id'], profile))
         return 'profile'
     
@@ -79,7 +81,7 @@ def _create_full_context(email, sequence_id, profile, sequence):
         'demonstrate': DemonstrateStageSerializer(sequence.demonstrate_stage).data if sequence.demonstrate_stage else {}
     }
 
-def _get_message_history(email, sequence_id, user_message):
+def _get_message_history(email, sequence_id, user_message, max_tokens=64000):
     """Get or initialize message history."""
     message_history = cache.get(f"{email}_{sequence_id}_{HISTORY_SUFFIX}", [])
     
@@ -90,16 +92,17 @@ def _get_message_history(email, sequence_id, user_message):
             "role": "system",
             "content": "Send a personalized welcome message to the learner."
         })
+    message_history = filter_history(message_history, max_tokens)
     return message_history
 
-def _process_agent_response(stage_name, message_history, context):
+def _process_agent_response(stage_name, message_history, context, max_turns=10):
     """Process agent response with given context and messages."""
     agent = agents[stage_name]
     return run_step(
         agent=agent,
         messages=message_history,
         context=context,
-        max_turns=10
+        max_turns=max_turns
     )
 
 def _update_context_and_cache(user, sequence_id, context, message_history, response):
