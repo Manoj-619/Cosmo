@@ -34,7 +34,7 @@ def chat_view(request):
         })
 
     message_history = _get_message_history(user.email, sequence_id, request.data.get('message'))
-    response = _process_agent_response(stage_name, message_history, context)
+    response        = _process_agent_response(stage_name, message_history, context)
     
     if not response.messages:
         return DRFResponse({

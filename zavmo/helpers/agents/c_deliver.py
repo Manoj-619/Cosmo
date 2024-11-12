@@ -41,6 +41,8 @@ class transfer_to_demonstrate_stage(StrictTool):
         profile = UserProfile.objects.get(user__email=email)
         
         # Get the DeliverStage object
+        curriculum = DiscussStage.objects.get(user__email=email, sequence_id=sequence_id).curriculum
+        
         deliver_stage             = DeliverStage.objects.get(user__email=email, sequence_id=sequence_id)
         deliver_stage.is_complete = self.is_complete
         deliver_stage.save()        
@@ -51,6 +53,9 @@ class transfer_to_demonstrate_stage(StrictTool):
         agent.start_message = f"""
         **User Profile:**
         {profile.get_summary()}
+        
+        **Curriculum:**
+        {curriculum}
         
         **Deliver Stage:**
         {deliver_stage.get_summary()}
@@ -71,7 +76,7 @@ class Lesson(StrictTool):
     module: str  = Field(description="The module that the lesson belongs to")
     learning_objective: str = Field(description="The learning objective of the lesson")
     title: str   = Field(description="The title of the lesson")
-    lesson: str  = Field(description="A concise summary of the lesson")
+    lesson: str  = Field(description="A brief overview of the lesson in 2-3 sentences")
         
     def __str__(self):
         return f"Module: {self.module}\nLearning Objective: {self.learning_objective}\nTitle: {self.title}\nLesson: {self.lesson}"
@@ -84,24 +89,22 @@ class Lesson(StrictTool):
         # Get curriculum from previous stage
         curriculum = DiscussStage.objects.get(user__email=email, sequence_id=sequence_id).curriculum
         
-        new_lesson           = self.model_dump()
+        new_lesson  = self.model_dump()
         
-        # TODO: Revaluate if this is needed
         deliver_stage = DeliverStage.objects.get(
             user__email=email, 
             sequence_id=sequence_id
         )
-        previous_lessons = deliver_stage.lessons
+        lesson_number = len(deliver_stage.lessons) + 1
         deliver_stage.lessons.append(new_lesson)
         deliver_stage.save()
         
-        value = f"""Curriculum:
+        value = f"""        
+        **Curriculum:**
         {curriculum}
         
-        **Previous Lessons:**
-        {previous_lessons}
+        ** Lesson #{lesson_number} **
         
-        **New Lesson Generated:**
         {new_lesson}
         """
         return Result(value=value, context=context)

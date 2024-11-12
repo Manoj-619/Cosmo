@@ -109,13 +109,14 @@ def _update_context_and_cache(user, sequence_id, context, message_history, respo
     """Update context and cache with response data."""
     message_history.append(response.messages[-1])
     context.update(response.context)
-    context['stage'] = response.agent.id
     
-    if response.agent.id != context.get('stage'):
+    sequence = FourDSequence.objects.get(id=sequence_id)
+    
+    if response.agent.id != sequence.stage_display:
         logger.info(f"Stage changed from {context.get('stage')} to {response.agent.id}.")
-        sequence = FourDSequence.objects.get(id=sequence_id)
         sequence.update_stage(response.agent.id)
-    
+        context['stage'] = response.agent.id
+
     cache.set(f"{user.email}_{sequence_id}_{CONTEXT_SUFFIX}", context, timeout=DEFAULT_CACHE_TIMEOUT)
     cache.set(f"{user.email}_{sequence_id}_{HISTORY_SUFFIX}", message_history, timeout=DEFAULT_CACHE_TIMEOUT)
     

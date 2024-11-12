@@ -163,7 +163,8 @@ class DiscussStage(models.Model):
         **Interest Areas**: {self.interest_areas}
         **Learning Style**: {self.learning_style}
         **Available Time (hours per week)**: {self.timeline}
-        **Curriculum**: {self.curriculum}
+        **Curriculum**:
+        {self.curriculum}
         """
 
 # Stage 3
