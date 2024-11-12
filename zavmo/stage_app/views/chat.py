@@ -41,7 +41,7 @@ def chat_view(request):
             "error": "No response generated from the agent",
             "stage": stage_name,
             "sequence_id": sequence_id,
-            "stages": {
+            "stage_data": {
                 "profile": context.get('profile', {}),
                 "discover": context.get('discover', {}),
                 "discuss": context.get('discuss', {}),
@@ -57,7 +57,7 @@ def chat_view(request):
         "message": response.messages[-1]['content'],
         "stage": response.agent.id,
         "sequence_id": sequence_id,
-        "stages": {
+        "stage_data": {
             "profile": context.get('profile', {}),
             "discover": context.get('discover', {}),
             "discuss": context.get('discuss', {}),

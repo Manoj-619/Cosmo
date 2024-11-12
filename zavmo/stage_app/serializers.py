@@ -39,22 +39,22 @@ class UserProfileSerializer(BaseStageSerializer):
 class DiscoverStageSerializer(BaseStageSerializer):
     class Meta:
         model = DiscoverStage
-        exclude = ('sequence',)
+        exclude = ('sequence', 'user')
 
 class DiscussStageSerializer(BaseStageSerializer):
     class Meta:
         model = DiscussStage
-        exclude = ('sequence',)
+        exclude = ('sequence', 'user')
 
 class DeliverStageSerializer(BaseStageSerializer):
     class Meta:
         model = DeliverStage
-        exclude = ('sequence',)
+        exclude = ('sequence', 'user')
 
 class DemonstrateStageSerializer(BaseStageSerializer):
     class Meta:
         model = DemonstrateStage
-        exclude = ('sequence',)
+        exclude = ('sequence', 'user')
 
 class FourDSequenceSerializer(serializers.ModelSerializer):
     uuid_str = serializers.SerializerMethodField()
