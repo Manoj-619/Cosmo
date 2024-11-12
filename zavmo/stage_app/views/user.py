@@ -49,59 +49,63 @@ def sync_user(request):
     Returns:
     Response: JSON object with user data, status message, or error messages.
     """
-    serializer = UserDetailSerializer(data=request.data, context={'request': request})
-    if serializer.is_valid():
-        email = serializer.validated_data['email']
-        org_id = request.data.get('org_id')
-        org    = Org.objects.filter(org_id=org_id).first()
-        if not org:
-            return DRFResponse({"error": "Organization with this ID does not exist."}, status=status.HTTP_400_BAD_REQUEST)
-        
-        try:
-            user, created = User.objects.get_or_create(
-                email=email,
-                defaults={'username': email, **serializer.validated_data}
-            )
-            
-            if created:
-                message = "User created successfully."
-                status_code = status.HTTP_201_CREATED
-                UserProfile.objects.create(user=user, org=org)
-                logger.info(f"UserProfile created for user {user.username}")
-            else:
-                message = "User already exists."
-                status_code = status.HTTP_200_OK
-            # Check if there are any sequences for this user
-            sequences = FourDSequence.objects.filter(user=user)
-            if not sequences:
-                # Create a new sequence
-                sequence = FourDSequence(user=user)
-                sequence.save()
-            else:
-                sequence = sequences.order_by('-created_at').first()    # Initialize related stages with user_id
-                sequence.save()
-
-            # Determine the stage_name
-            profile = UserProfile.objects.filter(user=user).first()
-            is_complete, error = profile.check_complete()
-            if not is_complete:
-                stage_name = 'profile'
-            else:
-                stage_name = sequence.stage_display
-
-            return DRFResponse({
-                "message": message,
-                "email": user.email,
-                "stage": stage_name,
-                "sequence_id": sequence.id
-            }, status=status_code)
-        
-        except IntegrityError as e:
-            logger.error(f"IntegrityError during user sync: {str(e)}")
-            return DRFResponse({"error": f"An error occurred while synchronizing the user data: {str(e)}"},
-                            status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    # First check if org_id is provided
+    org_id = request.data.get('org_id')
+    if not org_id:
+        return DRFResponse({"error": "Organization ID is required."}, status=status.HTTP_400_BAD_REQUEST)
     
-    return DRFResponse(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    org = Org.objects.filter(org_id=org_id).first()
+    if not org:
+        return DRFResponse({"error": "Organization with this ID does not exist."}, status=status.HTTP_400_BAD_REQUEST)
+
+    serializer = UserDetailSerializer(data=request.data, context={'request': request})
+    if not serializer.is_valid():
+        return DRFResponse(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+    try:
+        email = serializer.validated_data['email']
+        user, created = User.objects.get_or_create(
+            email=email,
+            defaults={'username': email, **serializer.validated_data}
+        )
+        
+        if created:
+            message = "User created successfully."
+            status_code = status.HTTP_201_CREATED
+            UserProfile.objects.create(user=user, org=org)
+            logger.info(f"UserProfile created for user {user.username}")
+        else:
+            message = "User already exists."
+            status_code = status.HTTP_200_OK
+        # Check if there are any sequences for this user
+        sequences = FourDSequence.objects.filter(user=user)
+        if not sequences:
+            # Create a new sequence
+            sequence = FourDSequence(user=user)
+            sequence.save()
+        else:
+            sequence = sequences.order_by('-created_at').first()    # Initialize related stages with user_id
+            sequence.save()
+
+        # Determine the stage_name
+        profile = UserProfile.objects.filter(user=user).first()
+        is_complete, error = profile.check_complete()
+        if not is_complete:
+            stage_name = 'profile'
+        else:
+            stage_name = sequence.stage_display
+
+        return DRFResponse({
+            "message": message,
+            "email": user.email,
+            "stage": stage_name,
+            "sequence_id": sequence.id
+        }, status=status_code)
+    
+    except IntegrityError as e:
+        logger.error(f"IntegrityError during user sync: {str(e)}")
+        return DRFResponse({"error": f"An error occurred while synchronizing the user data: {str(e)}"},
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 # Endpoint: /api/user/profile
 @api_view(['GET'])
