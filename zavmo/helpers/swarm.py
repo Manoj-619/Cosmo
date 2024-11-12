@@ -185,8 +185,6 @@ def run_step(agent: Agent, messages: List, context: Dict = {}, max_turns: int = 
             history.append(message_dict)
             break
 
-        # Add current agent to context before executing tool calls
-        context['current_agent'] = active_agent.name
         # Execute tool calls and get responses
         partial_response = execute_tool_calls(
             message.tool_calls, active_agent.functions, context=context
