@@ -164,7 +164,7 @@ class DemonstrateStage(models.Model):
     
     # Evaluations is a list of dictionaries, each representing an evaluation
     evaluations = models.JSONField(default=list, blank=True, null=True, verbose_name="Evaluations")
-    understanding_levels = models.PositiveSmallIntegerField(
+    understanding_level = models.PositiveSmallIntegerField(
         choices=[
             (1, 'Beginner'),
             (2, 'Intermediate'),
@@ -184,7 +184,6 @@ class DemonstrateStage(models.Model):
     
     def is_complete(self):
         return self.evaluations and self.understanding_levels and self.feedback_summary
-    
 
     def get_summary(self):
         """Get a summary of the user's profile."""

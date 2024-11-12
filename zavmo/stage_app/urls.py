@@ -1,11 +1,11 @@
 from django.urls import path
-from .views import create_org, get_user_profile, chat_view, sync_user, delete_all_caches
+from stage_app.views import user, chat
 
 urlpatterns = [
-    path('org/create/', create_org, name='create_org'),
-    path('zavmo/chat/', chat_view, name='chat-api'),  # Added trailing slash
-    path('user/sync/', sync_user, name='sync_user'),
-    path('user/profile/', get_user_profile, name='user-profile'),  # Added 
-    path('clear-caches/', delete_all_caches, name='clear-caches'),
+    path('org/create/', user.create_org, name='create_org'),
+    path('user/sync/', user.sync_user, name='sync_user'),
+    path('user/profile/', user.get_user_profile, name='user-profile'),  # Added 
+    path('clear-cache/', user.clear_cache, name='clear-cache'),
+    path('zavmo/chat/', chat.chat_view, name='chat-api'),  # Added trailing slash
     # path('user/reset/', reset_all, name='reset-all'),
 ]
