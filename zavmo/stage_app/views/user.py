@@ -83,7 +83,8 @@ def sync_user(request):
 
             # Determine the stage_name
             profile = UserProfile.objects.filter(user=user).first()
-            if not profile or not profile.is_complete():
+            is_complete, error = profile.check_complete()
+            if not is_complete:
                 stage_name = 'profile'
             else:
                 stage_name = sequence.stage_display
