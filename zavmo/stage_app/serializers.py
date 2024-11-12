@@ -60,18 +60,11 @@ class FourDSequenceSerializer(serializers.ModelSerializer):
     uuid_str = serializers.SerializerMethodField()
     stage_name = serializers.CharField(source='stage_display', read_only=True)
     email = serializers.CharField(source='user.email', read_only=True)
-    org_id = serializers.SerializerMethodField()  # Changed to SerializerMethodField
-    org_name = serializers.CharField(source='user.userprofile.org.org_name', read_only=True)
 
     def get_uuid_str(self, obj):
         return str(obj.id)  # Ensure UUID is converted to string
     
-    def get_org_id(self, obj):
-        try:
-            return str(obj.user.userprofile.org.org_id)
-        except AttributeError:
-            return None
 
     class Meta:
         model = FourDSequence
-        fields = ['uuid_str', 'created_at', 'updated_at', 'stage_name', 'email', 'org_id', 'org_name']
+        fields = ['uuid_str', 'created_at', 'updated_at', 'stage_name', 'email']

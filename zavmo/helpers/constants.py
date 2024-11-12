@@ -6,7 +6,7 @@
 HISTORY_SUFFIX         = "history"
 USER_PROFILE_SUFFIX    = "data"
 CONTEXT_SUFFIX         = "context"
-
+DEFAULT_CACHE_TIMEOUT = 24*60*60*7 # 7 days
 
 STAGE_ORDER = {
     "profile": 1,

@@ -19,3 +19,14 @@ docker logs -f zavmo-api-app-1
 ```
 docker system prune -a --volumes
 ```
+
+
+### For dev
+
+```
+python delete_migrations.py
+python manage.py makemigrations
+python manage.py migrate
+python manage.py createsuperuser --noinput
+python manage.py runserver
+```
