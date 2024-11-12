@@ -123,7 +123,9 @@ def _update_context_and_cache(user, sequence_id, context, message_history, respo
     
     if response.agent.id != sequence.stage_display:
         logger.info(f"Stage changed from {context.get('stage')} to {response.agent.id}.")
-        sequence.update_stage(response.agent.id)
+        if response.agent.id != 'profile':
+            sequence.update_stage(response.agent.id)
+        
         context['stage'] = response.agent.id
 
     cache.set(f"{user.email}_{sequence_id}_{CONTEXT_SUFFIX}", context, timeout=DEFAULT_CACHE_TIMEOUT)
