@@ -105,6 +105,8 @@ class DiscoverStage(models.Model):
         verbose_name="Knowledge Level"
     )    
     application_area = models.TextField(blank=True, null=True, verbose_name="Application Area")
+    def __str__(self):
+        return f"User {self.user.email} - Sequence {self.sequence.id} - Discover Stage"
     
     @property
     def knowledge_level_display(self):
@@ -146,6 +148,9 @@ class DiscussStage(models.Model):
     timeline =  models.IntegerField(blank=True, null=True, verbose_name="Available Time (hours per week)")
     curriculum     = models.JSONField(blank=True, null=True, verbose_name="Curriculum Plan")
     
+    def __str__(self):
+        return f"User {self.user.email} - Sequence {self.sequence.id} - Discuss Stage"
+    
     def check_complete(self):
         if not self.interest_areas:
             return False, "Interest areas are required"
@@ -178,6 +183,9 @@ class DeliverStage(models.Model):
     # Lessons is a list of dictionaries, each representing a lesson
     lessons     = models.JSONField(default=list, blank=True, null=True, verbose_name="Lessons")
     is_complete = models.BooleanField(default=False, verbose_name="Is Complete")
+    
+    def __str__(self):
+        return f"User {self.user.email} - Sequence {self.sequence.id} - Deliver Stage"
         
     def get_summary(self):
         """Get a summary of the user's profile."""
@@ -209,6 +217,9 @@ class DemonstrateStage(models.Model):
         verbose_name="Understanding Level"
     )
     feedback_summary = models.TextField(blank=True, null=True, verbose_name="Feedback Summary")
+    
+    def __str__(self):
+        return f"User {self.user.email} - Sequence {self.sequence.id} - Demonstrate Stage"
     
     @property
     def understanding_level_display(self):
@@ -257,6 +268,8 @@ class FourDSequence(models.Model):
         default=Stage.DISCOVER
     )
 
+    def __str__(self):
+        return f"User {self.user.email} - Sequence {self.id} - {self.stage_display}"
 
     @property
     def uuid_str(self):
