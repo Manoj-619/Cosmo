@@ -39,7 +39,7 @@ def chat_view(request):
     if not response.messages:
         return DRFResponse({
             "error": "No response generated from the agent",
-            "stage": stage_name,
+            "stage": response.agent.id,
             "sequence_id": sequence_id,
             "stage_data": {
                 "profile": context.get('profile', {}),
