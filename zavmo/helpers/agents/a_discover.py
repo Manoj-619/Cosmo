@@ -12,31 +12,34 @@ from typing import Dict
 from helpers._types import (
     Agent,
     StrictTool,
-    PermissiveTool,
     Result,
-    Response,
-    AgentFunction,
-    function_to_json,
 )
 from stage_app.models import DiscoverStage
-from .b_discuss import discuss_agent
-from .common import get_agent_instructions
+from helpers.agents.b_discuss import discuss_agent
+from helpers.agents.common import get_agent_instructions
 from helpers.utils import get_logger
 
 logger = get_logger(__name__)
 
 ### For handoff
-class TransferToDiscussionStage(StrictTool):
-    """Transfer to the Discussion stage when the learner approves the summary of the information gathered."""
+class transfer_to_discussion_stage(StrictTool):
+    """Transfer to the Discussion stage when the learner approves the summary of the information gathered."""    
     def execute(self, context: Dict):
-        logger.info(f"Transferred to the Discussion stage for {context['email']}.")
+        email = context['email']
+        sequence_id = context['sequence_id']
+        
+        logger.info(f"Transferring to the Discussion stage for {context['email']}.")
+        discovery_object = DiscoverStage.objects.get(user__email=email, sequence_id=sequence_id)
+        
+        agent               = discuss_agent        
+        agent.start_message = f"Here is the discovery data for the learner: {discovery_object.get_summary()}"
         return Result(
-            value="Transferred to the Discussion stage.",
-            agent=discuss_agent, 
+            value="Transferred to Discussion stage.",
+            agent=agent, 
             context=context)
 
 ### For updating the data
-class UpdateDiscoverData(StrictTool):
+class update_discover_data(StrictTool):
     """Update the learner's information gathered during the Discovery stage."""
     
     learning_goals: str = Field(description="The learner's learning goals.")
@@ -59,18 +62,16 @@ class UpdateDiscoverData(StrictTool):
         if not email or not sequence_id:
             raise ValueError("Email and sequence ID are required to update discovery data.")        
         # Attempt to get the DiscoverStage object
-        discover_stage = DiscoverStage.objects.get(user__email=email, sequence__id=sequence_id)
-        # Update the DiscoverStage object
+        discover_stage = DiscoverStage.objects.get(user__email=email, sequence_id=sequence_id)
         discover_stage.learning_goals = self.learning_goals
         discover_stage.learning_goal_rationale = self.learning_goal_rationale
         discover_stage.knowledge_level = self.knowledge_level
         discover_stage.application_area = self.application_area
-        discover_stage.save()
-        
-        value = f"Updated DiscoverStage Data for {email}. The following data was updated:\n\n{str(self)}"
-        context['stage_data']['discover'] = self.model_dump() # JSON dump of pydantic model
+        discover_stage.save()        
+        context['discover'] = self.model_dump() # JSON dump of pydantic model
         logger.info(f"Updated DiscoverStage Data for {email}. The following data was updated:\n\n{str(self)}")
-        return Result(value=value,
+        
+        return Result(value=self.model_dump_json(),
                       context=context)
             
 discover_agent = Agent(
@@ -79,8 +80,8 @@ discover_agent = Agent(
     model="gpt-4o",
     instructions=get_agent_instructions('discover'),
     functions=[
-        UpdateDiscoverData,
-        TransferToDiscussionStage
+        update_discover_data,
+        transfer_to_discussion_stage
     ],
     tool_choice="auto",
     parallel_tool_calls=False

@@ -10,7 +10,6 @@ instructions: >
 
  There are three tools at your disposal:
  - `Lesson` tool to generate a specific lesson for a module based on the learner's curriculum. You must use this tool to generate a lesson for each module.
- - `UpdateDeliverData` tool to update the DeliverStage data with the lesson. After each lesson, you must use this tool to update the DeliverStage data. You must use this tool every time you generate and present a lesson.
  - `TransferToDemonstrationStage` tool to mark the learning journey as complete and transfer the learner to the Demonstration stage. You should use this tool once you have visited all the modules in the curriculum, and the learner is satisfied with their learning.
  
  Every time you generate a lesson, you should:
@@ -87,7 +86,6 @@ examples: >
  - Ecosystems are like nature's machines, each part playing a vital role! Imagine you're designing a brand-new planet—what species would you include to keep everything in balance? 🦁🌳🌍 
  Let's pretend we're creating an imaginary rainforest. What kinds of animals, plants, and weather patterns should we include? Let's make sure our ecosystem is as diverse and sustainable as possible! 🌿🐸☔"
 
- **Tool Use #8:** `UpdateDeliverData` tool to update the DeliverStage data with the lesson.
 
  Finally, you should:
  1. Check in with the learner to see if they have any questions or need further clarification on any of the topics.

@@ -129,13 +129,9 @@ class DiscussStage(models.Model):
         return f"""
         **Interest Areas**: {self.interest_areas}
         **Learning Style**: {self.learning_style}
-        **Available Time**: {self.timeline}
-        **Curriculum Plan**: {self.curriculum}
+        **Available Time (hours per week)**: {self.timeline}
+        **Curriculum**: {self.curriculum}
         """
-    
-    def is_complete(self):
-        return self.interest_areas and self.learning_style and self.available_time and self.curriculum
-
 
 # Stage 3
 class DeliverStage(models.Model):
@@ -146,7 +142,8 @@ class DeliverStage(models.Model):
                                      related_name='deliver_stage')
     
     # Lessons is a list of dictionaries, each representing a lesson
-    lessons    = models.JSONField(default=list,blank=True, null=True, verbose_name="Lessons")
+    lessons     = models.JSONField(default=list, blank=True, null=True, verbose_name="Lessons")
+    is_complete = models.BooleanField(default=False, verbose_name="Is Complete")
         
     def get_summary(self):
         """Get a summary of the user's profile."""
@@ -166,7 +163,7 @@ class DemonstrateStage(models.Model):
                                      related_name='demonstrate_stage')
     
     # Evaluations is a list of dictionaries, each representing an evaluation
-    evaluations = models.JSONField(default=list,blank=True, null=True, verbose_name="Evaluations")
+    evaluations = models.JSONField(default=list, blank=True, null=True, verbose_name="Evaluations")
     understanding_levels = models.PositiveSmallIntegerField(
         choices=[
             (1, 'Beginner'),

@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 from openai import OpenAI
 from openai.types.chat import ChatCompletionMessage
 from openai.types.chat.chat_completion_message_tool_call import ChatCompletionMessageToolCall
+from helpers.chat import filter_history
 from pydantic import BaseModel
 import logging
 from helpers._types import (
@@ -34,9 +35,13 @@ def fetch_agent_response(agent: Agent, history: List, context: Dict) -> ChatComp
     """Fetches the response from an agent."""
     context = defaultdict(str, context)
     instructions = agent.instructions
-
     # Start with system message
-    messages = [{"role": "system", "content": instructions}] + history
+    system_message = {"role": "system", "content": instructions}
+    init_messages  = [system_message]
+    if agent.start_message:
+        init_messages.append({"role": "user", "content": agent.start_message})
+    
+    messages = init_messages + filter_history(history, max_tokens=64000)
     tools = [function_to_json(f) for f in agent.functions]
 
     create_params = {

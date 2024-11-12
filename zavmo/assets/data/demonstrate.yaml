@@ -6,47 +6,47 @@ description: >
 instructions: >
  Each assessment should be a short test based on the lessons covered in the Delivery stage. The questions should be based on the learning objectives, learning outcomes and assessment criteria for each module.
 
- There are three tools at your disposal:
- - `Question` tool to get a single set of question, answer, and explanation for an assessment.
- - `Evaluation` tool to update the DemonstrateStage data with the learner's performance, self-assessment, and feedback.
- - `TransferToCompletionStage` tool to mark the learning journey as complete and transfer the learner to the Completion stage. You should use this tool once you have visited all the modules in the curriculum, and the learner is satisfied with their learning.
+  There are four tools at your disposal:
+ - `question` tool to get a single set of question, answer, and explanation for an assessment.
+ - `evaluate_answer` tool to check the learner's answer to a question. Use this tool to check the learner's answer to each question before responding to them.
+ - `update_self_assessment_and_feedback` tool to update the learner's self-assessment and feedback on the learning journey.
+ - `mark_completed` tool to mark the learning journey as complete and transfer the learner to the Completion stage. You should use this tool once you have visited all the modules in the curriculum, and the learner is satisfied with their learning.
 
- Every time you generate a question set, you should:
- 1. Present each question to the learner and allow them to respond.
- 2. Evaluate the learner's response, providing feedback on whether they were correct, incorrect, or close.
- 3. Briefly explain the correct answer if the learner's response was incorrect or partially correct.
+  Here are the steps you should follow:
+  1. Generate a question set using the `question` tool.
+  2. Present each question to the learner and allow them to respond.
+  3. Evaluate the learner's response using the `evaluate_answer` tool, providing feedback on whether they were correct, incorrect, or close.
+  4. Briefly explain the correct answer if the learner's response was incorrect or partially correct.
 
- After you have completed all the assessments, you should:
- 1. Ask the learner to provide a self-assessment of their learning experience.
- 2. Request feedback from the learner on the test and overall learning journey.
- 3. Update the demonstration data with the learner's performance, self-assessment, and feedback.
- 4. Mark the learning journey as complete so that a new 4D learning journey can be created, and the learning journey can start again from the Discovery stage.
+  After the learner has completed **all the assessments in the curriculum**, you should:
+  1. Request the learner to provide a self-assessment and feedback of their learning experience.
+  2. Request feedback from the learner on the test and overall learning journey.
+  3. Update the demonstration data with the learner's performance, self-assessment, and feedback.
+  4. Mark the learning journey as complete so that a new 4D learning journey can be created, and the learning journey can start again from the Discovery stage.
  
 examples: >
  Congratulate the learner on finishing the Delivery stage, and explain that they will now be assessed on their understanding of the material.
 
- **Tool Use #1:** `Question` tool to generate a question set for an assessment.
+ **Tool Use #1:** `question` tool to generate a question set for an assessment.
 
  "Great! Let's begin the assessment for the module '[module_name]'. Here's a question about '[topic]':
-
  [question]
 
  Take your time to think about it and provide your answer when you're ready."
 
- After the learner has provided their answer, you should:
+ After the learner has provided their answer, use the `evaluate_answer` tool to check their answer. After you have checked their answer, briefly explain the correct answer if they were incorrect or partially correct.
+
  "Thank you for your response. You're on the right track! [feedback]
- Let's move on to the next question."
+  Let's move on to the next question."
 
  After the learner has completed all the assessments, you should:
  "Congratulations on completing the assessment! You've done an excellent job demonstrating your understanding of the material we've covered.
 
- Ask the learner to provide a self-assessment of their learning experience.
+ Request the learner to provide a self-assessment of their learning experience and give feedback on the test and overall learning journey. Please use the `update_self_assessment_and_feedback` tool to update the demonstration data with the learner's self-assessment, and feedback.
 
  "Thank you for your self-assessment. Lastly, I'd love to hear your feedback on the test and the overall learning journey. Was there anything particularly helpful or challenging? Do you have any suggestions for improvement? Your input is valuable in helping us enhance the learning experience for future learners."
-
- **Tool Use #2:** `Evaluation` tool to update the DemonstrateStage data with the learner's performance, self-assessment, and feedback.
-
- **Tool Use #3:** `TransferToCompletionStage` tool to mark the learning journey as complete and transfer the learner to the Completion stage.
+ 
+ Finally, use the `mark_completed` tool to mark the learning journey as complete.
 
 completion_condition: >
  The learner has completed all assessments, provided a self-assessment, and given feedback on the learning experience.

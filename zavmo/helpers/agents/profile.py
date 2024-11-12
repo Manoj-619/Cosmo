@@ -8,29 +8,25 @@ from typing import Dict
 from helpers._types import (
     Agent,
     StrictTool,
-    PermissiveTool,
     Result,
-    Response,
-    AgentFunction,
-    function_to_json,
 )
 from stage_app.models import UserProfile
-from .a_discover import discover_agent
-from .common import get_agent_instructions
+from helpers.agents.a_discover import discover_agent
+from helpers.agents.common import get_agent_instructions
 
 ### For handoff
 
-class TransferToDiscoverStage(StrictTool):
+class transfer_to_discover_stage(StrictTool):
     """Transfer to the Discovery stage when the learner has completed the Profile stage."""
+    
     def execute(self, context: Dict):
-        """Transfer to the Discovery stage when the learner has completed the Profile stage."""
-        
+        """Transfer to the Discovery stage when the learner has completed the Profile stage."""        
         return Result(agent=discover_agent, context=context)
 
 
 ### For updating the data
 
-class UpdateProfileData(StrictTool):
+class update_profile_data(StrictTool):
     """Update the learner's information gathered during the Profile stage."""
     
     first_name: str = Field(description="The learner's first name.")
@@ -58,8 +54,7 @@ class UpdateProfileData(StrictTool):
         # Get the UserProfile object
         profile = UserProfile.objects.get(user__email=email)
         if not profile:
-            raise ValueError("UserProfile not found")
-        
+            raise ValueError("UserProfile not found")        
         # Update the UserProfile object
         profile.first_name = self.first_name
         profile.last_name = self.last_name
@@ -69,13 +64,10 @@ class UpdateProfileData(StrictTool):
         profile.current_industry = self.current_industry
         profile.years_of_experience = self.years_of_experience
         profile.save()
-        value = f"""Updated UserProfile for {email}.
-        The following data was updated:
-        {str(self)}
-        """
-        context['stage_data']['profile'] = self.model_dump()
         
-        return Result(value=value, context=context)
+        context['profile'] = self.model_dump()
+        
+        return Result(value=self.model_dump_json(), context=context)
             
 profile_agent = Agent(
     name="Profile",
@@ -83,8 +75,8 @@ profile_agent = Agent(
     model="gpt-4o",
     instructions=get_agent_instructions('profile'),
     functions=[
-        UpdateProfileData,
-        TransferToDiscoverStage
+        update_profile_data, 
+        transfer_to_discover_stage
     ],
     tool_choice="auto",
     parallel_tool_calls=False

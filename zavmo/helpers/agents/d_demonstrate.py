@@ -8,80 +8,57 @@ Fields:
     self_assessment: str
     feedback: str
 """
-import os
-from pydantic import BaseModel, Field
-from typing import List, Dict
-from helpers.chat import filter_history, summarize_history, get_prompt
-from stage_app.models import DemonstrateStage
+from pydantic import Field
+from typing import Dict
 from helpers._types import (
     Agent,
     StrictTool,
-    PermissiveTool,
     Result,
-    Response,
-    AgentFunction,
-    function_to_json,
 )
-from .common import get_agent_instructions
-from stage_app.models import FourDSequence
+from helpers.agents.common import get_agent_instructions
+from stage_app.models import FourDSequence, DemonstrateStage
 from django.contrib.auth.models import User
 from helpers.utils import get_logger
 
 logger = get_logger(__name__)
 
-class Question(StrictTool):
-    """
-    Use this tool to get a single set of question, answer, and explanation for an assessment.
-    """
-    question: str = Field(description="The question to be answered")
+class question(StrictTool):
+    """Use this tool to generate a single set of question, answer, and explanation for an assessment."""
+    curriculum_module: str = Field(description="The name of the module that the question is about")
+    question: str         = Field(description="The question to be answered")
     expected_answer: str = Field(description="A concise explanation of what the learner should say")
 
     def execute(self, context: Dict):
-        question = self.model_dump()
-        if 'questions' in context['stage_data']['demonstrate']:
-            context['stage_data']['demonstrate']['questions'].append(question)
-        else:
-            context['stage_data']['demonstrate']['questions'] = [question]
-        return Result(value=str(self.model_dump()), context=context)
+        """Generate a question set for an assessment."""        
+        logger.info(f"Generating question set for module: {self.curriculum_module}")
+        logger.info(f"Question: {self.question}")
+        logger.info(f"Expected answer: {self.expected_answer}")
+        
+        return Result(value=self.model_dump_json(), context=context)
     
-class Evaluation(StrictTool):
-    """An evaluation of the learner's answer to a question."""
-    question: str = Field(description="The question that was asked")
-    answer: str = Field(description="A concise summary of the learner's answer to the question")
+class evaluate_answer(StrictTool):
+    """Use this tool after the learner has answered a question. An evaluation of the learner's answer to a question."""
+    
+    question: str   = Field(description="The question that was asked")
+    answer: str     = Field(description="A concise summary of the learner's answer to the question")
     evaluation: str = Field(description="Whether the answer is correct or incorrect, and a brief explanation of why")
     
     def execute(self, context: Dict):        
-        logger.info(f"Evaluating learner's answer to question: {self.question}")
-        
+        logger.info(f"Evaluating learner's answer to question: {self.question}")        
         email = context['email']
         sequence_id = context['sequence_id']
-        
-        # Ensure email and sequence_id are available
-        if not email or not sequence_id:
-            raise ValueError("Email and sequence id are required to update demonstration data.")
-        
+                
+        evaluation         = self.model_dump()
         # Retrieve DemonstrateStage object
-        demonstrate_object = DemonstrateStage.objects.get(
-            user__email=email, 
-            sequence_id=sequence_id
-        )
-        
-        evaluation = self.model_dump()
-        
-        # Access the current context for the demonstrate stage
-        demonstrate_context = context.setdefault('stage_data', {}).setdefault('demonstrate', {})
-        
-        # Append new evaluation data to the demonstrate context
-        demonstrate_context.setdefault('evaluations', []).append(evaluation)
-        
+        demonstrate_object = DemonstrateStage.objects.get(user__email=email, sequence_id=sequence_id)        
         # Update evaluations in the DemonstrateStage object and save
-        demonstrate_object.evaluations = demonstrate_context['evaluations']
+        demonstrate_object.evaluations.append(evaluation)
         demonstrate_object.save()
         
         return Result(value=str(evaluation), context=context)
 
 
-class UpdateDemonstrationData(StrictTool):
+class update_self_assessment_and_feedback(StrictTool):
     """Use this tool after the learner has completed all assessments, and you have received their self-assessment and feedback."""
     understanding_level: int = Field(description="The learner's self assessment of their understanding level, from 1 to 4 (Beginner, Intermediate, Advanced, Expert)")
     feedback_summary: str = Field(description="A summary of the learner's feedback on the learning journey")
@@ -92,32 +69,24 @@ class UpdateDemonstrationData(StrictTool):
         email = context['email']
         sequence_id = context['sequence_id']
         
-        # Ensure email and sequence_id are available
-        if not email or not sequence_id:
-            raise ValueError("Email and sequence id are required to update demonstration data.")
-        
-        # Access or initialize demonstrate data in the context
-        demonstrate_data = context.setdefault('stage_data', {}).setdefault('demonstrate', {})
-        
-        # Update demonstrate data with understanding level and feedback summary
-        demonstrate_data['understanding_level'] = self.understanding_level
-        demonstrate_data['feedback_summary'] = self.feedback_summary
-        context['stage_data']['demonstrate'] = demonstrate_data
-        
         # Update the DemonstrateStage object
         demonstrate_stage = DemonstrateStage.objects.get(
             user__email=email, 
             sequence_id=sequence_id
         )
-        demonstrate_stage.evaluations = demonstrate_data['evaluations']
-        demonstrate_stage.understanding_levels = self.understanding_level
-        demonstrate_stage.feedback_summary = self.feedback_summary
+        # If no evaluations are in the demonstrate_stage object, raise an error
+        evaluations = demonstrate_stage.evaluations
+        if not evaluations:
+            raise ValueError("No evaluations found in demonstrate stage data.")
+        
+        demonstrate_stage.understanding_level = self.understanding_level
+        demonstrate_stage.feedback_summary    = self.feedback_summary
         demonstrate_stage.save()
         
         return Result(value="Demonstration data updated successfully", context=context)
     
 
-class MarkCompleted(StrictTool):
+class mark_completed(StrictTool):
     """Mark the Demonstration stage as complete so that a new 4D learning journey can be created."""
     
     def execute(self, context: Dict):
@@ -127,7 +96,7 @@ class MarkCompleted(StrictTool):
             raise ValueError("Email is required to mark the Demonstration stage as complete.")
         
         # Retrieve user and create a new 4D Sequence
-        user = User.objects.get(email=email)
+        user     = User.objects.get(email=email)
         sequence = FourDSequence.objects.create(user=user)
         
         value = f"4D Sequence {sequence.id} marked as completed. New 4D learning journey created."
@@ -138,10 +107,10 @@ demonstrate_agent = Agent(
     id="demonstrate",
     instructions=get_agent_instructions('demonstrate'),
     functions=[
-        Question,
-        Evaluation,
-        UpdateDemonstrationData,
-        MarkCompleted
+        question,
+        evaluate_answer,
+        update_self_assessment_and_feedback,
+        mark_completed
     ],
     parallel_tool_calls=False,
     tool_choice='auto',

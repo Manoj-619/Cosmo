@@ -183,7 +183,7 @@ def chat_view(request):
     logger.info(f"Generated cache key: {cache_key}")  # Log the generated cache key
 
     if cache.get(cache_key):
-        context = cache.get(cache_key)
+        context    = cache.get(cache_key)
         stage_name = context['stage']  # Ensure current_stage is set from cached context
         
     profile = UserProfile.objects.get(user__email=user.email)
@@ -285,11 +285,9 @@ def chat_view(request):
     context['stage'] = response.agent.id
     cache.set(cache_key, context, timeout=3600)
     
-    return Response({"type": "text",
-                     "message": last_message['content'],
-                     "stage": stage_name,
-                     "sequence_id": sequence_id,
-                     "log_context": context,
-                     "log_history": message_history,
-                     "summary_text": summary_text
+    return Response({
+        "type": "text",
+        "message": last_message['content'],
+        "stage": stage_name,
+        "sequence_id": sequence_id,
                      })

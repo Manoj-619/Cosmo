@@ -10,7 +10,6 @@ import os
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field
 from typing import List, Dict, Literal, Optional
-from helpers.chat import get_prompt, summarize_history, filter_history
 from helpers._types import (
     Agent,
     StrictTool,
@@ -52,11 +51,20 @@ class Curriculum(StrictTool):
     modules: List[Module] = Field(description="List of modules included in the curriculum")
         
     def execute(self, context: Dict):
-        context['stage_data']['discuss']['curriculum'] = self.model_dump()
-        logger.info(f"Generated Curriculum for {context['email']}:\n\n{str(self.model_dump())}")
+        email       = context['email']
+        sequence_id = context['sequence_id']
+        
+        if not email or not sequence_id:
+            raise ValueError("Email and sequence id are required to generate a curriculum.")        
+        discuss_stage = DiscussStage.objects.get(user__email=email, sequence_id=sequence_id)
+        discuss_stage.curriculum = self.model_dump()
+        discuss_stage.save()
+                    
+        context['discuss']['curriculum'] = self.model_dump()
+        
+        logger.info(f"Generated Curriculum for {email}:\n\n{str(self.model_dump())}")
         return Result(value=str(self.model_dump()), context=context)
     
-
 
 class UpdateDiscussionData(StrictTool):
     """Update the discussion data after the learner has agreed to the curriculum."""
@@ -69,25 +77,21 @@ class UpdateDiscussionData(StrictTool):
         email       = context['email']
         sequence_id = context['sequence_id']
         if not email or not sequence_id:
-            raise ValueError("Email and sequence id are required to update discussion data.")
-        
-        # Safely get curriculum from context
-        stage_data = context.get('stage_data', {})
-        discuss_data = stage_data.get('discuss', {})
-        curriculum = discuss_data.get('curriculum')
-        
-        if not curriculum:
-            raise ValueError("Curriculum is required to update discussion data. Please generate a curriculum first.")
+            raise ValueError("Email and sequence id are required to update discussion data.")        
         
         # Get the DiscussStage object
         discuss_stage = DiscussStage.objects.get(user__email=email, sequence_id=sequence_id)
+        
+        # Check if the curriculum is already set
+        if not discuss_stage.curriculum:
+            raise ValueError("Curriculum is required to update discussion data. Please generate a curriculum first.")        
+        
         discuss_stage.interest_areas  = self.interest_areas
         discuss_stage.learning_style  = self.learning_style
-        discuss_stage.curriculum      = curriculum
         discuss_stage.timeline        = self.timeline
         discuss_stage.save()
         
-        value = f"""Discussion data updated successfully for {email}
+        value = f"""Discussion data updated successfully for {email}        
         
         **Discussion data:**
             {discuss_stage.get_summary()}
@@ -95,22 +99,40 @@ class UpdateDiscussionData(StrictTool):
         logger.info(f"Discussion data updated successfully for {email}:\n\n{value}")
 
         # Update context with the current stage data
-        context['stage_data']['discuss'] = {
+        context['discuss'] = {
             "interest_areas": self.interest_areas,
             "learning_style": self.learning_style,
             "timeline": self.timeline,
-            "curriculum": curriculum
+            "curriculum": discuss_stage.curriculum
         }
-        
+                
         return Result(value=value, context=context)
             
 # Handoff Agent for the next stage
 class TransferToDeliveryStage(StrictTool):
     """Transfer to the Delivery stage once the Discussion stage is complete."""
-    def execute(self, context: Dict):
+
+    def execute(self, context: Dict):        
         logger.info(f"Transferred to the Delivery stage for {context['email']}.")
+        # Get discussion data from DB
+        email       = context['email']
+        sequence_id = context['sequence_id']
+        discuss_stage = DiscussStage.objects.get(user__email=email, sequence_id=sequence_id)
+        discuss_data = discuss_stage.get_summary()
+        
+        # Get the DeliverStage object
+        agent = deliver_agent
+        
+        # Create the start message for the Delivery agent
+        agent.start_message = f"""
+        Discussion Data Summary:
+        {discuss_data}
+        
+        Greet the learner and introduce the Delivery stage.
+        """
+        
         return Result(
-            value="Transferred to the Delivery stage.",
+            value="Transferred to Delivery stage.",
             agent=deliver_agent, 
             context=context
         )
@@ -122,7 +144,7 @@ discuss_agent = Agent(
     instructions=get_agent_instructions('discuss'),
     functions=[
         Curriculum,
-        UpdateDiscussionData,        
+        UpdateDiscussionData,
         TransferToDeliveryStage
     ],
     parallel_tool_calls=False,
