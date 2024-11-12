@@ -124,10 +124,7 @@ class transfer_to_delivery_stage(StrictTool):
         # Get the DeliverStage object
         agent = deliver_agent
         # Create the start message for the Delivery agent
-        agent.start_message = f"""
-        **User Profile:**
-        {profile.get_summary()}
-        
+        agent.start_message += f"""        
         **Discussion Data:**
         {discuss_data}
         

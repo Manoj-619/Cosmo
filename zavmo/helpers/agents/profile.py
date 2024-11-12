@@ -27,7 +27,7 @@ class transfer_to_discover_stage(StrictTool):
             raise ValueError(error)
         summary = profile.get_summary()
         agent = discover_agent
-        agent.start_message = f"Here is the learner's profile: {summary}"
+        agent.start_message += f"Here is the learner's profile: {summary}"
         
         return Result(agent=agent, context=context)
 

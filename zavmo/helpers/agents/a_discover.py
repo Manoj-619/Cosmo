@@ -36,10 +36,7 @@ class transfer_to_discussion_stage(StrictTool):
             raise ValueError(error)
         
         agent               = discuss_agent        
-        agent.start_message = f"""
-        **User Profile:**
-        {profile.get_summary()}        
-        
+        agent.start_message += f"""
         **Discovery Data:**
         {discovery_object.get_summary()}
         """

@@ -50,9 +50,7 @@ class transfer_to_demonstrate_stage(StrictTool):
         agent = demonstrate_agent
         
         # Create the start message for the Demonstration agent
-        agent.start_message = f"""
-        **User Profile:**
-        {profile.get_summary()}
+        agent.start_message += f"""
         
         **Curriculum:**
         {curriculum}
@@ -99,7 +97,7 @@ class Lesson(StrictTool):
         deliver_stage.lessons.append(new_lesson)
         deliver_stage.save()
         
-        value = f"""        
+        value = f"""
         **Curriculum:**
         {curriculum}
         

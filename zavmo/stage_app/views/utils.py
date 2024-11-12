@@ -98,6 +98,15 @@ def _get_message_history(email, sequence_id, user_message, max_tokens=64000):
 def _process_agent_response(stage_name, message_history, context, max_turns=10):
     """Process agent response with given context and messages."""
     agent = agents[stage_name]
+    email = context['email']
+    profile = UserProfile.objects.get(user__email=email)
+    summary = profile.get_summary()
+    
+    agent.start_message += f"""
+    **User Profile:**
+    
+    {summary}
+    """
     return run_step(
         agent=agent,
         messages=message_history,
