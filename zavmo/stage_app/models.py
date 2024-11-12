@@ -212,14 +212,14 @@ class DemonstrateStage(models.Model):
     
     @property
     def understanding_level_display(self):
-        if self.understanding_levels is None:  # Fix variable name from understanding_level to understanding_levels
+        if self.understanding_level is None:
             return 'Unknown'
-        return dict(self._meta.get_field('understanding_levels').choices)[self.understanding_levels]  # Fix field name and variable
-    
+        return dict(self._meta.get_field('understanding_level').choices)[self.understanding_level]
+
     def check_complete(self):
         if not self.evaluations:
             return False, "Evaluations are required"
-        if not self.understanding_levels:
+        if not self.understanding_level:
             return False, "Understanding levels are required"
         if not self.feedback_summary:
             return False, "Feedback summary is required"
