@@ -173,8 +173,11 @@ def filter_history(history, max_tokens=84000):
     message_history = []
     total_tokens = 0
     for message in reversed(history):
+        # Pass tool call messages
+        if message.get('tool_calls'): 
+            pass
         # Skip messages with None or empty content
-        if not message.get('content'):
+        elif not message.get('content'): 
             continue
             
         message_tokens = count_tokens([message])
