@@ -33,6 +33,7 @@ openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 def fetch_agent_response(agent: Agent, history: List, context: Dict) -> ChatCompletionMessage:
     """Fetches the response from an agent."""
+    logging.info('Logging from fetch_agent response')
     context = defaultdict(str, context)
     instructions = agent.instructions
     # Start with system message
@@ -40,8 +41,8 @@ def fetch_agent_response(agent: Agent, history: List, context: Dict) -> ChatComp
     init_messages  = [system_message]
     if agent.start_message:
         init_messages.append({"role": "user", "content": agent.start_message})
-    
-    messages = init_messages + history
+
+    messages = init_messages + filter_history(history)
     tools = [function_to_json(f) for f in agent.functions]
 
     create_params = {
@@ -52,8 +53,7 @@ def fetch_agent_response(agent: Agent, history: List, context: Dict) -> ChatComp
     }
     if tools:
         create_params["parallel_tool_calls"] = agent.parallel_tool_calls
-    logging.info('Logging from fetch_agent response')    
-    logging.info(messages)
+        
     return openai_client.chat.completions.create(**create_params)
 
 
@@ -193,7 +193,6 @@ def run_step(agent: Agent, messages: List, context: Dict = {}, max_turns: int = 
         # Add tool usage to total usage
         for key in usage:
             usage[key] += partial_response.usage.get(key, 0)
-
         # Append assistant message and tool responses together
         history.append(message_dict)
         if partial_response.messages:
