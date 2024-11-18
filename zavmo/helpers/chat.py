@@ -173,12 +173,15 @@ def filter_history(history, max_tokens=84000):
     message_history = []
     total_tokens = 0
     
-    # First pass: Create a map of tool_call_ids to their original tool calls
+    # First pass: Create a map of tool_call_ids to their original tool calls and track responses
     tool_call_map = {}
+    tool_response_map = {}
     for msg in history:
         if msg.get('role') == 'assistant' and msg.get('tool_calls'):
             for tool_call in msg['tool_calls']:
                 tool_call_map[tool_call['id']] = msg
+        elif msg.get('role') == 'tool':
+            tool_response_map[msg.get('tool_call_id')] = msg
 
     # Second pass: Build filtered history
     for message in reversed(history):
@@ -188,7 +191,17 @@ def filter_history(history, max_tokens=84000):
             
         message_tokens = count_tokens([message])
         
-        # If this is a tool response, ensure we include its original tool call
+        # Handle assistant messages with tool calls
+        if message.get('role') == 'assistant' and message.get('tool_calls'):
+            # Check if we have responses for all tool calls
+            all_responses_present = all(
+                tool_call['id'] in tool_response_map 
+                for tool_call in message['tool_calls']
+            )
+            if not all_responses_present:
+                continue  # Skip this message if we don't have all responses
+                
+        # Handle tool responses
         if message.get('tool_call_id'):
             original_tool_call = tool_call_map.get(message['tool_call_id'])
             if original_tool_call:
