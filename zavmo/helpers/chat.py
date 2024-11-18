@@ -169,21 +169,45 @@ def create_message_payload(user_content=None, system_message=None, messages=[], 
     return message_history
 
 def filter_history(history, max_tokens=84000):
-    """Filter the history to a maximum number of tokens."""
+    """Filter the history to a maximum number of tokens while preserving tool call sequences."""
     message_history = []
     total_tokens = 0
+    
+    # First pass: Create a map of tool_call_ids to their original tool calls
+    tool_call_map = {}
+    for msg in history:
+        if msg.get('role') == 'assistant' and msg.get('tool_calls'):
+            for tool_call in msg['tool_calls']:
+                tool_call_map[tool_call['id']] = msg
+
+    # Second pass: Build filtered history
     for message in reversed(history):
-        # Pass tool call messages
-        if message.get('tool_calls') or message.get('tool_call_id'): 
-            pass
-        # Skip messages with None or empty content
-        elif not message.get('content'): 
+        # Skip messages with None or empty content, unless they're tool-related
+        if not message.get('content') and not message.get('tool_calls') and not message.get('tool_call_id'):
             continue
             
         message_tokens = count_tokens([message])
+        
+        # If this is a tool response, ensure we include its original tool call
+        if message.get('tool_call_id'):
+            original_tool_call = tool_call_map.get(message['tool_call_id'])
+            if original_tool_call:
+                # Check if we can fit both messages
+                total_tool_tokens = message_tokens + count_tokens([original_tool_call])
+                if total_tokens + total_tool_tokens <= max_tokens:
+                    # Add original tool call if not already present
+                    if original_tool_call not in message_history:
+                        message_history.insert(0, original_tool_call)
+                        total_tokens += count_tokens([original_tool_call])
+                    message_history.insert(0, message)
+                    total_tokens += message_tokens
+                continue
+                
+        # Handle regular messages
         if total_tokens + message_tokens <= max_tokens:
             total_tokens += message_tokens
             message_history.insert(0, message)
+            
     return message_history
 
 
