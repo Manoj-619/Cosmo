@@ -42,7 +42,8 @@ def fetch_agent_response(agent: Agent, history: List, context: Dict) -> ChatComp
     if agent.start_message:
         init_messages.append({"role": "user", "content": agent.start_message})
 
-    messages = init_messages + filter_history(history)
+    # TODO: Add filtering of history
+    messages = init_messages + history
     tools = [function_to_json(f) for f in agent.functions]
 
     create_params = {
