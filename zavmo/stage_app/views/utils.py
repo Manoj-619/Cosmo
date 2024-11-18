@@ -82,7 +82,7 @@ def _create_full_context(email, sequence_id, profile, sequence):
         'demonstrate': DemonstrateStageSerializer(sequence.demonstrate_stage).data if sequence.demonstrate_stage else {}
     }
 
-def _get_message_history(email, sequence_id, user_message, max_tokens=64000):
+def _get_message_history(email, sequence_id, user_message):
     """Get or initialize message history."""
     message_history = cache.get(f"{email}_{sequence_id}_{HISTORY_SUFFIX}", [])
     
@@ -93,7 +93,8 @@ def _get_message_history(email, sequence_id, user_message, max_tokens=64000):
             "role": "system",
             "content": "Send a personalized welcome message to the learner."
         })
-    message_history = filter_history(message_history, max_tokens)
+# NOTE: Filtering history only in swarm.py
+#    message_history = filter_history(message_history, max_tokens)
     return message_history
 
 def _process_agent_response(stage_name, message_history, context, max_turns=10):
@@ -123,7 +124,10 @@ def _process_agent_response(stage_name, message_history, context, max_turns=10):
 
 def _update_context_and_cache(user, sequence_id, context, message_history, response):
     """Update context and cache with response data."""
-    message_history.append(response.messages[-1])
+    # NOTE:  Add either last message or all recent messages
+    # message_history.append(response.messages[-1])
+    message_history.extend(response.messages)
+    
     context.update(response.context)
     
     sequence = FourDSequence.objects.get(id=sequence_id)
