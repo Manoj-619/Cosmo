@@ -3,7 +3,7 @@ import codecs
 import yaml
 from helpers.chat import get_prompt
 
-def get_yaml_data(yaml_path, yaml_dir="/zavmo/assets/data"):
+def get_yaml_data(yaml_path, yaml_dir="assets/data"):
     """Load a YAML file containing field data.
 
     Args:
@@ -56,5 +56,5 @@ def get_agent_instructions(stage_name: str) -> str:
     prompt_context  = {k:v for k,v in conf_data.items() if k in agent_keys}
     system_content  = get_prompt('probe.md', 
                                  context=prompt_context,
-                                 prompt_dir="/zavmo/assets/prompts")
+                                 prompt_dir="assets/prompts")
     return system_content   
