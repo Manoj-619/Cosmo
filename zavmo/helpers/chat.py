@@ -169,61 +169,52 @@ def create_message_payload(user_content=None, system_message=None, messages=[], 
     return message_history
 
 def filter_history(history, max_tokens=84000):
-    """Filter the history to a maximum number of tokens while preserving tool call sequences."""
+    """Filter the history to a maximum number of tokens."""
     message_history = []
     total_tokens = 0
-    
-    # First pass: Create a map of tool_call_ids to their original tool calls and track responses
-    tool_call_map = {}
-    tool_response_map = {}
-    for msg in history:
-        if msg.get('role') == 'assistant' and msg.get('tool_calls'):
-            for tool_call in msg['tool_calls']:
-                tool_call_map[tool_call['id']] = msg
-        elif msg.get('role') == 'tool':
-            tool_response_map[msg.get('tool_call_id')] = msg
 
-    # Second pass: Build filtered history
     for message in reversed(history):
-        # Skip messages with None or empty content, unless they're tool-related
+        # Skip messages with None or empty content unless it's a tool call message
         if message.get('tool_call_id') or message.get('tool_calls'):
             pass
         elif not message.get('content'):
             continue
-            
+
         message_tokens = count_tokens([message])
-        
-        # Handle assistant messages with tool calls
-        if message.get('role') == 'assistant' and message.get('tool_calls'):
-            # Check if we have responses for all tool calls
-            all_responses_present = all(
-                tool_call['id'] in tool_response_map 
-                for tool_call in message['tool_calls']
-            )
-            if not all_responses_present:
-                continue  # Skip this message if we don't have all responses
-                
-        # Handle tool responses
-        if message.get('tool_call_id'):
-            original_tool_call = tool_call_map.get(message['tool_call_id'])
-            if original_tool_call:
-                # Check if we can fit both messages
-                total_tool_tokens = message_tokens + count_tokens([original_tool_call])
-                if total_tokens + total_tool_tokens <= max_tokens:
-                    # Add original tool call if not already present
-                    if original_tool_call not in message_history:
-                        message_history.insert(0, original_tool_call)
-                        total_tokens += count_tokens([original_tool_call])
-                    message_history.insert(0, message)
-                    total_tokens += message_tokens
-                continue
-                
-        # Handle regular messages
         if total_tokens + message_tokens <= max_tokens:
             total_tokens += message_tokens
             message_history.insert(0, message)
-            
+
+    # Check if the first message is a tool call message and remove it if so
+    if message_history and message_history[0].get('role') == 'tool':
+        message_history.pop(0)
+
     return message_history
+
+def validate_message_history(filtered_messages):
+    """
+    Validates that every assistant message with tool_calls has a corresponding tool response.
+    
+    Args:
+        filtered_messages (list): The list of filtered messages to test.
+
+    Returns:
+        bool: True if all tool_calls have valid responses, False otherwise.
+    """
+    # Map of tool_call_ids to responses
+    tool_responses = {
+        msg.get('tool_call_id'): msg for msg in filtered_messages if msg.get('role') == 'tool'
+    }
+    
+    # Iterate through messages to check assistant tool calls
+    for msg in filtered_messages:
+        if msg.get('role') == 'assistant' and msg.get('tool_calls'):
+            for tool_call in msg['tool_calls']:
+                tool_call_id = tool_call.get('id')
+                if tool_call_id not in tool_responses:
+                    print(f"Missing response for tool_call_id: {tool_call_id}")
+                    return False
+    return True
 
 
 def summarize_stage_data(stage_data, stage_name):
