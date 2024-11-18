@@ -186,7 +186,7 @@ def filter_history(history, max_tokens=84000):
     # Second pass: Build filtered history
     for message in reversed(history):
         # Skip messages with None or empty content, unless they're tool-related
-        if message.get('tool_call_id') and message.get('tool_calls'):
+        if message.get('tool_call_id') or message.get('tool_calls'):
             pass
         elif not message.get('content'):
             continue
