@@ -76,10 +76,10 @@ def _create_full_context(email, sequence_id, profile, sequence):
         'email': email,
         'sequence_id': sequence_id,
         'profile': UserProfileSerializer(profile).data if profile else {},
-        'discover': DiscoverStageSerializer(sequence_id=sequence_id).data if sequence.discover_stage else {},
-        'discuss': DiscussStageSerializer(sequence_id=sequence_id).data if sequence.discuss_stage else {},
-        'deliver': DeliverStageSerializer(sequence_id=sequence_id).data if sequence.deliver_stage else {},
-        'demonstrate': DemonstrateStageSerializer(sequence_id=sequence_id).data if sequence.demonstrate_stage else {}
+        'discover': DiscoverStageSerializer(sequence.discover_stage).data if sequence.discover_stage else {},
+        'discuss': DiscussStageSerializer(sequence.discuss_stage).data if sequence.discuss_stage else {},
+        'deliver': DeliverStageSerializer(sequence.deliver_stage).data if sequence.deliver_stage else {},
+        'demonstrate': DemonstrateStageSerializer(sequence.demonstrate_stage).data if sequence.demonstrate_stage else {}
     }
 
 def _get_message_history(email, sequence_id, user_message):
