@@ -2,6 +2,8 @@ from django.db import models
 from django.contrib.auth.models import User
 import uuid
 
+# TODO: Update UserProfile model with following fields - job_duration, reports_to, department
+
 class Org(models.Model):
     org_id   = models.CharField(max_length=50, primary_key=True)
     org_name = models.CharField(max_length=255, unique=True)
@@ -134,6 +136,7 @@ class DiscoverStage(models.Model):
             return False, "Application area is required"
         return True, None
 
+# TODO: Remove interest_areas
 
 # Stage 2
 class DiscussStage(models.Model):

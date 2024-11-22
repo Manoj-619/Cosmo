@@ -2,6 +2,14 @@
 # Stage 0: Profile
 Fields:
 """
+# TODO: Do not probe the user for any of the existing fields - remove code 
+
+# TODO: Update the profile_agent to probe the user for:
+# TODO: job_duration (how long they've been in their current job).
+# TODO: reports_to (their manager or the person they report to).
+# TODO: department (the department name manager runs).
+
+# TODO: Update discover.yaml prompt
 
 from pydantic import Field
 from typing import Dict

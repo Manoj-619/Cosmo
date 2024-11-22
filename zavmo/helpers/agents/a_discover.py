@@ -21,6 +21,8 @@ from helpers.utils import get_logger
 
 logger = get_logger(__name__)
 
+# TODO: Update dicover.yaml prompt - making it more specific to the Job Description of the user
+
 ### For handoff
 class transfer_to_discussion_stage(StrictTool):
     """Transfer to the Discussion stage when the learner approves the summary of the information gathered."""    
@@ -44,6 +46,8 @@ class transfer_to_discussion_stage(StrictTool):
             value="Transferred to Discussion stage.",
             agent=agent, 
             context=context)
+
+# TODO: Update knowledge_level field with options in scale of 1 - 7 (1 being a beginner and 7 being an expert)
 
 ### For updating the data
 class update_discover_data(StrictTool):

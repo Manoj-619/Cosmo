@@ -43,13 +43,6 @@ python manage.py runserver
   - Explore and review xAPI
   - Testing by saving dummy information using xAPI
 
-- **Bug Fixes**
-  - User profile switching issue
-  - Token filtering issue with tool calls
-
-- **Prompt Changes**
-  - Update initial message for 4D prompt
-
 - **Infrastructure**
   - Redis Insight whitelisting
   - Dev server backend setup
