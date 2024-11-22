@@ -30,3 +30,29 @@ python manage.py migrate
 python manage.py createsuperuser --noinput
 python manage.py runserver
 ```
+
+
+## TODO
+
+- **Centrica Tasks**
+  - Centrica GitHub branch setup
+  - Centrica new models
+  - Setting up structure for Centrica corporate flow
+
+- **xAPI Exploration**
+  - Explore and review xAPI
+  - Testing by saving dummy information using xAPI
+
+- **Bug Fixes**
+  - User profile switching issue
+  - Token filtering issue with tool calls
+
+- **Prompt Changes**
+  - Update initial message for 4D prompt
+
+- **Infrastructure**
+  - Redis Insight whitelisting
+  - Dev server backend setup
+
+- **Documentation Review**
+  - Review NOS documents
