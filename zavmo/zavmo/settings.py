@@ -100,7 +100,7 @@ WSGI_APPLICATION = 'zavmo.wsgi.application'
 #         'NAME': BASE_DIR / 'db.sqlite3',
 #     }
 # }
-# TODO: Configure the PostgreSQL database settings
+
 
 DATABASES = {
     'default': {

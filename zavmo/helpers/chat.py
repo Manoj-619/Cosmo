@@ -132,7 +132,6 @@ def get_claude_response(sys_mssg,messages,model="claude-3-opus-20240229"):
     )
     return message.content[0].text
 
-### TODO: Crea
 
 def create_message_payload(user_content=None, system_message=None, messages=[], max_tokens=20000):  # IMPORTANT
     """Create a message payload for the conversation.
