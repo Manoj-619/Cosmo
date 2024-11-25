@@ -63,7 +63,7 @@ class transfer_to_demonstrate_stage(StrictTool):
         
         return Result(
             value="Transferred to Demonstration stage.",
-            agent=demonstrate_agent, 
+            agent=agent, 
             context=context
         )
 

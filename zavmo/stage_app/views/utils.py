@@ -5,7 +5,6 @@ from stage_app.serializers import (
     DiscoverStageSerializer, DiscussStageSerializer, DeliverStageSerializer, DemonstrateStageSerializer,
     UserProfileSerializer
 )
-from helpers.chat import filter_history
 from helpers.agents import a_discover, b_discuss,c_deliver,d_demonstrate, profile
 
 from helpers.constants import CONTEXT_SUFFIX, HISTORY_SUFFIX, DEFAULT_CACHE_TIMEOUT
@@ -45,7 +44,7 @@ def _initialize_context(user, sequence_id):
         return cache.get(cache_key)
     return context
 
-def _determine_stage(user, context):
+def _determine_stage(user, context, sequence_id):
     """Determine current stage and update context."""
     profile = UserProfile.objects.get(user__email=user.email)
     
@@ -54,7 +53,7 @@ def _determine_stage(user, context):
         context.update(_create_empty_context(user.email, context['sequence_id'], profile))
         return 'profile'
     
-    sequence = FourDSequence.objects.filter(user=user).order_by('-created_at').first()
+    sequence = FourDSequence.objects.get(id=sequence_id)
     context.update(_create_full_context(user.email, context['sequence_id'], profile, sequence))
     return sequence.stage_display
 
@@ -99,7 +98,7 @@ def _get_message_history(email, sequence_id, user_message):
 
 def _process_agent_response(stage_name, message_history, context, max_turns=10):
     """Process agent response with given context and messages."""
-    agent = agents[stage_name]
+    agent = agents[stage_name]    
     email = context['email']
     sequence_id = context['sequence_id']
     
@@ -109,8 +108,9 @@ def _process_agent_response(stage_name, message_history, context, max_turns=10):
             stage_model = UserProfile.objects.get(user__email=email)
         else:
             stage_model = stage_models[i].objects.get(user__email=email, sequence_id=sequence_id)
+        
         summary = stage_model.get_summary()
-        agent.start_message += f"""
+        agent.start_message = f"""
         **{stage_order[i].capitalize()}:**
         
         {summary}        

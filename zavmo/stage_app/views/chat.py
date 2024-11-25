@@ -17,7 +17,7 @@ def chat_view(request):
     """Handles chat sessions between a user and the AI assistant."""
     user, sequence_id = _get_user_and_sequence(request)
     context    = _initialize_context(user, sequence_id)
-    stage_name = _determine_stage(user, context)
+    stage_name = _determine_stage(user, context, sequence_id)
     
     if stage_name == 'completed':
         return DRFResponse({
