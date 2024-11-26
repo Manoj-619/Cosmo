@@ -61,7 +61,6 @@ class Curriculum(StrictTool):
         logger.info(f"Generated Curriculum for {email}:\n\n{str(self.model_dump())}")
         return Result(value=str(self.model_dump()), context=context)
     
-# TODO: Remove interest_areas - Do not probe the user for this
 # TODO: Before generating Curriculum plan, discuss_agent should perform Skill assesment with queries - this requires Updates in discuss.yaml prompt.  
 # TODO: Additional field - assesment_based_knowledge_level, Based on the assesment zavmo does benchmarking of the user's knowledge level in the scale of 1-7
 
