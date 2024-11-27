@@ -38,12 +38,12 @@ class transfer_to_discussion_stage(StrictTool):
             raise ValueError(error)
         
         agent               = discuss_agent        
-        agent.start_message += f"""
+        agent.start_message = f"""
         **Discovery Data:**
         {discovery_object.get_summary()}
         """
         return Result(
-            value="Transferred to Discussion stage.",
+            value=self.model_dump_json(),
             agent=agent, 
             context=context)
 

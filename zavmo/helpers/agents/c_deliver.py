@@ -50,7 +50,7 @@ class transfer_to_demonstrate_stage(StrictTool):
         agent = demonstrate_agent
         
         # Create the start message for the Demonstration agent
-        agent.start_message += f"""
+        agent.start_message = f"""
         
         **Curriculum:**
         {curriculum}
@@ -62,7 +62,7 @@ class transfer_to_demonstrate_stage(StrictTool):
         """
         
         return Result(
-            value="Transferred to Demonstration stage.",
+            value=self.model_dump_json(),
             agent=demonstrate_agent, 
             context=context
         )
@@ -83,9 +83,7 @@ class Lesson(StrictTool):
         # Get email and sequence id from context
         email       = context['email']
         sequence_id = context['sequence_id']
-        
-        # Get curriculum from previous stage
-        curriculum = DiscussStage.objects.get(user__email=email, sequence_id=sequence_id).curriculum
+            
         
         new_lesson  = self.model_dump()
         
@@ -97,15 +95,7 @@ class Lesson(StrictTool):
         deliver_stage.lessons.append(new_lesson)
         deliver_stage.save()
         
-        value = f"""
-        **Curriculum:**
-        {curriculum}
-        
-        ** Lesson #{lesson_number} **
-        
-        {new_lesson}
-        """
-        return Result(value=value, context=context)
+        return Result(value=self.model_dump_json(), context=context)
 
 
     

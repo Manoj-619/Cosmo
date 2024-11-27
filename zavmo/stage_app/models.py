@@ -2,8 +2,6 @@ from django.db import models
 from django.contrib.auth.models import User
 import uuid
 
-# TODO: Update UserProfile model with following fields - job_duration, reports_to, department
-
 class Org(models.Model):
     org_id   = models.CharField(max_length=50, primary_key=True)
     org_name = models.CharField(max_length=255, unique=True)
@@ -11,22 +9,21 @@ class Org(models.Model):
     def __str__(self):
         return self.org_name
 
-# NOTE: USED ONLY ONCE PER USER, DURING ONBOARDING
 
 class UserProfile(models.Model):
+    """Profile stage model.
+    # NOTE: USED ONLY ONCE PER USER, DURING ONBOARDING
+    
+    This is not a part of the 4d sequence framework. Should be used only once per user, during onboarding.
+    We don't need to connect this to 4d sequences via foreign keys because we could have multiple 4d sequences per user.
     """
-    Profile stage model.
-    NOTE: 
-    - This is not a part of the 4d sequence framework.
-    - This should be used only once per user, during onboarding.
-    - We don't need to connect this to 4d sequences via foreign keys because we could have multiple 4d sequences per user.
-    """
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile_stage', verbose_name="User")
-    org = models.ForeignKey(Org, on_delete=models.SET_NULL, null=True, blank=True)
-    first_name = models.CharField(max_length=100, blank=True, null=True, verbose_name="First Name")
-    last_name = models.CharField(max_length=100, blank=True, null=True, verbose_name="Last Name")
-    age = models.PositiveIntegerField(null=True, blank=True, verbose_name="Age")    
-    edu_level = models.PositiveSmallIntegerField(
+    user            = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile_stage', verbose_name="User")
+    org             = models.ForeignKey(Org, on_delete=models.SET_NULL, null=True, blank=True)
+    # Saved information (Already known to us)
+    first_name      = models.CharField(max_length=100, blank=True, null=True, verbose_name="First Name")
+    last_name       = models.CharField(max_length=100, blank=True, null=True, verbose_name="Last Name")
+    age             = models.PositiveIntegerField(null=True, blank=True, verbose_name="Age")
+    education_level = models.PositiveSmallIntegerField(
         choices=[
             (1, 'Primary School'),
             (2, 'Middle School'),
@@ -36,19 +33,24 @@ class UserProfile(models.Model):
             (6, 'Master\'s Degree'),
             (7, 'PhD')
         ],
-        blank=True, null=True,
-        verbose_name="Education Level"
+        null=True, blank=True, verbose_name="Education Level"
     )
-    current_role        = models.CharField(max_length=100, blank=True, null=True, verbose_name="Current Role")
-    current_industry    = models.CharField(max_length=100, blank=True, null=True, verbose_name="Current Industry") 
+    
+    current_role    = models.CharField(max_length=100, blank=True, null=True, verbose_name="Current Role")
+    current_industry = models.CharField(max_length=100, blank=True, null=True, verbose_name="Current Industry")
     years_of_experience = models.PositiveIntegerField(
         blank=True, null=True,
         verbose_name="Years of experience"
-    ) 
+    )
+
+    # NOTE: Job information (TO BE COLLECTED)
+    job_duration    = models.PositiveIntegerField(null=True, blank=True, verbose_name="Job Duration")
+    manager         = models.CharField(max_length=100, blank=True, null=True, verbose_name="Manager")
+    department      = models.CharField(max_length=100, blank=True, null=True, verbose_name="Department")
     
     def __str__(self):
         """Get a dump of the Django model as a string."""
-        return f"{self.user.email} - {self.first_name} {self.last_name} - {self.age} - {self.edu_level} - {self.current_role} - {self.current_industry} - {self.years_of_experience}"
+        return f"{self.user.email} - Profile"
 
     @property
     def edu_level_display(self):
@@ -66,24 +68,30 @@ class UserProfile(models.Model):
         **Current Role**: {self.current_role}
         **Current Industry**: {self.current_industry}
         **Years of experience**: {self.years_of_experience}
+        **Job Duration**: {self.job_duration}
+        **Manager**: {self.manager}
+        **Department**: {self.department}
         """
 
     def check_complete(self):
         """Check if the profile is complete."""
-        if not self.first_name:
-            return False, "First name is required"
-        if not self.last_name:
-            return False, "Last name is required"
-        if not self.age:
-            return False, "Age is required"
-        if not self.edu_level:
-            return False, "Education level is required"
-        if not self.current_role:
-            return False, "Current role is required"
-        if not self.current_industry:
-            return False, "Current industry is required"
-        if not self.years_of_experience:
-            return False, "Years of experience is required"
+        required_fields = {
+            'first_name': 'First name is required',
+            'last_name': 'Last name is required',
+            'age': 'Age is required',
+            'edu_level': 'Education level is required',
+            'current_role': 'Current role is required',
+            'current_industry': 'Current industry is required',
+            'years_of_experience': 'Years of experience is required',
+            'job_duration': 'Job duration is required',
+            'manager': 'Manager is required',
+            'department': 'Department is required'
+        }
+
+        for field, message in required_fields.items():
+            if not getattr(self, field):
+                return False, message
+        
         return True, None
 
 # Stage 1
