@@ -119,14 +119,14 @@ class transfer_to_delivery_stage(StrictTool):
         
         discuss_data   = discuss_stage.get_summary()    
         # Get the DeliverStage object
-        agent = deliver_agent
-        # Create the start message for the Delivery agent
-        agent.start_message = f"""        
-        **Discussion Data:**
-        {discuss_data}
+        # agent = deliver_agent
+        # # Create the start message for the Delivery agent
+        # agent.start_message += f"""
+        # **Discussion Data:**
+        # {discuss_data}
         
-        Greet the learner and introduce the Delivery stage.
-        """
+        # Greet the learner and introduce the Delivery stage.
+        # """
         
         return Result(
             value="Transferred to Delivery stage.",

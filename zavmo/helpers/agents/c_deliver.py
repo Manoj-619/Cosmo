@@ -62,8 +62,13 @@ class transfer_to_demonstrate_stage(StrictTool):
         """
         
         return Result(
+<<<<<<< HEAD
             value=self.model_dump_json(),
             agent=demonstrate_agent, 
+=======
+            value="Transferred to Demonstration stage.",
+            agent=agent, 
+>>>>>>> main
             context=context
         )
 
