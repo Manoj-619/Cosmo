@@ -2,7 +2,7 @@
 # Stage 0: Profile
 Fields:
 """
-# TODO: Do not probe the user for any of the existing fields and remove them 
+# TODO: Do not probe the user for any of the existing fields if shared otherwise ask for the existing fields
 
 # TODO: Update the profile_agent to probe the user for:
 # TODO: job_duration (how long they've been in their current job).
