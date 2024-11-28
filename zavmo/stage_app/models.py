@@ -23,7 +23,7 @@ class UserProfile(models.Model):
     first_name      = models.CharField(max_length=100, blank=True, null=True, verbose_name="First Name")
     last_name       = models.CharField(max_length=100, blank=True, null=True, verbose_name="Last Name")
     age             = models.PositiveIntegerField(null=True, blank=True, verbose_name="Age")
-    education_level = models.PositiveSmallIntegerField(
+    edu_level = models.PositiveSmallIntegerField(
         choices=[
             (1, 'Primary School'),
             (2, 'Middle School'),
