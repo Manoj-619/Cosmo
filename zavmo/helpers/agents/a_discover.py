@@ -23,6 +23,10 @@ logger = get_logger(__name__)
 
 # TODO: Update dicover.yaml prompt - making it more specific to the Job Description of the user
 
+# TODO: Add tool for -> Training needs analysis
+
+
+
 ### For handoff
 class transfer_to_discussion_stage(StrictTool):
     """Transfer to the Discussion stage when the learner approves the summary of the information gathered."""    
@@ -31,7 +35,6 @@ class transfer_to_discussion_stage(StrictTool):
         sequence_id = context['sequence_id']
         
         logger.info(f"Transferring to the Discussion stage for {context['email']}.")
-        profile = UserProfile.objects.get(user__email=email)
         discovery_object = DiscoverStage.objects.get(user__email=email, sequence_id=sequence_id)
         is_complete, error = discovery_object.check_complete()
         if not is_complete:
@@ -40,6 +43,7 @@ class transfer_to_discussion_stage(StrictTool):
         agent               = discuss_agent        
         agent.start_message = f"""
         **Discovery Data:**
+                
         {discovery_object.get_summary()}
         """
         return Result(
