@@ -47,7 +47,6 @@ class UserProfile(models.Model):
     job_duration    = models.PositiveIntegerField(null=True, blank=True, verbose_name="Job Duration")
     manager         = models.CharField(max_length=100, blank=True, null=True, verbose_name="Manager")
     department      = models.CharField(max_length=100, blank=True, null=True, verbose_name="Department")
-    
     def __str__(self):
         """Get a dump of the Django model as a string."""
         return f"{self.user.email} - Profile"
@@ -94,6 +93,60 @@ class UserProfile(models.Model):
         
         return True, None
 
+
+class TNAassessment(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='tna_assessments')
+    sequence = models.ForeignKey('FourDSequence', on_delete=models.CASCADE, related_name='tna_assessments')
+    competency = models.CharField(max_length=20)
+    user_assessed_knowledge_level = models.PositiveSmallIntegerField(
+        choices=[
+            (1, 'Novice (Basic awareness)'),
+            (2, 'Advanced Beginner (Limited practical application)'),
+            (3, 'Competent (Independent application)'),
+            (4, 'Proficient (Deep understanding)'),
+            (5, 'Expert (Strategic application)'),
+            (6, 'Master (Industry leading)'),
+            (7, 'Thought Leader (Setting industry standards)')
+        ],
+        blank=True, null=True
+    )
+    zavmo_assessed_knowledge_level = models.PositiveSmallIntegerField(
+        choices=[
+            (1, 'Novice (Basic awareness)'),
+            (2, 'Advanced Beginner (Limited practical application)'),
+            (3, 'Competent (Independent application)'),
+            (4, 'Proficient (Deep understanding)'),
+            (5, 'Expert (Strategic application)'),
+            (6, 'Master (Industry leading)'),
+            (7, 'Thought Leader (Setting industry standards)')
+        ],
+        blank=True, null=True
+    )
+    evidence_of_competency = models.TextField(blank=True, null=True, verbose_name="Evidence of Competency")
+
+    def __str__(self):
+        return f"User {self.user.email} - Sequence {self.sequence.id} - TNA Assessment Stage - {self.competency}"
+    
+    def check_complete(self):
+        if not self.competency:
+            return False, "Competency is required"
+        if not self.user_assessed_knowledge_level:
+            return False, "User assessed knowledge level is required"
+        if not self.zavmo_assessed_knowledge_level:
+            return False, "Zavmo assessed knowledge level is required"
+        if not self.evidence_of_competency:
+            return False, "Evidence of competency is required"
+        return True, None
+    
+    def get_summary(self):
+        assessments = TNAassessment.objects.filter(user=self.user, sequence=self.sequence)
+        summary = ""
+        for assessment in assessments:
+            summary += f"**Competency**: {assessment.competency}\n"
+            summary += f"**User Assessed Knowledge Level**: {assessment.user_assessed_knowledge_level}\n"
+            summary += f"**Zavmo Assessed Knowledge Level**: {assessment.zavmo_assessed_knowledge_level}\n"
+            summary += f"**Evidence of Competency**: {assessment.evidence_of_competency}\n\n"
+        return summary.strip()
 # Stage 1
 class DiscoverStage(models.Model):
     user           = models.ForeignKey(User, on_delete=models.CASCADE, related_name='discover_stage')
@@ -115,6 +168,7 @@ class DiscoverStage(models.Model):
         verbose_name="Knowledge Level"
     )    
     application_area = models.TextField(blank=True, null=True, verbose_name="Application Area")
+
     def __str__(self):
         return f"User {self.user.email} - Sequence {self.sequence.id} - Discover Stage"
     
@@ -126,13 +180,13 @@ class DiscoverStage(models.Model):
     
     def get_summary(self):
         """Get a summary of the user's profile."""
-        return f"""
+        return f"""  
         **Learning Goals**: {self.learning_goals}
         **Learning Goal Rationale**: {self.learning_goal_rationale}
         **Knowledge Level**: {self.knowledge_level_display}
         **Application Area**: {self.application_area}
         """
-    
+
     def check_complete(self):
         if not self.learning_goals:
             return False, "Learning goals are required"

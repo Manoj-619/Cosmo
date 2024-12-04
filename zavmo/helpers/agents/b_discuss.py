@@ -1,7 +1,7 @@
 """
 # Stage 2: Discussion
 Fields:
-    interest_areas: str 
+    
     learning_style: str
     curriculum: dict
     timeline: str
@@ -61,8 +61,6 @@ class Curriculum(StrictTool):
         logger.info(f"Generated Curriculum for {email}:\n\n{str(self.model_dump())}")
         return Result(value=str(self.model_dump()), context=context)
     
-# TODO: Before generating Curriculum plan, discuss_agent should perform Skill assesment with queries - this requires Updates in discuss.yaml prompt.  
-# TODO: Additional field - assesment_based_knowledge_level, Based on the assesment zavmo does benchmarking of the user's knowledge level in the scale of 1-7
 
 class update_discussion_data(StrictTool):
     """Update the discussion data after the learner has expressed their interest areas, learning style, and timeline."""
@@ -121,7 +119,7 @@ class transfer_to_delivery_stage(StrictTool):
         # Get the DeliverStage object
         agent = deliver_agent
         # Create the start message for the Delivery agent
-        agent.start_message = f"""
+        agent.start_message = f"""        
         **Discussion Data:**
         {discuss_data}
         
@@ -130,7 +128,7 @@ class transfer_to_delivery_stage(StrictTool):
         
         return Result(
             value="Transferred to Delivery stage.",
-            agent=deliver_agent, 
+            agent=agent, 
             context=context
         )
 

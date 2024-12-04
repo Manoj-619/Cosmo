@@ -1,0 +1,212 @@
+[
+  {
+    "skill_area": "Sales Planning and Implementation",
+    "skill_category": "Technical",
+    "blooms_taxonomy_criteria": [
+      {
+        "level": "Remember",
+        "criteria": "Recall the types of sales-related information required for effective planning."
+      },
+      {
+        "level": "Understand",
+        "criteria": "Explain the importance of using sales-related information in planning and implementing activities."
+      },
+      {
+        "level": "Apply",
+        "criteria": "Use sales-related information to develop a sales plan."
+      },
+      {
+        "level": "Analyze",
+        "criteria": "Identify components of an effective sales plan based on sales data."
+      },
+      {
+        "level": "Evaluate",
+        "criteria": "Assess the effectiveness of a sales plan based on sales outcomes."
+      },
+      {
+        "level": "Create",
+        "criteria": "Design a comprehensive sales plan that incorporates various sales-related information."
+      }
+    ]
+  },
+  {
+    "skill_area": "Sales Technology and Information Management",
+    "skill_category": "Technical",
+    "blooms_taxonomy_criteria": [
+      {
+        "level": "Remember",
+        "criteria": "Recall the key features of the sales technology systems used."
+      },
+      {
+        "level": "Understand",
+        "criteria": "Explain how to check the quality, validity, and reliability of stored information."
+      },
+      {
+        "level": "Apply",
+        "criteria": "Demonstrate how to store information on sales technology systems."
+      },
+      {
+        "level": "Analyze",
+        "criteria": "Evaluate stored data for its accuracy and relevance."
+      },
+      {
+        "level": "Evaluate",
+        "criteria": "Make informed decisions based on the analysis of the information in the technology systems."
+      },
+      {
+        "level": "Create",
+        "criteria": "Develop a system for maintaining up-to-date sales information."
+      }
+    ]
+  },
+  {
+    "skill_area": "Sales Automation",
+    "skill_category": "Technical",
+    "blooms_taxonomy_criteria": [
+      {
+        "level": "Remember",
+        "criteria": "Identify the tools and technologies used for the automation of sales tasks."
+      },
+      {
+        "level": "Understand",
+        "criteria": "Explain the advantages of automation in sales activities."
+      },
+      {
+        "level": "Apply",
+        "criteria": "Utilize automation tools to carry out specific sales-related tasks."
+      },
+      {
+        "level": "Analyze",
+        "criteria": "Break down a sales process and identify opportunities for automation."
+      },
+      {
+        "level": "Evaluate",
+        "criteria": "Assess the impact of automation on sales effectiveness."
+      },
+      {
+        "level": "Create",
+        "criteria": "Design a workflow that incorporates automation technology for sales activities."
+      }
+    ]
+  },
+  {
+    "skill_area": "Collaboration and Communication in Sales",
+    "skill_category": "Soft",
+    "blooms_taxonomy_criteria": [
+      {
+        "level": "Remember",
+        "criteria": "Recall the methods of sharing sales-related information within a team."
+      },
+      {
+        "level": "Understand",
+        "criteria": "Describe the importance of collaboration among sales team members."
+      },
+      {
+        "level": "Apply",
+        "criteria": "Demonstrate effective communication strategies in sharing sales information."
+      },
+      {
+        "level": "Analyze",
+        "criteria": "Evaluate the effectiveness of communication within the sales team."
+      },
+      {
+        "level": "Evaluate",
+        "criteria": "Assess collaborative strategies and their impact on team performance."
+      },
+      {
+        "level": "Create",
+        "criteria": "Develop a strategy for improving collaboration and information sharing among sales team members."
+      }
+    ]
+  },
+  {
+    "skill_area": "Lead Generation and Qualification",
+    "skill_category": "Technical",
+    "blooms_taxonomy_criteria": [
+      {
+        "level": "Remember",
+        "criteria": "Recall the process of lead generation and qualification."
+      },
+      {
+        "level": "Understand",
+        "criteria": "Explain the importance of qualifying leads in the sales process."
+      },
+      {
+        "level": "Apply",
+        "criteria": "Use lead generation automation technology to identify and qualify leads."
+      },
+      {
+        "level": "Analyze",
+        "criteria": "Analyze the criteria for prioritizing leads based on sales targets."
+      },
+      {
+        "level": "Evaluate",
+        "criteria": "Justify the approach taken to qualify and prioritize leads."
+      },
+      {
+        "level": "Create",
+        "criteria": "Design a lead generation strategy that includes automation tools."
+      }
+    ]
+  },
+  {
+    "skill_area": "Sales Reporting and Management",
+    "skill_category": "Technical",
+    "blooms_taxonomy_criteria": [
+      {
+        "level": "Remember",
+        "criteria": "Identify the types of reports generated from sales systems."
+      },
+      {
+        "level": "Understand",
+        "criteria": "Explain the role of sales reporting in performance management."
+      },
+      {
+        "level": "Apply",
+        "criteria": "Generate a report summarizing sales-related information for management."
+      },
+      {
+        "level": "Analyze",
+        "criteria": "Evaluate the data included in sales reports for actionable insights."
+      },
+      {
+        "level": "Evaluate",
+        "criteria": "Assess the effectiveness of reporting tools and their impact on decision making."
+      },
+      {
+        "level": "Create",
+        "criteria": "Design a reporting template that captures key sales metrics."
+      }
+    ]
+  },
+  {
+    "skill_area": "Performance Monitoring and Feedback",
+    "skill_category": "Soft",
+    "blooms_taxonomy_criteria": [
+      {
+        "level": "Remember",
+        "criteria": "Recall the elements of monitoring personal sales performance."
+      },
+      {
+        "level": "Understand",
+        "criteria": "Explain the importance of feedback in personal development within sales."
+      },
+      {
+        "level": "Apply",
+        "criteria": "Implement a self-monitoring technique for evaluating sales performance."
+      },
+      {
+        "level": "Analyze",
+        "criteria": "Assess one's own performance against established sales targets."
+      },
+      {
+        "level": "Evaluate",
+        "criteria": "Critique feedback received on performance for improvement."
+      },
+      {
+        "level": "Create",
+        "criteria": "Develop a personal development plan based on feedback and performance metrics."
+      }
+    ]
+  }
+]

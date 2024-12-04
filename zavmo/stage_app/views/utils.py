@@ -1,19 +1,20 @@
 from helpers.utils import get_logger
 from django.core.cache import cache
-from stage_app.models import UserProfile, FourDSequence, DeliverStage, DiscoverStage, DiscussStage, DemonstrateStage
+from stage_app.models import UserProfile, FourDSequence, DeliverStage, DiscoverStage, DiscussStage, DemonstrateStage, TNAassessment
 from stage_app.serializers import (
     DiscoverStageSerializer, DiscussStageSerializer, DeliverStageSerializer, DemonstrateStageSerializer,
-    UserProfileSerializer
+    UserProfileSerializer, TNAassessmentSerializer
 )
-from helpers.agents import a_discover, b_discuss,c_deliver,d_demonstrate, profile
+from helpers.agents import a_discover, b_discuss,c_deliver,d_demonstrate, profile, tna_assessment
 
 from helpers.constants import CONTEXT_SUFFIX, HISTORY_SUFFIX, DEFAULT_CACHE_TIMEOUT
 from helpers.swarm import run_step
 
-stage_order = ['profile', 'discover', 'discuss', 'deliver', 'demonstrate']
-stage_models = [UserProfile, DiscoverStage, DiscussStage, DeliverStage, DemonstrateStage]
+stage_order = ['profile', 'tna_assessment', 'discover', 'discuss', 'deliver', 'demonstrate']
+stage_models = [UserProfile, TNAassessment, DiscoverStage, DiscussStage, DeliverStage, DemonstrateStage]
 
 agents = { 'profile': profile.profile_agent,
+           'tna_assessment': tna_assessment.tna_assessment_agent,
            'discover': a_discover.discover_agent,
            'discuss': b_discuss.discuss_agent,
            'deliver': c_deliver.deliver_agent,
@@ -47,11 +48,18 @@ def _initialize_context(user, sequence_id):
 def _determine_stage(user, context, sequence_id):
     """Determine current stage and update context."""
     profile = UserProfile.objects.get(user__email=user.email)
-    
-    is_complete, error = profile.check_complete()
-    if not is_complete:
+    tna_assessments = TNAassessment.objects.filter(user=user, sequence_id=sequence_id)
+    for assessment in tna_assessments:
+        tna_is_complete, tna_error = assessment.check_complete()
+        
+    profile_is_complete, profile_error = profile.check_complete()
+    if not profile_is_complete:
         context.update(_create_empty_context(user.email, context['sequence_id'], profile))
         return 'profile'
+    
+    if not tna_is_complete:
+        context.update(_create_empty_context(user.email, context['sequence_id'], profile))
+        return 'tna_assessment'
     
     sequence = FourDSequence.objects.get(id=sequence_id)
     context.update(_create_full_context(user.email, context['sequence_id'], profile, sequence))
@@ -63,6 +71,7 @@ def _create_empty_context(email, sequence_id, profile):
         'email': email,
         'sequence_id': sequence_id,
         'profile': UserProfileSerializer(profile).data if profile else {},
+        'tna_assessment': {},
         'discover': {},
         'discuss': {},
         'deliver': {},
@@ -71,10 +80,14 @@ def _create_empty_context(email, sequence_id, profile):
 
 def _create_full_context(email, sequence_id, profile, sequence):
     """Create context with all stage data."""
+    tna_assessments = sequence.tna_assessments.all()  # Get all related TNA assessments
+    tna_assessment_data = [TNAassessmentSerializer(assessment).data for assessment in tna_assessments]
+
     return {
         'email': email,
         'sequence_id': sequence_id,
         'profile': UserProfileSerializer(profile).data if profile else {},
+        'tna_assessment': tna_assessment_data,  # Use the list of serialized assessments
         'discover': DiscoverStageSerializer(sequence.discover_stage).data if sequence.discover_stage else {},
         'discuss': DiscussStageSerializer(sequence.discuss_stage).data if sequence.discuss_stage else {},
         'deliver': DeliverStageSerializer(sequence.deliver_stage).data if sequence.deliver_stage else {},
@@ -132,13 +145,16 @@ def _update_context_and_cache(user, sequence_id, context, message_history, respo
     
     sequence = FourDSequence.objects.get(id=sequence_id)
     
+    valid_stages = ['discover', 'discuss', 'deliver', 'demonstrate', 'completed']
     if response.agent.id != sequence.stage_display:
-        logger.info(f"Stage changed from {context.get('stage')} to {response.agent.id}.")
-        if response.agent.id != 'profile':
-            sequence.update_stage(response.agent.id)
+        logger.info("\n\n")
+        logger.info(f"Stage changed from {context.get('stage')} to {response.agent.id}.\n\n")
         
+        # Ensure the stage is valid before updating
+        if response.agent.id in valid_stages:
+            sequence.update_stage(response.agent.id)
+
         context['stage'] = response.agent.id
 
     cache.set(f"{user.email}_{sequence_id}_{CONTEXT_SUFFIX}", context, timeout=DEFAULT_CACHE_TIMEOUT)
     cache.set(f"{user.email}_{sequence_id}_{HISTORY_SUFFIX}", message_history, timeout=DEFAULT_CACHE_TIMEOUT)
-    

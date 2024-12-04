@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand
 from django.contrib.auth.models import User
-from stage_app.models import Org, UserProfile, FourDSequence
+from stage_app.models import Org, UserProfile, FourDSequence, TNAassessment
 
 class Command(BaseCommand):
     help = 'Creates test users and associates them with an organization'
@@ -33,6 +33,9 @@ class Command(BaseCommand):
                 
                 # Create FourDSequence
                 FourDSequence.objects.create(user=user)
+                
+                # Create TNAassessment
+                TNAassessment.objects.create(user=user)
                 
                 self.stdout.write(self.style.SUCCESS(f'Created user: {email}'))
             else:

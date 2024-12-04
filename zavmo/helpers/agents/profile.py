@@ -2,16 +2,9 @@
 # Stage 0: Profile
 Fields:
 """
-# TODO: Do not probe the user for any of the existing fields if shared otherwise ask for the existing fields
-
-# TODO: Update the profile_agent to probe the user for:
-# TODO: job_duration (how long they've been in their current job).
-# TODO: reports_to (their manager or the person they report to).
-# TODO: department (the department name manager runs).
-
 
 from pydantic import Field
-from typing import Dict
+from typing import Dict, List
 from helpers._types import (
     Agent,
     StrictTool,
@@ -19,25 +12,27 @@ from helpers._types import (
 )
 from stage_app.models import UserProfile
 from helpers.agents.a_discover import discover_agent
+from helpers.agents.tna_assessment import tna_assessment_agent
 from helpers.agents.common import get_agent_instructions
 
 ### For handoff
 
-class transfer_to_discover_stage(StrictTool):
-    """Transfer to the Discovery stage when the learner has completed the Profile stage."""
+class transfer_to_tna_assessment_stage(StrictTool):
+    """After updating the profile stage, transfer to the TNA Assessment stage when the learner has completed the Profile stage."""
     
     def execute(self, context: Dict):
-        """Transfer to the Discovery stage when the learner has completed the Profile stage."""        
+        """Transfer to the TNA Assessment stage when the learner has completed the Profile stage."""
         profile = UserProfile.objects.get(user__email=context['email'])
         is_complete, error = profile.check_complete()
         if not is_complete:
             raise ValueError(error)
         summary = profile.get_summary()
-        agent = discover_agent
+        agent = tna_assessment_agent
         agent.start_message = f"Here is the learner's profile: {summary}"
-        
-        return Result(agent=agent, context=context)
 
+        return Result(value="Transferred to TNA Assessment stage.",
+            agent=agent, 
+            context=context)
 
 ### For updating the data
 
@@ -51,8 +46,10 @@ class update_profile_data(StrictTool):
     current_role: str     = Field(description="The learner's current role.")
     current_industry: str = Field(description="The industry in which the learner is currently working in.")
     years_of_experience: int = Field(description="The number of years the learner has worked in their current industry.")
-
-    
+    department: str       = Field(description="The department the learner works in.")
+    manager: str      = Field(description="The name of the person the learner reports to.")
+    job_duration: int = Field(description="The number of years the learner has worked in their current job.")
+   
     def execute(self, context: Dict):
         # Get email and sequence_id from context
         email       = context.get('email')
@@ -71,10 +68,12 @@ class update_profile_data(StrictTool):
         profile.current_role = self.current_role
         profile.current_industry = self.current_industry
         profile.years_of_experience = self.years_of_experience
+        profile.manager = self.manager
+        profile.department = self.department
+        profile.job_duration = self.job_duration
         profile.save()
         
         context['profile'] = self.model_dump()
-        
         return Result(value=self.model_dump_json(), context=context)
             
 profile_agent = Agent(
@@ -83,8 +82,8 @@ profile_agent = Agent(
     model="gpt-4o",
     instructions=get_agent_instructions('profile'),
     functions=[
-        update_profile_data, 
-        transfer_to_discover_stage
+        update_profile_data,
+        transfer_to_tna_assessment_stage
     ],
     tool_choice="auto",
     parallel_tool_calls=False

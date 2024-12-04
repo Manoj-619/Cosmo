@@ -10,8 +10,9 @@ DEFAULT_CACHE_TIMEOUT = 24*60*60*7 # 7 days
 
 STAGE_ORDER = {
     "profile": 1,
-    "discover": 2,
-    "discuss": 3,
-    "deliver": 4,
-    "demonstrate": 5
+    "tna_assessment": 2,
+    "discover": 3,
+    "discuss": 4,
+    "deliver": 5,
+    "demonstrate": 6
 }

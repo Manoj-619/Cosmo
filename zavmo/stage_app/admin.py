@@ -2,7 +2,8 @@ from django.contrib import admin
 from .models import (
     Org, 
     FourDSequence,
-    UserProfile, 
+    UserProfile,
+    TNAassessment,
     DiscoverStage, 
     DiscussStage, 
     DeliverStage, 
@@ -17,6 +18,7 @@ class FourDSequenceAdmin(admin.ModelAdmin):
 admin.site.register(Org)
 admin.site.register(FourDSequence, FourDSequenceAdmin)
 admin.site.register(UserProfile)
+admin.site.register(TNAassessment)
 admin.site.register(DiscoverStage)
 admin.site.register(DiscussStage)
 admin.site.register(DeliverStage)

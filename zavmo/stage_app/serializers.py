@@ -1,7 +1,7 @@
 import uuid  # Add this import at the top
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
-from .models import UserProfile, DiscoverStage, DiscussStage, DeliverStage, DemonstrateStage, Org, FourDSequence
+from .models import UserProfile, DiscoverStage, DiscussStage, DeliverStage, DemonstrateStage, Org, FourDSequence, TNAassessment
 
 User = get_user_model()
 
@@ -35,7 +35,13 @@ class UserProfileSerializer(BaseStageSerializer):
     class Meta:
         model = UserProfile
         fields = ['id', 'email', 'org_id', 'org_name', 'first_name', 'last_name', 'age', 'edu_level', 'current_role']
-                
+
+
+class TNAassessmentSerializer(BaseStageSerializer):
+    class Meta:
+        model = TNAassessment
+        exclude = ('sequence', 'user')
+               
 class DiscoverStageSerializer(BaseStageSerializer):
     class Meta:
         model = DiscoverStage

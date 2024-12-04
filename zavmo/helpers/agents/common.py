@@ -1,7 +1,10 @@
 import os
 import codecs
 import yaml
+from typing import Dict
 from helpers.chat import get_prompt
+from stage_app.models import UserProfile
+import json
 
 def get_yaml_data(yaml_path, yaml_dir="assets/data"):
     """Load a YAML file containing field data.
@@ -54,7 +57,13 @@ def get_agent_instructions(stage_name: str) -> str:
     conf_data       = get_yaml_data(stage_name.lower())
     agent_keys      = ['name', 'description', 'instructions', 'examples', 'completion_condition', 'next_stage', 'next_stage_description']
     prompt_context  = {k:v for k,v in conf_data.items() if k in agent_keys}
-    system_content  = get_prompt('probe.md', 
-                                 context=prompt_context,
-                                 prompt_dir="assets/prompts")
+
+    if stage_name == 'TNA Assessment':
+        system_content  = get_prompt('tna_assessment.md', 
+                                    context=prompt_context,
+                                    prompt_dir="assets/prompts")
+    else:
+        system_content  = get_prompt('probe.md', 
+                                    context=prompt_context,
+                                    prompt_dir="assets/prompts")
     return system_content   
