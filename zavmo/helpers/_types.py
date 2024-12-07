@@ -34,6 +34,7 @@ class Agent(BaseModel):
     functions: List[AgentFunction] = []
     tool_choice: str = None
     parallel_tool_calls: bool = True
+    context: dict = {}
 
 
 class StrictTool(BaseModel):

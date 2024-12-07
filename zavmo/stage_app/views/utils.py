@@ -6,7 +6,7 @@ from stage_app.serializers import (
     UserProfileSerializer, TNAassessmentSerializer
 )
 from helpers.agents import a_discover, b_discuss,c_deliver,d_demonstrate, profile, tna_assessment
-
+from helpers.agents.common import get_tna_assessment_instructions
 from helpers.constants import CONTEXT_SUFFIX, HISTORY_SUFFIX, DEFAULT_CACHE_TIMEOUT
 from helpers.swarm import run_step
 
@@ -50,7 +50,11 @@ def _determine_stage(user, context, sequence_id):
     profile = UserProfile.objects.get(user__email=user.email)
     tna_assessments = TNAassessment.objects.filter(user=user, sequence_id=sequence_id)
     for assessment in tna_assessments:
-        tna_is_complete, tna_error = assessment.check_complete()
+        if not assessment.evidence_of_competency:
+            tna_is_complete = False
+            break
+        else:
+            tna_is_complete = True
         
     profile_is_complete, profile_error = profile.check_complete()
     if not profile_is_complete:
@@ -119,15 +123,23 @@ def _process_agent_response(stage_name, message_history, context, max_turns=10):
     for i in range(stage_level):
         if i == 0:
             stage_model = UserProfile.objects.get(user__email=email)
-        else:
+        elif i == 1:
+            stage_model = TNAassessment
+        elif i > 1:
             stage_model = stage_models[i].objects.get(user__email=email, sequence_id=sequence_id)
         
-        summary = stage_model.get_summary()
+        if stage_model == TNAassessment:
+            all_tna_assessments = TNAassessment.objects.filter(user__email=email, sequence_id=sequence_id)
+            summary = "".join([s.get_summary() for s in all_tna_assessments])
+        else:
+            summary = stage_model.get_summary()
         agent.start_message = f"""
         **{stage_order[i].capitalize()}:**
         
         {summary}        
-        """        
+        """ 
+    if stage_name == 'tna_assessment':
+        agent.instructions = get_tna_assessment_instructions(context)
     return run_step(
         agent=agent,
         messages=message_history,

@@ -10,12 +10,16 @@ from helpers._types import (
     StrictTool,
     Result,
 )
-from stage_app.models import UserProfile
+from stage_app.models import UserProfile, TNAassessment
 from helpers.agents.a_discover import discover_agent
 from helpers.agents.tna_assessment import tna_assessment_agent
-from helpers.agents.common import get_agent_instructions
+from helpers.agents.common import get_agent_instructions, get_tna_assessment_instructions
+from helpers.chat import get_prompt
+import os
+import json
 
 ### For handoff
+
 
 class transfer_to_tna_assessment_stage(StrictTool):
     """After updating the profile stage, transfer to the TNA Assessment stage when the learner has completed the Profile stage."""
@@ -29,7 +33,7 @@ class transfer_to_tna_assessment_stage(StrictTool):
         summary = profile.get_summary()
         agent = tna_assessment_agent
         agent.start_message = f"Here is the learner's profile: {summary}"
-
+        agent.instructions  = get_tna_assessment_instructions(context)
         return Result(value="Transferred to TNA Assessment stage.",
             agent=agent, 
             context=context)

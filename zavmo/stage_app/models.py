@@ -97,7 +97,7 @@ class UserProfile(models.Model):
 class TNAassessment(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='tna_assessments')
     sequence = models.ForeignKey('FourDSequence', on_delete=models.CASCADE, related_name='tna_assessments')
-    competency = models.CharField(max_length=20)
+    competency = models.CharField(max_length=20, default=None, null=True)
     user_assessed_knowledge_level = models.PositiveSmallIntegerField(
         choices=[
             (1, 'Novice (Basic awareness)'),
@@ -125,7 +125,7 @@ class TNAassessment(models.Model):
     evidence_of_competency = models.TextField(blank=True, null=True, verbose_name="Evidence of Competency")
 
     def __str__(self):
-        return f"User {self.user.email} - Sequence {self.sequence.id} - TNA Assessment Stage - {self.competency}"
+        return f"User {self.user.email} - Sequence {self.sequence.id} - TNA Assessment - Competency: {self.competency}"
     
     def check_complete(self):
         if not self.competency:
@@ -139,14 +139,13 @@ class TNAassessment(models.Model):
         return True, None
     
     def get_summary(self):
-        assessments = TNAassessment.objects.filter(user=self.user, sequence=self.sequence)
-        summary = ""
-        for assessment in assessments:
-            summary += f"**Competency**: {assessment.competency}\n"
-            summary += f"**User Assessed Knowledge Level**: {assessment.user_assessed_knowledge_level}\n"
-            summary += f"**Zavmo Assessed Knowledge Level**: {assessment.zavmo_assessed_knowledge_level}\n"
-            summary += f"**Evidence of Competency**: {assessment.evidence_of_competency}\n\n"
+        summary=""
+        summary += f"**Competency**: {self.competency}\n"
+        summary += f"**User Assessed Knowledge Level**: {self.user_assessed_knowledge_level}\n"
+        summary += f"**Zavmo Assessed Knowledge Level**: {self.zavmo_assessed_knowledge_level}\n"
+        summary += f"**Evidence of Competency**: {self.evidence_of_competency}\n\n"
         return summary.strip()
+
 # Stage 1
 class DiscoverStage(models.Model):
     user           = models.ForeignKey(User, on_delete=models.CASCADE, related_name='discover_stage')

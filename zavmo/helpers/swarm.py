@@ -53,7 +53,7 @@ def fetch_agent_response(agent: Agent, history: List, context: Dict) -> ChatComp
     }
     if tools:
         create_params["parallel_tool_calls"] = agent.parallel_tool_calls
-
+    # logging.info(f"Agent instructions: {agent.instructions}")
     return openai_client.chat.completions.create(**create_params)
 
 
