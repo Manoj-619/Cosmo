@@ -96,8 +96,7 @@ def get_tna_assessment_instructions(context: Dict):
 
     user_profile = UserProfile.objects.get(user__email=context['email'])
 
-    tna_assessments = TNAassessment.objects.filter(user__email=context['email'], sequence_id=context['sequence_id'])
-    if tna_assessments.count()==1:  # Changed to check for zero assessments
+    if not TNAassessment.objects.exists():
         competency_names = [c['competency'] for c in all_competencies]
         # Create new TNAassessment objects for each competency
         for competency in competency_names:
@@ -106,12 +105,10 @@ def get_tna_assessment_instructions(context: Dict):
                 sequence_id=context['sequence_id'],
                 competency=competency
             )    
-        # Delete TNAassessment objects with no competency, as it is no longer needed
-        TNAassessment.objects.filter(user__email=context['email'], sequence_id=context['sequence_id']).first().delete()
-        tna_assessments = TNAassessment.objects.filter(user__email=context['email'], sequence_id=context['sequence_id'])
+    tna_assessments = TNAassessment.objects.filter(user__email=context['email'], sequence_id=context['sequence_id'])
     
     competencies_to_assess = [assessment.competency for assessment in tna_assessments 
-                              if not assessment.evidence_of_competency]
+                            if not assessment.evidence_of_competency]
     
     system_content = compile_system_content(competencies_to_assess, all_competencies, prompt_context)
     return system_content 

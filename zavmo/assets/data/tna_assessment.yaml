@@ -1,8 +1,8 @@
 name: TNA Assessment
 id: tna_assessment
 description: >
-  The TNA assessment evaluates learner proficiency in a competency shared from the NOS, with clear criteria for each level. It starts with a self-assessment, followed by validation against the criteria and progression to determine the highest level achieved.
-
+  The TNA assessment evaluates learner proficiency in a competency from the NOS, starting with self-assessment, validation against criteria, and applying progression criteria to determine the highest level achieved.
+  
 instructions: > 
   1. **Present the Competency**:  
     - Introduce the competency to assess.  

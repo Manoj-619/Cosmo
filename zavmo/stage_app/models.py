@@ -95,6 +95,10 @@ class UserProfile(models.Model):
 
 
 class TNAassessment(models.Model):
+    
+    class Meta:
+        verbose_name_plural = "TNA Assessments"
+
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='tna_assessments')
     sequence = models.ForeignKey('FourDSequence', on_delete=models.CASCADE, related_name='tna_assessments')
     competency = models.CharField(max_length=20, default=None, null=True)

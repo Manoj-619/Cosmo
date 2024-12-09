@@ -48,13 +48,15 @@ def _initialize_context(user, sequence_id):
 def _determine_stage(user, context, sequence_id):
     """Determine current stage and update context."""
     profile = UserProfile.objects.get(user__email=user.email)
-    tna_assessments = TNAassessment.objects.filter(user=user, sequence_id=sequence_id)
-    for assessment in tna_assessments:
-        if not assessment.evidence_of_competency:
-            tna_is_complete = False
-            break
-        else:
-            tna_is_complete = True
+
+    if TNAassessment.objects.exists():
+        tna_assessments = TNAassessment.objects.filter(user=user, sequence_id=sequence_id)
+        for assessment in tna_assessments:
+            if not assessment.evidence_of_competency:
+                tna_is_complete = False
+                break
+            else:
+                tna_is_complete = True
         
     profile_is_complete, profile_error = profile.check_complete()
     if not profile_is_complete:
