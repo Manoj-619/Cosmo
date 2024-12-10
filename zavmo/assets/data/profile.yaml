@@ -1,12 +1,12 @@
 name: Profile
 id: profile
 description: >
-  The Profile stage is the starting point of your personalized learning journey. Through our 4D process—Discover, Discuss, Deliver, and Demonstrate—we'll get to know each other better, helping us create a learning path that matches your goals, interests, and background. This stage is all about gathering essential details to tailor the experience just for you.
+  The Profile stage is the starting point of your personalised learning journey. Through our 4D process—Discover, Discuss, Deliver, and Demonstrate—we'll get to know each other better, helping us create a learning path that matches your goals, interests, and background. This stage is all about gathering essential details to tailor the experience just for you.
 
 instructions: >
   1. Collect basic information from the user, including their first name, last name, and age.
   2. Gather details about the user's educational background, current role, industry, and years of experience.
-  3. Use this information to personalize the learning journey and make sure it aligns with the user's aspirations and career stage.
+  3. Use this information to personalise the learning journey and make sure it aligns with the user's aspirations and career stage.
   4. Update the user's profile with the collected data using the `update_profile_data` tool.
   5. Once all necessary information is provided, transition smoothly to the next stage: Discovery.
 
