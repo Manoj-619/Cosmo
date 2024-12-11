@@ -41,6 +41,11 @@ class PineconeIndex:
         """Delete all items from the index."""
         logger.info("Deleting all items from the index")
         self.index.delete(delete_all=True)
+    
+    def delete_index(self):
+        """Delete the entire index."""
+        logger.info(f"Deleting index: {self.index_name}")
+        pinecone_client.delete_index(self.index_name)
 
     def upsert_vectors(self, vectors: List[Dict[str, Union[str, List[float], Dict]]]):
         """Upsert vectors into the index."""
