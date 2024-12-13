@@ -48,25 +48,22 @@ def _initialize_context(user, sequence_id):
 def _determine_stage(user, context, sequence_id):
     """Determine current stage and update context."""
     profile = UserProfile.objects.get(user__email=user.email)
-
-    if TNAassessment.objects.exists():
-        tna_assessments = TNAassessment.objects.filter(user=user, sequence_id=sequence_id)
-        for assessment in tna_assessments:
-            if not assessment.evidence_of_competency:
-                tna_is_complete = False
-                break
-            else:
-                tna_is_complete = True
-        
+    
     profile_is_complete, profile_error = profile.check_complete()
     if not profile_is_complete:
         context.update(_create_empty_context(user.email, context['sequence_id'], profile))
         return 'profile'
     
-    if not tna_is_complete:
+    if TNAassessment.objects.exists():
+        tna_assessments = TNAassessment.objects.filter(user=user, sequence_id=sequence_id)
+        for assessment in tna_assessments:
+            if not assessment.evidence_of_competency:
+                context.update(_create_empty_context(user.email, context['sequence_id'], profile))
+                return 'tna_assessment'
+    elif not TNAassessment.objects.exists():
         context.update(_create_empty_context(user.email, context['sequence_id'], profile))
-        return 'tna_assessment'
-    
+        return 'profile'
+            
     sequence = FourDSequence.objects.get(id=sequence_id)
     context.update(_create_full_context(user.email, context['sequence_id'], profile, sequence))
     return sequence.stage_display
