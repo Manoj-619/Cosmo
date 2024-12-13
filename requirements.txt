@@ -60,3 +60,4 @@ django-ratelimit
 pyyaml
 
 tabulate
+pinecone
