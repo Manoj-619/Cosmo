@@ -21,7 +21,8 @@ from helpers.swarm import openai_client
 import os
 import json
 import logging
-criteria_prompt ="""As a proficient assistant, your task is to identify all competencies outlined in both the knowledge and performance sections of the NOS document. For each identified competency, develop assessment criteria based on the six levels of Bloom's Taxonomy:
+
+criteria_prompt ="""As a proficient assistant, your task is to list all competencies outlined in both the knowledge and performance sections of the NOS document. For each listed competency, develop assessment criteria based on the six levels of Bloom's Taxonomy:
 
 Remember: Can the user recall relevant facts, definitions, or procedures related to this skill?
 Understand: Is the user able to explain or interpret the concepts associated with this skill?
@@ -49,7 +50,7 @@ class GetSkillFromNOS(StrictTool):
 class GetRequiredSkillsFromNOS(StrictTool):
     """A tool to extract all competencies from both sections (knowledge and performance) of National Occupational Standards(NOS)"""
     
-    nos: List[GetSkillFromNOS] = Field(description="List all competencies from both sections (knowledge and performance) with corresponding criteria on Bloom's Taxonomy levels")
+    nos: List[GetSkillFromNOS] = Field(description="List all competencies mentioned in the NOS document from both sections (knowledge and performance) with corresponding criteria on Bloom's Taxonomy levels")
     
     def execute(self, context: Dict):
         return self.model_dump_json()
