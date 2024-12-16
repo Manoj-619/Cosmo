@@ -34,9 +34,6 @@ class Command(BaseCommand):
                 # Create FourDSequence
                 FourDSequence.objects.create(user=user)
                 
-                # Create TNAassessment
-                TNAassessment.objects.create(user=user)
-                
                 self.stdout.write(self.style.SUCCESS(f'Created user: {email}'))
             else:
                 self.stdout.write(self.style.WARNING(f'User already exists: {email}'))
