@@ -50,8 +50,7 @@ class GetSkillFromNOS(StrictTool):
 class GetRequiredSkillsFromNOS(StrictTool):
     """A tool to extract all competencies from both sections (knowledge and performance) of National Occupational Standards(NOS)"""
     
-    nos: List[GetSkillFromNOS] = Field(description="List all competencies mentioned in the NOS document from both sections (knowledge and performance) with corresponding criteria on Bloom's Taxonomy levels",
-                                       max_length=3)
+    nos: List[GetSkillFromNOS] = Field(description="List all competencies mentioned in the NOS document from both sections (knowledge and performance) with corresponding criteria on Bloom's Taxonomy levels")
     
     def execute(self, context: Dict):
         return self.model_dump_json()
