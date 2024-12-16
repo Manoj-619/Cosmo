@@ -23,7 +23,7 @@ def fetch_nos_text(industry: str, current_role: str) -> List[str]:
     Fetch NOS text from Pinecone based on industry and current role.
     
     """
-    query_vector = get_embedding(current_role)  
+    query_vector = get_embedding(f"Occupation relevant to {current_role}")  
 
     # Query the Pinecone index
     index = pinecone_client.Index('test-nos')  
@@ -37,7 +37,3 @@ def fetch_nos_text(industry: str, current_role: str) -> List[str]:
     # Extract and return the NOS texts from the response
     nos_texts = [match['metadata']['text'] for match in response.matches]
     return nos_texts
-
-
-
-
