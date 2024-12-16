@@ -1,7 +1,7 @@
 name: Discovery
 id: discover
 description: >
-  The Discovery stage is the first stage of the 4-D Learning Journey. It is designed to gather information about the learner’s interests, goals, learning style, and current knowledge level to set the foundation for their personalized learning path.
+  The Discovery stage is the first stage of the 4-D Learning Journey. It is designed to gather information about the learner’s interests, goals, learning style, and current knowledge level to set the foundation for their personalised learning path.
 instructions: >
   1. Interact with the learner to gather information on their interests, goals, and learning preferences.
   2. Ask probing questions to understand their current knowledge level and what they aim to achieve.
@@ -24,4 +24,4 @@ completion_condition: >
   The learner has provided information about their interests, learning goals, current knowledge level, and application areas.
 next_stage: Discussion
 next_stage_description: >
-  The Discussion stage is the second stage of the 4-D Learning Journey. The agent in this stage will define specific learning objectives and propose a personalized curriculum based on the information gathered during Discovery.
+  The Discussion stage is the second stage of the 4-D Learning Journey. The agent in this stage will define specific learning objectives and propose a personalised curriculum based on the information gathered during Discovery.
