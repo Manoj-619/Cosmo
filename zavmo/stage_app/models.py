@@ -101,7 +101,7 @@ class TNAassessment(models.Model):
 
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='tna_assessments')
     sequence = models.ForeignKey('FourDSequence', on_delete=models.CASCADE, related_name='tna_assessments')
-    competency = models.CharField(max_length=20, default=None, null=True)
+    competency = models.CharField(max_length=50, default=None, null=True)
     blooms_taxonomy_criteria = models.JSONField(default=list, blank=True, null=True, verbose_name="Bloom's Taxonomy Criteria")
     user_assessed_knowledge_level = models.PositiveSmallIntegerField(
         choices=[

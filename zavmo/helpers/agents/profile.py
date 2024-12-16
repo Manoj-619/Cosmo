@@ -84,7 +84,6 @@ class transfer_to_tna_assessment_stage(StrictTool):
         summary = profile.get_summary()
         if profile.current_role:
             all_competencies = get_nos_competencies_with_criteria(profile.current_role)
-            logging.info(f"All competencies: {all_competencies}")
             for item in all_competencies['nos']:
                 TNAassessment.objects.create(
                     user=profile.user,
