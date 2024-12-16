@@ -3,14 +3,13 @@
 import logging
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from .models import FourDSequence, DiscoverStage, DiscussStage, DeliverStage, DemonstrateStage,TNAassessment
+from .models import FourDSequence, DiscoverStage, DiscussStage, DeliverStage, DemonstrateStage
 
 logger = logging.getLogger(__name__)
 
 @receiver(post_save, sender=FourDSequence)
 def create_stage_models(sender, instance, created, **kwargs):
     if created:
-        TNAassessment.objects.create(user=instance.user, sequence=instance)
         DiscoverStage.objects.create(user=instance.user, sequence=instance)
         DiscussStage.objects.create(user=instance.user, sequence=instance)
         DeliverStage.objects.create(user=instance.user, sequence=instance)
