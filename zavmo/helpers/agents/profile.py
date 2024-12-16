@@ -84,6 +84,7 @@ class transfer_to_tna_assessment_stage(StrictTool):
         summary = profile.get_summary()
         if profile.current_role:
             all_competencies = get_nos_competencies_with_criteria(profile.current_role)
+            logging.info(f"All competencies: {all_competencies}")
             for item in all_competencies['nos']:
                 TNAassessment.objects.create(
                     user=profile.user,
@@ -91,6 +92,7 @@ class transfer_to_tna_assessment_stage(StrictTool):
                     competency=item['competency'],
                     blooms_taxonomy_criteria=item['blooms_taxonomy_criteria']
                 )
+            logging.info(f"TNA assessments created: {TNAassessment.objects.filter(user=profile.user, sequence_id=context['sequence_id']).count()}")
         agent = tna_assessment_agent
         agent.start_message = f"Here is the learner's profile: {summary}"
         agent.instructions  = get_tna_assessment_instructions(context)
