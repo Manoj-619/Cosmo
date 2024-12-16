@@ -91,6 +91,7 @@ class transfer_to_tna_assessment_stage(StrictTool):
                     competency=item['competency'],
                     blooms_taxonomy_criteria=item['blooms_taxonomy_criteria']
                 ) 
+            TNAassessment.objects.get(user=profile.user, sequence_id=context['sequence_id']).delete()
         agent = tna_assessment_agent
         agent.start_message = f"Here is the learner's profile: {summary}"
         agent.instructions  = get_tna_assessment_instructions(context)
