@@ -50,18 +50,19 @@ class GetSkillFromNOS(StrictTool):
 class GetRequiredSkillsFromNOS(StrictTool):
     """A tool to extract all competencies from both sections (knowledge and performance) of National Occupational Standards(NOS)"""
     
-    nos: List[GetSkillFromNOS] = Field(description="List all competencies mentioned in the NOS document from both sections (knowledge and performance) with corresponding criteria on Bloom's Taxonomy levels")
+    nos: List[GetSkillFromNOS] = Field(description="List all competencies mentioned in the NOS document from both sections (knowledge and performance) with corresponding criteria on Bloom's Taxonomy levels",
+                                       max_length=3)
     
     def execute(self, context: Dict):
         return self.model_dump_json()
 
 
 def get_nos_competencies_with_criteria(current_role: str):
-    nos_doc = fetch_nos_text(industry="Sales", current_role=current_role)[0]
+    nos_doc = fetch_nos_text(industry="Sales", current_role=current_role)
     logging.info(f"NOS document for current role as {current_role}: {nos_doc}")
     messages = [
         {"role": "system", "content": criteria_prompt},
-        {"role": "user", "content": f"Here is the NOS document: {nos_doc}"}
+        {"role": "user", "content": f"Here is the NOS document:\n\n{nos_doc}"}
     ]
     create_params = {
         "model": "gpt-4o-mini",

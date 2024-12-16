@@ -26,14 +26,28 @@ def fetch_nos_text(industry: str, current_role: str) -> List[str]:
     query_vector = get_embedding(f"Occupation relevant to {current_role}")  
 
     # Query the Pinecone index
+    ## Get NOS ID
     index = pinecone_client.Index('test-nos')  
-    response = index.query(
-        vector=query_vector,
-        top_k=10,
-        include_metadata=True,
-        filter={"industry": industry}
-    )
+    nos_searched_from_relavant_occupations = index.query(
+            vector=query_vector,
+            top_k=1,
+            include_metadata=True,
+            filter={"industry": "Sales", "type":"Developed by"},
 
-    # Extract and return the NOS texts from the response
-    nos_texts = [match['metadata']['text'] for match in response.matches]
-    return nos_texts
+        )
+    nos_id = nos_searched_from_relavant_occupations['matches'][0]['metadata']['nos_id']
+
+
+    ## Get NOS sections
+    nos_sections_from_nos_id = index.query(
+            vector=query_vector,
+            top_k=2,
+            include_metadata=True,
+            filter={"nos_id": nos_id,  
+                    "$or": [
+            {"type": "Performance criteria"},
+            {"type": "Knowledge and understanding"}]
+            })
+
+    matching_nos_doc = "\n".join([match['metadata']['text'] for match in nos_sections_from_nos_id['matches']])
+    return matching_nos_doc
