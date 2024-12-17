@@ -74,7 +74,7 @@ def _create_empty_context(email, sequence_id, profile):
         'email': email,
         'sequence_id': sequence_id,
         'profile': UserProfileSerializer(profile).data if profile else {},
-        'tna_assessment': {},
+        'tna_assessment': [],
         'discover': {},
         'discuss': {},
         'deliver': {},
@@ -100,7 +100,7 @@ def _create_full_context(email, sequence_id, profile, sequence):
 def _get_message_history(email, sequence_id, user_message):
     """Get or initialize message history."""
     message_history = cache.get(f"{email}_{sequence_id}_{HISTORY_SUFFIX}", [])
-    
+    message_history = [message for message in message_history if not message.get("context")]
     if user_message:
         message_history.append({"role": "user", "content": user_message})
     else:
@@ -151,6 +151,7 @@ def _update_context_and_cache(user, sequence_id, context, message_history, respo
     # NOTE:  Add either last message or all recent messages
     # message_history.append(response.messages[-1])
     message_history.extend(response.messages)
+    logger.info(f"Response messages: {response.messages}")
     
     context.update(response.context)
     
@@ -164,8 +165,8 @@ def _update_context_and_cache(user, sequence_id, context, message_history, respo
         # Ensure the stage is valid before updating
         if response.agent.id in valid_stages:
             sequence.update_stage(response.agent.id)
-
+            
         context['stage'] = response.agent.id
-
+    message_history.append({"context":context})
     cache.set(f"{user.email}_{sequence_id}_{CONTEXT_SUFFIX}", context, timeout=DEFAULT_CACHE_TIMEOUT)
     cache.set(f"{user.email}_{sequence_id}_{HISTORY_SUFFIX}", message_history, timeout=DEFAULT_CACHE_TIMEOUT)

@@ -21,6 +21,7 @@ from helpers._types import (
 )
 from typing import List, Dict, Any
 from collections import defaultdict
+from helpers.utils import get_utc_timestamp
 
 load_dotenv()
 
@@ -80,7 +81,7 @@ def execute_tool_calls(
                     "role": "tool",
                     "tool_call_id": tool_call.id,
                     "tool_name": name,
-                    "content": f"Error: Tool {name} not found.",
+                    "content": f"Error: Tool {name} not found."
                 }
             )
             continue
@@ -179,6 +180,8 @@ def run_step(agent: Agent, messages: List, context: Dict = {}, max_turns: int = 
         message.sender = active_agent.name
         # Convert the message to dict and add to history
         message_dict = json.loads(message.model_dump_json())
+        message_dict["timestamp"] = get_utc_timestamp()
+        # TODO: message_dict['intent'] = 
 
         # If no tool calls, we're done with this turn
         if not message.tool_calls:

@@ -84,3 +84,9 @@ def get_logger(name):
     ch.setFormatter(formatter)
     logger.addHandler(ch)
     return logger
+
+def get_utc_timestamp():
+    """
+    Get UTC timestamp
+    """
+    return datetime.utcnow().isoformat()

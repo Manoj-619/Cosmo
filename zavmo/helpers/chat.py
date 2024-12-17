@@ -178,7 +178,8 @@ def filter_history(history, max_tokens=84000):
             pass
         elif not message.get('content'):
             continue
-
+        if message.get("context"):
+            continue
         message_tokens = count_tokens([message])
         if total_tokens + message_tokens <= max_tokens:
             total_tokens += message_tokens

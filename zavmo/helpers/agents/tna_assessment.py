@@ -60,6 +60,7 @@ class SaveCompetency(StrictTool):
         tna_assessment.evidence_of_competency = self.evidence_of_competency
         tna_assessment.save()
         tna_assessment_agent.instructions = get_tna_assessment_instructions(context)
+        context['tna_assessment'].append(self.model_dump())
         return Result(value=self.model_dump_json(), context=context)
 
     
