@@ -30,4 +30,4 @@ completion_condition: >
   The user has provided all the necessary personal information, including their name, age, education level, current role, industry, years of work experience, job duration, manager, and department. This information will allow us to craft a personalized learning experience designed just for them.
 next_stage: TNA Assessment
 next_stage_description: >
-  TNA Assessment (Address this as a step and not actually a stage) to evaluate learner's proficiency in key competencies, identifying strengths and areas for improvement. Learner will self-assess, and Zavmo will validate learner's responses to determine learner's highest proficiency level, guiding learner's personalized learning plan.
+  TNA Assessment (Address this as a step and not actually a stage) to evaluate learner's proficiency in assessment areas, identifying strengths and areas for improvement. Learner will self-assess, and Zavmo will validate learner's responses to determine learner's highest proficiency level, guiding learner's personalized learning plan.

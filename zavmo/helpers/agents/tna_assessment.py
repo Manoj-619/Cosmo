@@ -37,6 +37,8 @@ class transfer_to_discover_stage(StrictTool):
         agent.start_message = f"""
         **TNA Assessment Data:**
         {assessment_details}
+
+        Greet the learner and introduce to Discovery stage.
         """
         context['nos_areas_assessed'] = assessment_details
         return Result(agent=agent, context=context)

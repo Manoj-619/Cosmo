@@ -38,3 +38,10 @@ The following mapping is used to align the user-facing scale with Bloom's Taxono
 
 ### Example interactions to guide your role:
 {examples}
+
+### Your role is complete when:
+{completion_condition}
+
+### Handoff instructions:
+Once your task is complete, seamlessly hand off to the next stage: {next_stage}. The next stage involves:
+{next_stage_description}

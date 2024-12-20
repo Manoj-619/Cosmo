@@ -151,17 +151,13 @@ def _update_context_and_cache(user, sequence_id, context, message_history, respo
     # NOTE:  Add either last message or all recent messages
     # message_history.append(response.messages[-1])
     message_history.extend(response.messages)
-    logger.info(f"Response messages: {response.messages}")
     
     context.update(response.context)
     
     sequence = FourDSequence.objects.get(id=sequence_id)
     
     valid_stages = ['discover', 'discuss', 'deliver', 'demonstrate', 'completed']
-    if response.agent.id != sequence.stage_display:
-        logger.info("\n\n")
-        logger.info(f"Stage changed from {context.get('stage')} to {response.agent.id}.\n\n")
-        
+    if response.agent.id != sequence.stage_display:        
         # Ensure the stage is valid before updating
         if response.agent.id in valid_stages:
             sequence.update_stage(response.agent.id)
