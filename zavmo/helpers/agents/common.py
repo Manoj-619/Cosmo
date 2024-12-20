@@ -57,11 +57,11 @@ def compile_system_content(competencies_to_assess,prompt_context):
     if len(competencies_to_assess)>=1:
         criterias = competencies_to_assess[0]['blooms_taxonomy_criteria']
         criterias = "\n".join([f"- {c['level']}: {c['criteria']}" for c in criterias])
-        prompt_context['nos_competency_with criteria'] = f"Competency: {competencies_to_assess[0]['competency']}\nCriteria:\n{criterias}"
+        prompt_context['nos_area_with_criteria'] = f"Assessment Area: {competencies_to_assess[0]['assessment_area']}\nCriteria:\n{criterias}"
         
-        attach = "**Important**:\n - The assessment for shared competency will be considered complete if details of the competency is saved."
+        attach = "**Important**:\n - The assessment for shared NOS area will be considered complete if details of the assessment area is saved."
     else:
-        attach = f"""No NOS Competencies left to assess.\nHandoff instructions:\nWhen no NOS Competency is provided to assess, seamlessly hand off to the next stage: The Discovery stage of the 4-D Learning Journey.\nThis stage involves a detailed gap analysis between current competencies and future competencies required as per NOS. Learning goals, interests, and preferred learning styles will be identified, creating a roadmap for a personalized and engaging learning journey."""
+        attach = f"""No NOS Areas left to assess.\nHandoff instructions:\nWhen no NOS Area is provided to assess, seamlessly hand off to the next stage: The Discovery stage of the 4-D Learning Journey.\nThis stage involves a detailed gap analysis between current competencies and future competencies required as per NOS. Learning goals, interests, and preferred learning styles will be identified, creating a roadmap for a personalized and engaging learning journey."""
     
     system_content  = get_prompt('tna_assessment.md', 
                                     context=prompt_context,
@@ -86,8 +86,8 @@ def get_tna_assessment_instructions(context: Dict):
  
     tna_assessments = TNAassessment.objects.filter(user__email=context['email'], sequence_id=context['sequence_id'])
     
-    competencies_to_assess = [{'competency':assessment.competency, 'blooms_taxonomy_criteria':assessment.blooms_taxonomy_criteria} 
-                              for assessment in tna_assessments if not assessment.evidence_of_competency]
+    competencies_to_assess = [{'assessment_area':assessment.assessment_area, 'blooms_taxonomy_criteria':assessment.blooms_taxonomy_criteria} 
+                              for assessment in tna_assessments if not assessment.evidence_of_assessment]
     
     system_content = compile_system_content(competencies_to_assess, prompt_context)
     return system_content 

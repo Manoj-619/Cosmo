@@ -15,21 +15,21 @@ logger = get_logger(__name__)
 
 
 class transfer_to_discover_stage(StrictTool):
-    """Transfer to the Discovery stage when no NOS competency is left to assess."""
+    """Transfer to the Discovery stage when no NOS area is left to assess."""
     
     def execute(self, context: Dict):
-        """Transfer to the Discovery stage when it is informed that all NOS competencies are assessed."""        
+        """Transfer to the Discovery stage when it is informed that all NOS areas are assessed."""        
         email       = context['email']
         sequence_id = context['sequence_id']
         tna_assessments = TNAassessment.objects.filter(user__email=email, sequence_id=sequence_id)
         if tna_assessments.count() >= 5:
-            raise ValueError("TNA Assessment is not complete for all NOS competencies.")
+            raise ValueError("TNA Assessment is not complete for all NOS areas.")
         
         assessment_details = "\n".join(
-            f"Competency: {assessment.competency}, "
+            f"Assessment Area: {assessment.assessment_area}, "
             f"User Level: {assessment.user_assessed_knowledge_level}, "
             f"Zavmo Level: {assessment.zavmo_assessed_knowledge_level}, "
-            f"Evidence: {assessment.evidence_of_competency}"
+            f"Evidence: {assessment.evidence_of_assessment}"
             for assessment in tna_assessments
         )
 
@@ -38,26 +38,26 @@ class transfer_to_discover_stage(StrictTool):
         **TNA Assessment Data:**
         {assessment_details}
         """
-        context['nos_competencies_assessment'] = assessment_details
+        context['nos_areas_assessed'] = assessment_details
         return Result(agent=agent, context=context)
 
-class SaveCompetency(StrictTool):
+class SaveAssessmentArea(StrictTool):
     """
-    Save the competency details.
+    Save the details of an assessment area.
     """
-    competency: str = Field(description="The competency that was assessed.")
-    user_assessed_knowledge_level: int = Field(description="The knowledge level in the competency self-assessed by the user, rated on a scale of 1 to 7.")
+    assessment_area: str = Field(description="The assessment area that was assessed.")
+    user_assessed_knowledge_level: int = Field(description="The knowledge level in the assessment area self-assessed by the user, rated on a scale of 1 to 7.")
     zavmo_assessed_knowledge_level: int = Field(description="The knowledge level determined by Zavmo based on the assessment, rated on a scale of 1 to 7.")
-    evidence_of_competency: str = Field(description="A brief description of the evidence for the competency, based on the conversation.")
+    evidence_of_assessment: str = Field(description="A brief description of the evidence for the assessment area, based on the conversation.")
     
     def execute(self, context: Dict):
         """
-        Save the details of a competency.
+        Save the details of an assessment area.
         """
-        tna_assessment = TNAassessment.objects.get(user__email=context['email'], sequence_id=context['sequence_id'], competency=self.competency)
+        tna_assessment = TNAassessment.objects.get(user__email=context['email'], sequence_id=context['sequence_id'], assessment_area=self.assessment_area)
         tna_assessment.user_assessed_knowledge_level  = self.user_assessed_knowledge_level
         tna_assessment.zavmo_assessed_knowledge_level = self.zavmo_assessed_knowledge_level
-        tna_assessment.evidence_of_competency = self.evidence_of_competency
+        tna_assessment.evidence_of_assessment = self.evidence_of_assessment
         tna_assessment.save()
         tna_assessment_agent.instructions = get_tna_assessment_instructions(context)
         context['tna_assessment'].append(self.model_dump())
@@ -69,7 +69,7 @@ tna_assessment_agent = Agent(
     id="tna_assessment",
     model="gpt-4o",
     #instructions=get_agent_instructions('tna_assessment'),
-    functions=[SaveCompetency,
+    functions=[SaveAssessmentArea,
                transfer_to_discover_stage],
     tool_choice="auto",
     parallel_tool_calls=False

@@ -8,6 +8,7 @@ from typing import Dict, List, Literal
 from helpers._types import (
     Agent,
     StrictTool,
+    PermissiveTool,
     Result,
     function_to_json
 )
@@ -41,16 +42,17 @@ class BloomTaxonomyLevels(StrictTool):
         return self.model_dump_json()
     
 class GetSkillFromNOS(StrictTool):
-    competency:str = Field(description="Name of the competency")
+    assessment_area:str = Field(description="Name of the competency")
     blooms_taxonomy_criteria: List[BloomTaxonomyLevels] = Field(description="Competency criterias on Bloom's Taxonomy levels")
     
     def execute(self, context: Dict):
         return self.model_dump_json()
 
-class GetRequiredSkillsFromNOS(StrictTool):
+class GetRequiredSkillsFromNOS(PermissiveTool):
     """A tool to extract all competencies from both sections (knowledge and performance) of National Occupational Standards(NOS)"""
     
-    nos: List[GetSkillFromNOS] = Field(description="List all competencies mentioned in the NOS document from both sections (knowledge and performance) with corresponding criteria on Bloom's Taxonomy levels")
+    nos: List[GetSkillFromNOS] = Field(description="List all competencies mentioned in the NOS document from both sections (knowledge and performance) with corresponding criteria on Bloom's Taxonomy levels"
+                                       ,max_length=3)
     
     def execute(self, context: Dict):
         return self.model_dump_json()
@@ -86,19 +88,22 @@ class transfer_to_tna_assessment_stage(StrictTool):
             all_competencies = get_nos_competencies_with_criteria(profile.current_role)
             try:
                 for item in all_competencies['nos']:
-                    competency = item['competency']
+                    assessment_area = item['assessment_area']
                     TNAassessment.objects.create(
                         user=profile.user,
                         sequence_id=context['sequence_id'],
-                        competency=competency,
+                        assessment_area=assessment_area,
                         blooms_taxonomy_criteria=item['blooms_taxonomy_criteria']
                     )
             except Exception as e:
-                logging.error(f"Error creating TNA assessments: {e}, Competency: {competency}")
+                logging.error(f"Error creating TNA assessments: {e}, Assessment Area: {assessment_area}")
 
             logging.info(f"TNA assessments created: {TNAassessment.objects.filter(user=profile.user, sequence_id=context['sequence_id']).count()}")
         agent = tna_assessment_agent
-        agent.start_message = f"Here is the learner's profile: {summary}"
+        agent.start_message = f"""Here is the learner's profile: {summary}
+        
+        Greet the learner and introduce about the TNA (Training Needs Analysis) Assessment step.
+        """
         agent.instructions  = get_tna_assessment_instructions(context)
         return Result(value="Transferred to TNA Assessment stage.",
             agent=agent, 

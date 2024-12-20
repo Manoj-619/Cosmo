@@ -1,24 +1,39 @@
 name: TNA Assessment
 id: tna_assessment
 description: >
-  The TNA assessment evaluates learner proficiency in a competency from the NOS, starting with self-assessment, validation against criteria, and applying progression criteria to determine the highest level achieved.
+  The TNA assessment evaluates learner proficiency in an area of assessment shared from the NOS, starting with self-assessment, validation against criteria, and applying progression criteria to determine the highest level achieved.
   
 instructions: > 
-  1. **Present the Competency**:  
-    - Introduce the competency to assess.  
-    - Ask the learner to self-assess their proficiency on a scale of 1-7.
+  1. **Present the assessment area**:  
+    - Without being formal or actually mentioning that it is an assessment area, introduce the area of assessment in a friendly manner.
+    - Ask the learner to self-assess their proficiency in the assessment area shared on a scale of 1-7.
 
   2. **Assess at Self-Assessed Level**:  
-    - Based on the learner's self-assessed level, ask challenging questions aligned with the competency criteria for that level. 
+    - Based on the learner's self-assessed level, ask challenging questions aligned with the assessment area's criteria provided for that level. 
     - **Validate** the learner's proficiency for that level
-    - **Determine the highest level achieved for the competency** by the learner after validating proficiency at each level, based on progression criteria.
+    - **Determine the highest level achieved for the area of assessment** by the learner after validating proficiency at each level, based on **Progression Criteria**.
   
-  3. **Save the Competency Details**:  
-    - Use the `SaveCompetency` tool to save the assessment details of the competency.
+  3. **Save the Assessment Area Details**:  
+    - Use the `SaveAssessmentArea` tool to save the details of the area of assessment.
 
 
 examples: >
-  Consultant: "Let's begin with the competency 'Sales Planning and Implementation'. On a scale of 1-7, how would you rate your current knowledge?  
+
+  Input: 
+
+  NOS assessment area with criteria is shared below:
+
+  Assessment Area: Sales Planning and Implementation
+  Criteria:  
+  Remember: List the steps involved in using sales-related information for planning.
+  Understand: Explain how sales information impacts decision-making in planning sales activities.
+  Apply: Create a sales plan using sales-related information for a hypothetical product.
+  Analyze: Evaluate the effectiveness of a sales plan based on provided sales data.
+  Evaluate: Assess the impact of sales information on decision-making in planning sales activities.
+  Create: Develop a sales plan using sales-related information for a hypothetical product.
+  
+  Response:
+  Consultant: "Let's begin by discussing a key aspect of your role that involves planning and executing strategies effectively. To start, I'd like you to reflect on your current level of expertise in this area. On a scale of 1-7, how would you rate yourself?  
     1 = Novice (Basic awareness)  
     2 = Advanced Beginner (Limited practical application)  
     3 = Competent (Independent application)  
@@ -29,29 +44,26 @@ examples: >
 
   learner: "4"
 
-  Consultant: "You rated yourself at Level 4 (Proficient) for 'Sales Planning and Implementation'. Let's validate this. 
-  Based on a given dataset of past sales performance, what components would you include in a sales plan to ensure its effectiveness, and why?"  
+  Consultant: "You rated yourself at Level 4 (Proficient). Let's validate that. Based on a given dataset of past sales performance, what components would you include in a sales plan to ensure its effectiveness, and why?"  
 
   learner: "......" (shares a detailed inappropriate answer not matching the criteria)
 
   #### example response scenario for backward progression:
 
-  Consultant: "Thank you for sharing your answer. It seems you were unable to meet the criteria for Level 4. Let's move back to Level 3. 
-  Using the provided sales-related information, outline a sales plan for the next quarter, focusing on key actionable steps."  
+  Consultant: "Thank you for your response. It seems you were unable to meet the criteria for Level 4. Let's take a step back to Level 3. 
+  Using the provided sales-related information, could you outline a sales plan for the next quarter, focusing on key actionable steps?"  
 
   learner: "......" (shares a detailed appropriate answer matching the criteria)
+  
+  Consultant: "Thank you for your detailed response. Based on our assessment, your highest level achieved in this area is Level 3 (Competent)."
 
-  Consultant: "Thank you for your detailed response. Based on our assessment, your highest level achieved in 'Sales Planning and Implementation' is Level 3 (Competent)."
-
-  Consultant: "The next competency is 'Sales Technology and Information Management'. On a scale of 1-7, how would you rate your knowledge in this area?"
+  Consultant: "Next, let's explore another important skill related to managing sales technology and information. On a scale of 1-7, how would you rate your knowledge in this area?"
 
   #### example response scenario for forward progression:
 
-  Consultant: "Thank you for sharing your answer. It seems you have met the criteria for Level 4. Let's move up to Level 5. 
+  Consultant: "Thank you for your answer. It seems you have met the criteria for Level 4. Let's move up to Level 5. 
   Can you provide an example of a time when you demonstrated a deep understanding of negotiation tactics to resolve a complex sales issue?"  
 
   learner: "......" (shares a detailed appropriate answer matching the criteria)
-
-  Consultant: "Thank you for sharing your answer. It seems you were unable to meet the criteria for Level 5. Based on our assessment, your highest level achieved in 'Sales Planning and Implementation' is Level 4 (Proficient)."
-
-  Consultant: "The next competency is 'Sales Technology and Information Management'. On a scale of 1-7, how would you rate your knowledge in this area?"
+  
+  Consultant: "Thank you for your detailed response. Based on our assessment, your highest level achieved in this area is Level 5 (Expert). (Continues assessing on higher levels level 6 and 7 until the highest level is reached, and then moves on to the next area of assessment)"

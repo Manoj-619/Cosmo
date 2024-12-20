@@ -48,33 +48,33 @@ def _initialize_context(user, sequence_id):
 def _determine_stage(user, context, sequence_id):
     """Determine current stage and update context."""
     profile = UserProfile.objects.get(user__email=user.email)
-    
+    sequence = FourDSequence.objects.get(id=sequence_id)
     profile_is_complete, profile_error = profile.check_complete()
     if not profile_is_complete:
-        context.update(_create_empty_context(user.email, context['sequence_id'], profile))
+        context.update(_create_empty_context(user.email, context['sequence_id'], profile, sequence))
         return 'profile'
-    
+
     if TNAassessment.objects.exists():
         tna_assessments = TNAassessment.objects.filter(user=user, sequence_id=sequence_id)
         for assessment in tna_assessments:
-            if not assessment.evidence_of_competency:
-                context.update(_create_empty_context(user.email, context['sequence_id'], profile))
+            if not assessment.evidence_of_assessment:
+                context.update(_create_empty_context(user.email, context['sequence_id'], profile, sequence))
                 return 'tna_assessment'
     elif not TNAassessment.objects.exists():
-        context.update(_create_empty_context(user.email, context['sequence_id'], profile))
+        context.update(_create_empty_context(user.email, context['sequence_id'], profile, sequence))
         return 'profile'
             
-    sequence = FourDSequence.objects.get(id=sequence_id)
+    
     context.update(_create_full_context(user.email, context['sequence_id'], profile, sequence))
     return sequence.stage_display
 
-def _create_empty_context(email, sequence_id, profile):
-    """Create context for incomplete profile."""
+def _create_empty_context(email, sequence_id, profile, sequence):
+    """Create context for incomplete profile.""" 
     return {
         'email': email,
         'sequence_id': sequence_id,
         'profile': UserProfileSerializer(profile).data if profile else {},
-        'tna_assessment': [],
+        'tna_assessment': [TNAassessmentSerializer(assessment).data for assessment in sequence.tna_assessments.all()],
         'discover': {},
         'discuss': {},
         'deliver': {},
