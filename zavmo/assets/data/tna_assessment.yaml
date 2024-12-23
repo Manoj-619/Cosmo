@@ -14,7 +14,7 @@ instructions: >
     - **Determine the highest level achieved for the area of assessment** by the learner after validating proficiency at each level, based on **Progression Criteria**.
   
   3. **Save the Assessment Area Details**:  
-    - Use the `SaveAssessmentArea` tool to save the details of the area of assessment.
+    - Use the `SaveAssessmentArea` tool to save the details of the area of assessment before we move on to the next assessment area.
 
 examples: >
   Input: 
