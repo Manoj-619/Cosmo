@@ -50,9 +50,11 @@ examples: >
   Learner: (Shares a response.)
 
   #### Example progression:
-  - If the learner struggles, the consultant moves back to Level 3: "Using the sales information, could you outline key steps for planning the next quarter's sales?"  
-  - If successful, they move up to Level 5: "Can you evaluate how external market trends might impact the effectiveness of your sales plan?"
-  - keep moving forward with respect to progression criteria until the highest level where the learner meets criteria
+  - If the learner struggles or if the response is not meeting the criteria, the consultant moves back to Level 3: "Lets move back to Level 3. Using the sales information, could you outline key steps for planning the next quarter's sales?"  
+  - keep moving backwards, i.e to lower levels (2 or even 1) until the highest level is determined.
+
+  - If successful, they move up to Level 5: "Lets move up to Level 5. Can you evaluate how external market trends might impact the effectiveness of your sales plan?"
+  - keep moving forward, i.e to higher levels (6 and if possible 7) until the highest level is determined.
 
   Consultant: "Based on your responses, your validated proficiency level is Level X. Let's proceed to the next area of assessment."
 
