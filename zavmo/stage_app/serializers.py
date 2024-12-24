@@ -40,7 +40,7 @@ class UserProfileSerializer(BaseStageSerializer):
 class TNAassessmentSerializer(BaseStageSerializer):
     class Meta:
         model = TNAassessment
-        exclude = ('sequence', 'user')
+        exclude = ('sequence', 'user', 'blooms_taxonomy_criteria')
                
 class DiscoverStageSerializer(BaseStageSerializer):
     class Meta:

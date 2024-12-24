@@ -87,6 +87,7 @@ class transfer_to_tna_assessment_stage(StrictTool):
         if profile.current_role:
             all_competencies = get_nos_competencies_with_criteria(profile.current_role)
             try:
+                # Create all TNA assessments
                 for item in all_competencies['nos']:
                     assessment_area = item['assessment_area']
                     TNAassessment.objects.create(
@@ -95,6 +96,15 @@ class transfer_to_tna_assessment_stage(StrictTool):
                         assessment_area=assessment_area,
                         blooms_taxonomy_criteria=item['blooms_taxonomy_criteria']
                     )
+                
+                # Update context with assessment counts
+                total_assessments = len(all_competencies['nos'])
+                context['tna_assessment'] = {
+                    'total_assessments': total_assessments,
+                    'current_assessment': 1,  # Starting with first assessment
+                    'assessments_data': []
+                }
+                
             except Exception as e:
                 logging.error(f"Error creating TNA assessments: {e}, Assessment Area: {assessment_area}")
 
@@ -104,7 +114,7 @@ class transfer_to_tna_assessment_stage(StrictTool):
         
         Greet the learner and introduce about the TNA (Training Needs Analysis) Assessment step.
         """
-        agent.instructions  = get_tna_assessment_instructions(context)
+        agent.instructions = get_tna_assessment_instructions(context)
         return Result(value="Transferred to TNA Assessment stage.",
             agent=agent, 
             context=context)

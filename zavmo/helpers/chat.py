@@ -178,17 +178,15 @@ def filter_history(history, max_tokens=84000):
             pass
         elif not message.get('content'):
             continue
-        if message.get("context"):
-            continue
+
         message_tokens = count_tokens([message])
         if total_tokens + message_tokens <= max_tokens:
             total_tokens += message_tokens
-            message_history.insert(0, message)
+            message_history.insert(0, {k: v for k, v in message.items() if k != 'context'})
 
     # Check if the first message is a tool call message and remove it if so
     if message_history and message_history[0].get('role') == 'tool':
         message_history.pop(0)
-
     return message_history
 
 def validate_message_history(filtered_messages):

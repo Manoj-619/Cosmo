@@ -50,7 +50,7 @@ class SaveAssessmentArea(StrictTool):
     assessment_area: str = Field(description="The assessment area that was assessed.")
     user_assessed_knowledge_level: int = Field(description="The knowledge level in the assessment area self-assessed by the user, rated on a scale of 1 to 7.")
     zavmo_assessed_knowledge_level: int = Field(description="The knowledge level determined by Zavmo based on the assessment, rated on a scale of 1 to 7.")
-    evidence_of_assessment: str = Field(description="A brief description of the evidence for the assessment area, based on the conversation.")
+    evidence_of_assessment: str = Field(description="Generate a report of the assessment area, based on the learner's response. Including gaps in knowledge, areas of strength, and recommendations for training.")
     
     def execute(self, context: Dict):
         """
@@ -62,7 +62,8 @@ class SaveAssessmentArea(StrictTool):
         tna_assessment.evidence_of_assessment = self.evidence_of_assessment
         tna_assessment.save()
         tna_assessment_agent.instructions = get_tna_assessment_instructions(context)
-        context['tna_assessment'].append(self.model_dump())
+        context['tna_assessment']['assessments_data'].append(self.model_dump())
+        context['tna_assessment']['current_assessment'] += 1
         return Result(value=self.model_dump_json(), context=context)
 
     

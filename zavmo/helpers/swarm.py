@@ -180,7 +180,6 @@ def run_step(agent: Agent, messages: List, context: Dict = {}, max_turns: int = 
         message.sender = active_agent.name
         # Convert the message to dict and add to history
         message_dict = json.loads(message.model_dump_json())
-        message_dict["timestamp"] = get_utc_timestamp()
         # TODO: message_dict['intent'] = 
 
         # If no tool calls, we're done with this turn
@@ -205,6 +204,8 @@ def run_step(agent: Agent, messages: List, context: Dict = {}, max_turns: int = 
             break
         # Update context
         context.update(partial_response.context)
+        context['timestamp'] = get_utc_timestamp()
+        message_dict['context'] = context
 
         # Update active_agent if a new agent is returned
         if partial_response.agent and partial_response.agent != active_agent:
