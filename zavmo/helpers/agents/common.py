@@ -57,7 +57,7 @@ def compile_system_content(competencies_to_assess,prompt_context):
     if len(competencies_to_assess)>=1:
         criterias = competencies_to_assess[0]['blooms_taxonomy_criteria']
         criterias = "\n".join([f"- {c['level']}: {c['criteria']}" for c in criterias])
-        prompt_context['nos_area_with_criteria'] = f"""Assessment Area: {competencies_to_assess[0]['assessment_area']}\nCriteria:\n{criterias}\n\n**Important**:\n - The assessment for shared Assesment area will be considered complete if details of the assessment area is saved."""
+        prompt_context['nos_area_with_criteria'] = f"""Assessment Area: {competencies_to_assess[0]['assessment_area']}\nCriteria:\n{criterias}\n\n**Important**:\n - The assessment for shared Assesment Area will be considered complete if details of the assessment area is saved."""
     else:
         prompt_context['nos_area_with_criteria'] = "No NOS Areas left to assess."
 

@@ -115,7 +115,7 @@ def _create_full_context(email, sequence_id, profile, sequence):
 def _get_message_history(email, sequence_id, user_message):
     """Get or initialize message history."""
     message_history = cache.get(f"{email}_{sequence_id}_{HISTORY_SUFFIX}", [])
-    message_history = [{k: v for k, v in message.items() if k != 'context'} for message in message_history]
+
     if user_message:
         message_history.append({"role": "user", "content": user_message})
     else:

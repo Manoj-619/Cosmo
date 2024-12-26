@@ -43,7 +43,9 @@ def fetch_agent_response(agent: Agent, history: List, context: Dict) -> ChatComp
     if agent.start_message:
         init_messages.append({"role": "user", "content": agent.start_message})
 
-    messages = init_messages + filter_history(history)
+    messages_history = init_messages + filter_history(history)
+    # Remove context from messages
+    messages = [{k: v for k, v in message.items() if k != 'context'} for message in messages_history]
     tools = [function_to_json(f) for f in agent.functions]
 
     create_params = {
@@ -55,6 +57,7 @@ def fetch_agent_response(agent: Agent, history: List, context: Dict) -> ChatComp
     if tools:
         create_params["parallel_tool_calls"] = agent.parallel_tool_calls
     # logging.info(f"Agent instructions: {agent.instructions}")
+    logging.info(f"Model: {create_params['model']}")
     return openai_client.chat.completions.create(**create_params)
 
 
@@ -182,6 +185,8 @@ def run_step(agent: Agent, messages: List, context: Dict = {}, max_turns: int = 
         message_dict = json.loads(message.model_dump_json())
         # TODO: message_dict['intent'] = 
 
+        message_dict['context'] = context
+        message_dict['context']['timestamp'] = get_utc_timestamp()
         # If no tool calls, we're done with this turn
         if not message.tool_calls:
             history.append(message_dict)
@@ -202,10 +207,6 @@ def run_step(agent: Agent, messages: List, context: Dict = {}, max_turns: int = 
         if partial_response.stop:
             logging.info("Stopping agent chain")
             break
-        # Update context
-        context.update(partial_response.context)
-        context['timestamp'] = get_utc_timestamp()
-        message_dict['context'] = context
 
         # Update active_agent if a new agent is returned
         if partial_response.agent and partial_response.agent != active_agent:

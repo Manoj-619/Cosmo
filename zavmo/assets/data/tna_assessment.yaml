@@ -9,7 +9,7 @@ instructions: >
     - Ask the learner to self-assess their proficiency in the shared area of assessment on a scale of 1-7.
   2. **Assess at Self-Assessed Level**:  
     - Based on the learner's self-assessed level, ask challenging questions aligned with the assessment area's criteria provided for that level. 
-    - **Validate** the learner's proficiency at self-assessed level
+    - Validate the learner's proficiency at self-assessed level
   3. **Determine Zavmo Assessed Level**:
     - It is important to keep moving forward following progression criteria (backward/forward) until the highest level where the learner meets criteria
   4. **Save the Assessment Area Details**:  
@@ -19,7 +19,6 @@ instructions: >
     - If no assessment area is shared to assess, the TNA Assessment step will be completed.
 
 examples: >
-  examples: >
   Input: 
 
   NOS assessment area with criteria is shared below:

@@ -18,12 +18,11 @@ from helpers.agents.tna_assessment import tna_assessment_agent
 from helpers.agents.common import get_agent_instructions, get_tna_assessment_instructions
 from helpers.chat import get_prompt
 from helpers.search import fetch_nos_text
-from helpers.swarm import openai_client
-import os
+from helpers.swarm import fetch_agent_response
 import json
 import logging
 
-criteria_prompt ="""As a proficient assistant, your task is to list all competencies outlined in both the knowledge and performance sections of the NOS document. For each listed competency, develop assessment criteria based on the six levels of Bloom's Taxonomy:
+criteria_prompt ="""As a proficient assistant, your task is to list all competencies outlined in both the knowledge and performance sections of the shared NOS document. For each competency, develop assessment criteria based on the six levels of Bloom's Taxonomy:
 
 Remember: Can the user recall relevant facts, definitions, or procedures related to this skill?
 Understand: Is the user able to explain or interpret the concepts associated with this skill?
@@ -31,6 +30,10 @@ Apply: Can the user effectively utilize the skill in real-world scenarios or sim
 Analyze: Is the user capable of deconstructing complex situations to identify components related to this skill?
 Evaluate: Can the user assess situations and justify decisions involving this skill?
 Create: Is the user able to design or innovate new approaches, presentations, or solutions based on this skill?
+
+**Note**: 
+- Do not skip any competency mentioned in the NOS document, As it represents the skills that the learner needs to develop in future to meet the National Occupational Standards (NOS).
+- The list might have more than 30 competencies at times, when considering from both sections (knowledge and performance).
 """
 
 ### For handoff
@@ -44,35 +47,66 @@ class BloomTaxonomyLevels(StrictTool):
 class GetSkillFromNOS(StrictTool):
     assessment_area:str = Field(description="Name of the competency")
     blooms_taxonomy_criteria: List[BloomTaxonomyLevels] = Field(description="Competency criterias on Bloom's Taxonomy levels")
-    
+    type: Literal["knowledge", "performance"] = Field(description="The type of the competency")
+
     def execute(self, context: Dict):
         return self.model_dump_json()
 
 class GetRequiredSkillsFromNOS(PermissiveTool):
-    """A tool to extract all competencies from both sections (knowledge and performance) of National Occupational Standards(NOS)"""
+    """Use this tool if NOS document is shared by the user."""
     
     nos: List[GetSkillFromNOS] = Field(description="List all competencies mentioned in the NOS document from both sections (knowledge and performance) with corresponding criteria on Bloom's Taxonomy levels"
-                                       ,max_length=3)
+                                        ,max_length=3)
     
     def execute(self, context: Dict):
         return self.model_dump_json()
 
+class GenerateTNAAssessments(StrictTool):
+    """Use this tool, immediately after the user has provided the current role."""
 
-def get_nos_competencies_with_criteria(current_role: str):
-    nos_doc = fetch_nos_text(industry="Sales", current_role=current_role)
-    logging.info(f"NOS document for current role as {current_role}: {nos_doc}")
-    messages = [
-        {"role": "system", "content": criteria_prompt},
-        {"role": "user", "content": f"Here is the NOS document:\n\n{nos_doc}"}
-    ]
-    create_params = {
-        "model": "gpt-4o-mini",
-        "messages": messages,
-        "tools": [function_to_json(GetRequiredSkillsFromNOS)],
-        "tool_choice": "required"
-    }
-    competencies_with_criteria = json.loads(openai_client.chat.completions.create(**create_params).choices[0].message.tool_calls[0].function.arguments)
-    return competencies_with_criteria
+    def execute(self, context: Dict):
+        profile = UserProfile.objects.get(user__email=context['email'])
+        nos_doc = fetch_nos_text(industry="Sales", current_role=profile.current_role)
+        logging.info(f"NOS document for current role as {profile.current_role}: {nos_doc}")
+
+        agent       = profile_agent
+        agent.instructions  = criteria_prompt
+        agent.functions     = [GetRequiredSkillsFromNOS]
+        agent.start_message = f"Here is the NOS document:\n\n{nos_doc}"
+
+        completion  = fetch_agent_response(agent=agent, history=[], context=context)
+        assessments = json.loads(completion.choices[0].message.tool_calls[0].function.arguments)['nos']
+        try:
+            # Create all TNA assessments
+            for item in assessments:
+                assessment_area = item['assessment_area']
+                TNAassessment.objects.create(
+                    user=profile.user,
+                    sequence_id=context['sequence_id'],
+                    assessment_area=assessment_area,
+                    blooms_taxonomy_criteria=item['blooms_taxonomy_criteria']
+                    )
+                
+            # Update context with assessment counts
+            total_assessments = len(assessments)
+            context['tna_assessment'] = {
+                'total_assessments': total_assessments,
+                'current_assessment': 1,  # Starting with first assessment
+                'assessments_data': []
+            }
+            logging.info(f"TNA assessments created: {TNAassessment.objects.filter(user=profile.user, sequence_id=context['sequence_id']).count()}")
+            
+            # Update the agent by bringing back previous instructions and functions
+            agent.instructions = get_agent_instructions('profile')
+            agent.functions = [update_profile_data, transfer_to_tna_assessment_stage]
+            agent.start_message = ""
+
+            return Result(
+                value=f"TNA assessments: {[{assessment.get('assessment_area'): assessment.get('type')} for assessment in assessments]}",
+                context=context)
+        except Exception as e:
+            logging.error(f"Error creating TNA assessments: {e}, Assessment Area: {assessment_area}")
+            return Result(value="Unable to create TNA assessments", context=context)
 
 class transfer_to_tna_assessment_stage(StrictTool):
     """After updating the profile stage, transfer to the TNA Assessment stage when the learner has completed the Profile stage."""
@@ -84,31 +118,6 @@ class transfer_to_tna_assessment_stage(StrictTool):
         if not is_complete:
             raise ValueError(error)
         summary = profile.get_summary()
-        if profile.current_role:
-            all_competencies = get_nos_competencies_with_criteria(profile.current_role)
-            try:
-                # Create all TNA assessments
-                for item in all_competencies['nos']:
-                    assessment_area = item['assessment_area']
-                    TNAassessment.objects.create(
-                        user=profile.user,
-                        sequence_id=context['sequence_id'],
-                        assessment_area=assessment_area,
-                        blooms_taxonomy_criteria=item['blooms_taxonomy_criteria']
-                    )
-                
-                # Update context with assessment counts
-                total_assessments = len(all_competencies['nos'])
-                context['tna_assessment'] = {
-                    'total_assessments': total_assessments,
-                    'current_assessment': 1,  # Starting with first assessment
-                    'assessments_data': []
-                }
-                
-            except Exception as e:
-                logging.error(f"Error creating TNA assessments: {e}, Assessment Area: {assessment_area}")
-
-            logging.info(f"TNA assessments created: {TNAassessment.objects.filter(user=profile.user, sequence_id=context['sequence_id']).count()}")
         agent = tna_assessment_agent
         agent.start_message = f"""Here is the learner's profile: {summary}
         
@@ -168,7 +177,8 @@ profile_agent = Agent(
     instructions=get_agent_instructions('profile'),
     functions=[
         update_profile_data,
-        transfer_to_tna_assessment_stage
+        transfer_to_tna_assessment_stage,
+        GenerateTNAAssessments
     ],
     tool_choice="auto",
     parallel_tool_calls=False
