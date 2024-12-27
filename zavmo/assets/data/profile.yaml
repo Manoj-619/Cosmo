@@ -28,13 +28,13 @@ examples: >
   years_of_experience: "How many years of experience do you have in your field?"
   "Great! With this info, we'll create a learning path that's perfect for you."
 
-  "Here are the TNA assessments that you need to complete in future under two sections: knowledge and performance."
+  "Here are the TNA assessments that you need to complete in future with the following types: knowledge and performance."
   ### Assessment areas for Training Needs Analysis:
 
-    |            Knowledge based assessments                |         Performance based assessments             |
-    |-------------------------------------------------------|---------------------------------------------------|
-    | - List all assessments from knowledge type            | - List all assessments from performance type      |
-    |                                                       |                                                   |
+    |  No. |            Type             |       Assessments       |
+    |--------------------------------------------------------------|
+    |  1   |          knowledge          |     assessment area     |
+    |  2   |          performance        |     assessment area     | 
 
   "Now, let's move to the next step to get started with the TNA Assessment and to accomplish your learning journey. Are you ready?"
 
