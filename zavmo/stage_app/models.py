@@ -128,7 +128,7 @@ class TNAassessment(models.Model):
         blank=True, null=True
     )
     evidence_of_assessment = models.TextField(blank=True, null=True, verbose_name="Evidence of Assessment")
-    type = models.CharField(max_length=10, blank=True, null=True, verbose_name="Type")
+    type = models.CharField(max_length=50, blank=True, null=True, verbose_name="Type")
 
     def __str__(self):
         return f"User {self.user.email} - Sequence {self.sequence.id} - TNA Assessment - Assessment Area: {self.assessment_area}"
