@@ -4,7 +4,7 @@ Fields:
 """
 
 from pydantic import Field
-from typing import Dict, List, Literal, Optional
+from typing import Dict, List, Literal
 from helpers._types import (
     Agent,
     StrictTool,
@@ -21,6 +21,7 @@ from helpers.search import fetch_nos_text
 from helpers.swarm import openai_client
 import json
 import logging
+from enum import Enum
 
 criteria_prompt ="""As a proficient assistant, your task is to list all numberwise given  outlined in both the knowledge and performance sections of the shared NOS document. 
 For each competency, develop assessment criteria based on the six levels of Bloom's Taxonomy:
@@ -31,6 +32,10 @@ Apply: Can the user effectively utilize the skill in real-world scenarios or sim
 Analyze: Is the user capable of deconstructing complex situations to identify components related to this skill?
 Evaluate: Can the user assess situations and justify decisions involving this skill?
 Create: Is the user able to design or innovate new approaches, presentations, or solutions based on this skill?
+
+type: 
+- any competency listed right under **Performance criteria** is of type performance
+- any competency listed right under **Knowledge and understanding** is of type knowledge
 
 **Important**: 
 Do not skip any competency mentioned in the NOS document, as it represents the skills that the learner needs to develop in future to meet the National Occupational Standards (NOS).
@@ -43,26 +48,26 @@ class BloomTaxonomyLevels(StrictTool):
 
     def execute(self, context: Dict):
         return self.model_dump_json()
-    
+
 class GetSkillFromNOS(StrictTool):
     assessment_area:str = Field(description="Name of the competency")
     blooms_taxonomy_criteria: List[BloomTaxonomyLevels] = Field(description="Competency criterias on Bloom's Taxonomy levels")
-    type: Optional[Literal["knowledge", "performance"]] = Field(description="The type of the competency")
+    type: Literal["knowledge", "performance"] = Field(description="The type of the competency")
 
     def execute(self, context: Dict):
-        return self.model_dump_json()
+        return self.model_dump_json() 
 
 class GetRequiredSkillsFromNOS(PermissiveTool):
     """Use this tool if NOS document is shared by the user."""
     
-    nos: List[GetSkillFromNOS] = Field(description="List all competencies mentioned in the NOS document from both sections (knowledge and performance) with corresponding criteria on Bloom's Taxonomy levels"
+    nos: List[GetSkillFromNOS] = Field(description="List all competencies mentioned in the NOS document with corresponding criteria on Bloom's Taxonomy levels and type of the competency."
                                         ,max_length=50)
     
     def execute(self, context: Dict):
         return "Generated TNA assessments"
 
 class GenerateTNAAssessments(StrictTool):
-    """Use this tool, immediately after the user has provided the current role."""
+    """Use this tool to generate TNA assessments, after updating the profile data."""
     
     def execute(self, context: Dict):
         try:
@@ -79,23 +84,13 @@ class GenerateTNAAssessments(StrictTool):
             completion = openai_client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=messages,
-                tools=[function_to_json(GetRequiredSkillsFromNOS)],
-                tool_choice="auto"
+                tools=[function_to_json(GetRequiredSkillsFromNOS)]
             )
 
             assessments = json.loads(completion.choices[0].message.tool_calls[0].function.arguments)['nos']
-            knowledge_items = []
-            performance_items = []
-            
-            for assessment in assessments:
-                try:
-                    if assessment.get('type') == 'knowledge':
-                        knowledge_items.append(assessment)
-                    elif assessment.get('type') == 'performance':
-                        performance_items.append(assessment)
-                except (KeyError, AttributeError) as e:
-                    logging.warning(f"Skipping assessment due to missing type: {assessment}")
-                    continue
+            logging.info(f"Assessments: {assessments}")
+            knowledge_items = [assessment for assessment in assessments if assessment['type'] == "knowledge"]
+            performance_items = [assessment for assessment in assessments if assessment['type'] == "performance"]
             
             # Create chunks of 3 knowledge and 3 performance items each
             def chunk_items(items, chunk_size=3):
@@ -109,10 +104,7 @@ class GenerateTNAAssessments(StrictTool):
             logging.info(f"Performance chunks: {len(performance_chunks)}")
 
             # Delete existing sequence first
-            try:
-                FourDSequence.objects.filter(id=context['sequence_id']).delete()
-            except Exception as e:
-                logging.warning(f"Error deleting sequence: {e}")
+            FourDSequence.objects.filter(id=context['sequence_id']).delete()
 
             sequences_to_assess = []
             for n in range(max(len(knowledge_chunks), len(performance_chunks))):
@@ -130,7 +122,7 @@ class GenerateTNAAssessments(StrictTool):
                             sequence=sequence,
                             assessment_area=assessment['assessment_area'],
                             blooms_taxonomy_criteria=assessment['blooms_taxonomy_criteria'],
-                            type='knowledge'
+                            type=assessment['type']
                         )
                 
                 # Add performance chunk to the same sequence if available
@@ -141,7 +133,7 @@ class GenerateTNAAssessments(StrictTool):
                             sequence=sequence,
                             assessment_area=assessment['assessment_area'],
                             blooms_taxonomy_criteria=assessment['blooms_taxonomy_criteria'],
-                            type='performance'
+                            type=assessment['type']
                         )
             
             # Use the first sequence object
@@ -184,6 +176,8 @@ class transfer_to_tna_assessment_step(StrictTool):
         is_complete, error = profile.check_complete()
         if not is_complete:
             raise ValueError(error)
+        elif not TNAassessment.objects.filter(user=profile.user).exists():
+            raise ValueError("No TNA assessments found for the learner. Please generate TNA assessments first.")
         summary = profile.get_summary()
         agent = tna_assessment_agent
         agent.start_message = f"""Here is the learner's profile: {summary}
