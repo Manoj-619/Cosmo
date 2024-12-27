@@ -128,6 +128,7 @@ class TNAassessment(models.Model):
         blank=True, null=True
     )
     evidence_of_assessment = models.TextField(blank=True, null=True, verbose_name="Evidence of Assessment")
+    type = models.CharField(max_length=10, blank=True, null=True, verbose_name="Type")
 
     def __str__(self):
         return f"User {self.user.email} - Sequence {self.sequence.id} - TNA Assessment - Assessment Area: {self.assessment_area}"
@@ -141,6 +142,8 @@ class TNAassessment(models.Model):
             return False, "Zavmo assessed knowledge level is required"
         if not self.evidence_of_assessment:
             return False, "Evidence of assessment is required"
+        if not self.type:
+            return False, "Type is required"
         return True, None
     
     def get_summary(self):
@@ -149,6 +152,7 @@ class TNAassessment(models.Model):
         summary += f"**User Assessed Knowledge Level**: {self.user_assessed_knowledge_level}\n"
         summary += f"**Zavmo Assessed Knowledge Level**: {self.zavmo_assessed_knowledge_level}\n"
         summary += f"**Evidence of Assessment**: {self.evidence_of_assessment}\n\n"
+        summary += f"**Type**: {self.type}\n"
         return summary.strip()
 
 # Stage 1

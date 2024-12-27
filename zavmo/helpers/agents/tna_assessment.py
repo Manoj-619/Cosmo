@@ -18,18 +18,19 @@ class transfer_to_discover_stage(StrictTool):
     """Transfer to the Discovery stage when no NOS area is left to assess."""
     
     def execute(self, context: Dict):
-        """Transfer to the Discovery stage when it is informed that all NOS areas are assessed."""        
-        email       = context['email']
+        """Transfer to the Discovery stage when it is informed that all NOS areas are assessed."""       
         sequence_id = context['sequence_id']
-        tna_assessments = TNAassessment.objects.filter(user__email=email, sequence_id=sequence_id)
-        if tna_assessments.count() >= 5:
-            raise ValueError("TNA Assessment is not complete for all NOS areas.")
+        tna_assessments = TNAassessment.objects.filter(user=context['user'], sequence_id=sequence_id)
+        for assessment in tna_assessments:
+            if not assessment.evidence_of_assessment:
+                raise ValueError("TNA Assessment is not complete for all NOS areas.")
         
         assessment_details = "\n".join(
             f"Assessment Area: {assessment.assessment_area}, "
             f"User Level: {assessment.user_assessed_knowledge_level}, "
             f"Zavmo Level: {assessment.zavmo_assessed_knowledge_level}, "
-            f"Evidence: {assessment.evidence_of_assessment}"
+            f"Evidence: {assessment.evidence_of_assessment}, "
+            f"Type: {assessment.type}"
             for assessment in tna_assessments
         )
 

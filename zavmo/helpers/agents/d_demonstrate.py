@@ -16,7 +16,7 @@ from helpers._types import (
     Result,
 )
 from helpers.agents.common import get_agent_instructions
-from stage_app.models import FourDSequence, DemonstrateStage
+from stage_app.models import FourDSequence, DemonstrateStage, TNAassessment
 from django.contrib.auth.models import User
 from helpers.utils import get_logger
 
@@ -94,12 +94,27 @@ class mark_completed(StrictTool):
             raise ValueError("Email is required to mark the Demonstration stage as complete.")        
         # Retrieve user and create a new 4D Sequence
         demonstrate_stage = DemonstrateStage.objects.get(user__email=email)
+        sequence_id = context['sequence_id']
         is_complete, error = demonstrate_stage.check_complete()
         if not is_complete:
             raise ValueError(error)        
         user     = User.objects.get(email=email)
-        sequence = FourDSequence.objects.create(user=user)        
-        value = f"4D Sequence {sequence.id} marked as completed. New 4D learning journey created."
+        all_sequences    = FourDSequence.objects.filter(user=user).order_by('created_at')
+        sequences_to_complete = [s.id for s in all_sequences if s.current_stage != FourDSequence.Stage.COMPLETED]   
+        next_sequence = sequences_to_complete[0] if len(sequences_to_complete) > 0 else None
+        if next_sequence:
+            assessments_for_current_sequence = TNAassessment.objects.filter(user=user, sequence=next_sequence)
+            context['sequence_id'] = next_sequence
+            context['sequences_to_complete'] = sequences_to_complete
+            context['tna_assessment'] = {
+                'total_assessments': assessments_for_current_sequence.count(),
+                'current_assessment':1,
+                'assessment_data':[]
+            }
+            value = f"4D Sequence {sequence_id} marked as completed. Lets continue with the next sequence having new NOS competencies."
+        else:
+            sequence = FourDSequence.objects.create(user=user)
+            value = f"4D Sequence {sequence_id} marked as completed. Lets start a new 4D learning journey."
         return Result(value=value, context=context)
 
 demonstrate_agent = Agent(

@@ -29,8 +29,8 @@ def _get_user_and_sequence(request):
     user = request.user
     sequence_id = request.data.get('sequence_id')
     if not sequence_id:
-        sequence = FourDSequence.objects.filter(user=user).order_by('-created_at').first()
-        sequence_id = sequence.id
+        sequences = [sequence for sequence in FourDSequence.objects.filter(user=user).order_by('created_at') if sequence.current_stage != FourDSequence.Stage.COMPLETED]
+        sequence_id = sequences[0].id
     return user, sequence_id
 
 def _initialize_context(user, sequence_id):
@@ -55,14 +55,17 @@ def _determine_stage(user, context, sequence_id):
         return 'profile'
 
     if TNAassessment.objects.exists():
+        logger.info(f"TNA assessment exists so tna_assessment agent will run")
         tna_assessments = TNAassessment.objects.filter(user=user, sequence_id=sequence_id)
         for assessment in tna_assessments:
             if not assessment.evidence_of_assessment:
                 context.update(_create_full_context(user.email, context['sequence_id'], profile, sequence))
+                logger.info(f"TNA assessment exists but is not complete so tna_assessment agent will run")
                 return 'tna_assessment'
             
     elif not TNAassessment.objects.exists():
         context.update(_create_empty_context(user.email, context['sequence_id'], profile, sequence))
+        logger.info(f"TNA assessment does not exist so profile agent will run")
         return 'profile'
     
     context.update(_create_full_context(user.email, context['sequence_id'], profile, sequence))
@@ -115,7 +118,6 @@ def _create_full_context(email, sequence_id, profile, sequence):
 def _get_message_history(email, sequence_id, user_message):
     """Get or initialize message history."""
     message_history = cache.get(f"{email}_{sequence_id}_{HISTORY_SUFFIX}", [])
-
     if user_message:
         message_history.append({"role": "user", "content": user_message})
     else:
@@ -166,9 +168,10 @@ def _update_context_and_cache(user, sequence_id, context, message_history, respo
     # NOTE:  Add either last message or all recent messages
     # message_history.append(response.messages[-1])
     message_history.extend(response.messages)
-    
+
     context.update(response.context)
-    
+    sequence_id = context['sequence_id']
+
     sequence = FourDSequence.objects.get(id=sequence_id)
     
     valid_stages = ['discover', 'discuss', 'deliver', 'demonstrate', 'completed']

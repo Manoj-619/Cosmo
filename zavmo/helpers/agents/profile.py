@@ -4,7 +4,7 @@ Fields:
 """
 
 from pydantic import Field
-from typing import Dict, List, Literal
+from typing import Dict, List, Literal, Optional
 from helpers._types import (
     Agent,
     StrictTool,
@@ -12,17 +12,18 @@ from helpers._types import (
     Result,
     function_to_json
 )
-from stage_app.models import UserProfile, TNAassessment
+from stage_app.models import UserProfile, TNAassessment, FourDSequence
 from helpers.agents.a_discover import discover_agent
 from helpers.agents.tna_assessment import tna_assessment_agent
 from helpers.agents.common import get_agent_instructions, get_tna_assessment_instructions
 from helpers.chat import get_prompt
 from helpers.search import fetch_nos_text
-from helpers.swarm import fetch_agent_response
+from helpers.swarm import openai_client
 import json
 import logging
 
-criteria_prompt ="""As a proficient assistant, your task is to list all competencies outlined in both the knowledge and performance sections of the shared NOS document. For each competency, develop assessment criteria based on the six levels of Bloom's Taxonomy:
+criteria_prompt ="""As a proficient assistant, your task is to list all numberwise given  outlined in both the knowledge and performance sections of the shared NOS document. 
+For each competency, develop assessment criteria based on the six levels of Bloom's Taxonomy:
 
 Remember: Can the user recall relevant facts, definitions, or procedures related to this skill?
 Understand: Is the user able to explain or interpret the concepts associated with this skill?
@@ -31,9 +32,8 @@ Analyze: Is the user capable of deconstructing complex situations to identify co
 Evaluate: Can the user assess situations and justify decisions involving this skill?
 Create: Is the user able to design or innovate new approaches, presentations, or solutions based on this skill?
 
-**Note**: 
-- Do not skip any competency mentioned in the NOS document, As it represents the skills that the learner needs to develop in future to meet the National Occupational Standards (NOS).
-- The list might have more than 30 competencies at times, when considering from both sections (knowledge and performance).
+**Important**: 
+Do not skip any competency mentioned in the NOS document, as it represents the skills that the learner needs to develop in future to meet the National Occupational Standards (NOS).
 """
 
 ### For handoff
@@ -47,7 +47,7 @@ class BloomTaxonomyLevels(StrictTool):
 class GetSkillFromNOS(StrictTool):
     assessment_area:str = Field(description="Name of the competency")
     blooms_taxonomy_criteria: List[BloomTaxonomyLevels] = Field(description="Competency criterias on Bloom's Taxonomy levels")
-    type: Literal["knowledge", "performance"] = Field(description="The type of the competency")
+    type: Optional[Literal["knowledge", "performance"]] = Field(description="The type of the competency")
 
     def execute(self, context: Dict):
         return self.model_dump_json()
@@ -56,60 +56,127 @@ class GetRequiredSkillsFromNOS(PermissiveTool):
     """Use this tool if NOS document is shared by the user."""
     
     nos: List[GetSkillFromNOS] = Field(description="List all competencies mentioned in the NOS document from both sections (knowledge and performance) with corresponding criteria on Bloom's Taxonomy levels"
-                                        ,max_length=3)
+                                        ,max_length=50)
     
     def execute(self, context: Dict):
-        return self.model_dump_json()
+        return "Generated TNA assessments"
 
 class GenerateTNAAssessments(StrictTool):
     """Use this tool, immediately after the user has provided the current role."""
-
+    
     def execute(self, context: Dict):
-        profile = UserProfile.objects.get(user__email=context['email'])
-        nos_doc = fetch_nos_text(industry="Sales", current_role=profile.current_role)
-        logging.info(f"NOS document for current role as {profile.current_role}: {nos_doc}")
-
-        agent       = profile_agent
-        agent.instructions  = criteria_prompt
-        agent.functions     = [GetRequiredSkillsFromNOS]
-        agent.start_message = f"Here is the NOS document:\n\n{nos_doc}"
-
-        completion  = fetch_agent_response(agent=agent, history=[], context=context)
-        assessments = json.loads(completion.choices[0].message.tool_calls[0].function.arguments)['nos']
         try:
-            # Create all TNA assessments
-            for item in assessments:
-                assessment_area = item['assessment_area']
-                TNAassessment.objects.create(
-                    user=profile.user,
-                    sequence_id=context['sequence_id'],
-                    assessment_area=assessment_area,
-                    blooms_taxonomy_criteria=item['blooms_taxonomy_criteria']
-                    )
-                
-            # Update context with assessment counts
-            total_assessments = len(assessments)
-            context['tna_assessment'] = {
-                'total_assessments': total_assessments,
-                'current_assessment': 1,  # Starting with first assessment
-                'assessments_data': []
-            }
-            logging.info(f"TNA assessments created: {TNAassessment.objects.filter(user=profile.user, sequence_id=context['sequence_id']).count()}")
+            profile = UserProfile.objects.get(user__email=context['email'])
+            user = profile.user
+            nos_doc = fetch_nos_text(industry="Sales", current_role=profile.current_role)
+            logging.info(f"NOS document: {nos_doc}")
+
+            messages = [
+                {"role": "system", "content": criteria_prompt},
+                {"role": "user", "content": f"Here is the NOS document:\n\n{nos_doc}"}
+            ]
+
+            completion = openai_client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=messages,
+                tools=[function_to_json(GetRequiredSkillsFromNOS)],
+                tool_choice="auto"
+            )
+
+            assessments = json.loads(completion.choices[0].message.tool_calls[0].function.arguments)['nos']
+            knowledge_items = []
+            performance_items = []
             
-            # Update the agent by bringing back previous instructions and functions
-            agent.instructions = get_agent_instructions('profile')
-            agent.functions = [update_profile_data, transfer_to_tna_assessment_stage]
-            agent.start_message = ""
+            for assessment in assessments:
+                try:
+                    if assessment.get('type') == 'knowledge':
+                        knowledge_items.append(assessment)
+                    elif assessment.get('type') == 'performance':
+                        performance_items.append(assessment)
+                except (KeyError, AttributeError) as e:
+                    logging.warning(f"Skipping assessment due to missing type: {assessment}")
+                    continue
+            
+            # Create chunks of 3 knowledge and 3 performance items each
+            def chunk_items(items, chunk_size=3):
+                return [items[i:i + chunk_size] for i in range(0, len(items), chunk_size)]
+            
+            # Create chunks of 3 knowledge and 3 performance items each
+            knowledge_chunks = chunk_items(knowledge_items)
+            performance_chunks = chunk_items(performance_items)
 
+            logging.info(f"Knowledge chunks: {len(knowledge_chunks)}")
+            logging.info(f"Performance chunks: {len(performance_chunks)}")
+
+            # Delete existing sequence first
+            try:
+                FourDSequence.objects.filter(id=context['sequence_id']).delete()
+            except Exception as e:
+                logging.warning(f"Error deleting sequence: {e}")
+
+            sequences_to_assess = []
+            for n in range(max(len(knowledge_chunks), len(performance_chunks))):
+                sequence = FourDSequence.objects.create(
+                    user=user,
+                    current_stage=FourDSequence.Stage.DISCOVER
+                )
+                sequences_to_assess.append(sequence)
+
+                # Add knowledge chunk to this sequence if available
+                if n < len(knowledge_chunks):
+                    for assessment in knowledge_chunks[n]:
+                        TNAassessment.objects.create(
+                            user=user,
+                            sequence=sequence,
+                            assessment_area=assessment['assessment_area'],
+                            blooms_taxonomy_criteria=assessment['blooms_taxonomy_criteria'],
+                            type='knowledge'
+                        )
+                
+                # Add performance chunk to the same sequence if available
+                if n < len(performance_chunks):
+                    for assessment in performance_chunks[n]:
+                        TNAassessment.objects.create(
+                            user=user,
+                            sequence=sequence,
+                            assessment_area=assessment['assessment_area'],
+                            blooms_taxonomy_criteria=assessment['blooms_taxonomy_criteria'],
+                            type='performance'
+                        )
+            
+            # Use the first sequence object
+            current_sequence = sequences_to_assess[0]
+            assessments_for_current_sequence = TNAassessment.objects.filter(
+                user=user, 
+                sequence=current_sequence
+            )
+
+            context.update({
+                'sequence_id': current_sequence.id,  # Convert UUID to string
+                'sequences_to_complete': [s.id for s in sequences_to_assess if s.current_stage != FourDSequence.Stage.COMPLETED],
+                'tna_assessment': {
+                    'total_assessments': assessments_for_current_sequence.count(),
+                    'current_assessment': 1,
+                    'assessment_data': []
+                }
+            })
+
+            # Convert assessment data to serializable format
+            current_assessments_info = {
+                str(a.assessment_area): str(a.type) 
+                for a in assessments_for_current_sequence
+            }
+            
             return Result(
-                value=f"TNA assessments: {[{assessment.get('assessment_area'): assessment.get('type')} for assessment in assessments]}",
-                context=context)
+                value=f"TNA assessments: {current_assessments_info}", 
+                context=context
+            )
         except Exception as e:
-            logging.error(f"Error creating TNA assessments: {e}, Assessment Area: {assessment_area}")
-            return Result(value="Unable to create TNA assessments", context=context)
-
-class transfer_to_tna_assessment_stage(StrictTool):
-    """After updating the profile stage, transfer to the TNA Assessment stage when the learner has completed the Profile stage."""
+            logging.error(f"Error in GenerateTNAAssessments: {e}")
+            raise
+ 
+class transfer_to_tna_assessment_step(StrictTool):
+    """After updating the profile stage, transfer to the TNA Assessment step when the learner has completed the Profile stage."""
     
     def execute(self, context: Dict):
         """Transfer to the TNA Assessment stage when the learner has completed the Profile stage."""
@@ -124,7 +191,7 @@ class transfer_to_tna_assessment_stage(StrictTool):
         Greet the learner and introduce about the TNA (Training Needs Analysis) Assessment step.
         """
         agent.instructions = get_tna_assessment_instructions(context)
-        return Result(value="Transferred to TNA Assessment stage.",
+        return Result(value="Transferred to TNA Assessment step.",
             agent=agent, 
             context=context)
 
@@ -177,7 +244,7 @@ profile_agent = Agent(
     instructions=get_agent_instructions('profile'),
     functions=[
         update_profile_data,
-        transfer_to_tna_assessment_stage,
+        transfer_to_tna_assessment_step,
         GenerateTNAAssessments
     ],
     tool_choice="auto",

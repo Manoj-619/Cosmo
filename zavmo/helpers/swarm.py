@@ -171,6 +171,8 @@ def run_step(agent: Agent, messages: List, context: Dict = {}, max_turns: int = 
     # If no active agent, we're done
     while active_agent and turns < max_turns:
         logging.info(f"Running step {turns+1} with agent {active_agent.name}")
+        logging.info("Context from run_step")
+        logging.info(context)
         completion = fetch_agent_response(
             active_agent, history, context=context)
 
