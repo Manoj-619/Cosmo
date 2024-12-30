@@ -22,27 +22,20 @@ from helpers.swarm import openai_client
 import json
 import logging
 from enum import Enum
+from helpers.utils import chunk_items
 
-criteria_prompt ="""As a proficient assistant, your task is to list all numberwise given  outlined in both the knowledge and performance sections of the shared NOS document. 
-For each competency, develop assessment criteria based on the six levels of Bloom's Taxonomy:
-
-Remember: Can the user recall relevant facts, definitions, or procedures related to this skill?
-Understand: Is the user able to explain or interpret the concepts associated with this skill?
-Apply: Can the user effectively utilize the skill in real-world scenarios or simulated tasks?
-Analyze: Is the user capable of deconstructing complex situations to identify components related to this skill?
-Evaluate: Can the user assess situations and justify decisions involving this skill?
-Create: Is the user able to design or innovate new approaches, presentations, or solutions based on this skill?
-
-type: 
-- any competency listed right under **Performance criteria** is of type performance
-- any competency listed right under **Knowledge and understanding** is of type knowledge
-
-**Important**: 
-Do not skip any competency mentioned in the NOS document, as it represents the skills that the learner needs to develop in future to meet the National Occupational Standards (NOS).
-"""
 
 ### For handoff
 class BloomTaxonomyLevels(StrictTool):
+    """Use this tool to generate Bloom's Taxonomy levels for a given competency.
+
+    - Remember: Can the user recall relevant facts, definitions, or procedures related to this skill?
+    - Understand: Is the user able to explain or interpret the concepts associated with this skill?
+    - Apply: Can the user effectively utilize the skill in real-world scenarios or simulated tasks?
+    - Analyze: Is the user capable of deconstructing complex situations to identify components related to this skill?
+    - Evaluate: Can the user assess situations and justify decisions involving this skill?
+    - Create: Is the user able to design or innovate new approaches, presentations, or solutions based on this skill?    
+    """
     level: Literal["Remember", "Understand", "Apply", "Analyze", "Evaluate", "Create"] = Field(description="The level of Bloom's Taxonomy")
     criteria: str = Field(description="Generate very challenging criteria for assessing the competency on the level of Bloom's Taxonomy")
 
@@ -50,9 +43,16 @@ class BloomTaxonomyLevels(StrictTool):
         return self.model_dump_json()
 
 class GetSkillFromNOS(StrictTool):
+    """Use this tool to get a skill from the NOS document.
+    assessment_area: Name of the competency
+    blooms_taxonomy_criteria: Remember, Understand, Apply, Analyze, Evaluate, Create
+    type: 
+    - any competency listed right under **Performance criteria** is of type performance
+    - any competency listed right under **Knowledge and understanding** is of type knowledge        
+    """
     assessment_area:str = Field(description="Name of the competency")
     blooms_taxonomy_criteria: List[BloomTaxonomyLevels] = Field(description="Competency criterias on Bloom's Taxonomy levels")
-    type: Literal["knowledge", "performance"] = Field(description="The type of the competency")
+#    type: Literal["knowledge", "performance"] = Field(description="The type of the competency")
 
     def execute(self, context: Dict):
         return self.model_dump_json() 
@@ -64,44 +64,58 @@ class GetRequiredSkillsFromNOS(PermissiveTool):
                                         ,max_length=50)
     
     def execute(self, context: Dict):
-        return "Generated TNA assessments"
+        # Check whether nos_docs is in context
+        if 'nos_docs' not in context:
+            raise ValueError("NOS documents not found in context, use GetNOS tool first.")
+        
+            # Save generated skills.
+        
+        return Result(value=, context=context)
+        
+
+class GetNOSDocuments(StrictTool):
+    """Use this tool to get the NOS document."""
+    
+    def execute(self, context: Dict):
+        user_profile = UserProfile.objects.get(user__email=context['email'])
+        nos_docs = fetch_nos_text(
+                industry=user_profile.current_industry, 
+                current_role=user_profile.current_role)
+        
+        context['nos_docs'] = nos_docs
+        # knowledge_items = [
+        # # assessment for assessment in assessments if assessment['type'] == "knowledge"]
+        # # performance_items = [
+        # # assessment for assessment in assessments if assessment['type'] == "performance"]
+
+
+        return Result(value=nos_docs, context=context)
+
 
 class GenerateTNAAssessments(StrictTool):
-    """Use this tool to generate TNA assessments, after updating the profile data."""
+    """Use this tool to generate TNA assessments, after updating the profile data.
+    As a proficient assistant, your task is to list all numberwise given  outlined in both the knowledge and performance sections of the shared NOS document.
+
+    For each competency, develop assessment criteria based on the six levels of Bloom's Taxonomy:
+
+    **Important**:
+    Do not skip any competency mentioned in the NOS document, as it represents the skills that the learner needs to develop in future to meet the National Occupational Standards(NOS).
+    """
     
     def execute(self, context: Dict):
         try:
-            profile = UserProfile.objects.get(user__email=context['email'])
-            user = profile.user
-            nos_doc = fetch_nos_text(industry="Sales", current_role=profile.current_role)
-            logging.info(f"NOS document: {nos_doc}")
-
-            messages = [
-                {"role": "system", "content": criteria_prompt},
-                {"role": "user", "content": f"Here is the NOS document:\n\n{nos_doc}"}
-            ]
-
-            completion = openai_client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=messages,
-                tools=[function_to_json(GetRequiredSkillsFromNOS)]
-            )
-
             assessments = json.loads(completion.choices[0].message.tool_calls[0].function.arguments)['nos']
             logging.info(f"Assessments: {assessments}")
-            knowledge_items = [assessment for assessment in assessments if assessment['type'] == "knowledge"]
-            performance_items = [assessment for assessment in assessments if assessment['type'] == "performance"]
-            
-            # Create chunks of 3 knowledge and 3 performance items each
-            def chunk_items(items, chunk_size=3):
-                return [items[i:i + chunk_size] for i in range(0, len(items), chunk_size)]
-            
-            # Create chunks of 3 knowledge and 3 performance items each
-            knowledge_chunks = chunk_items(knowledge_items)
-            performance_chunks = chunk_items(performance_items)
 
-            logging.info(f"Knowledge chunks: {len(knowledge_chunks)}")
-            logging.info(f"Performance chunks: {len(performance_chunks)}")
+            # Create chunks of 3 knowledge and 3 performance items each
+
+            
+            # # Create chunks of 3 knowledge and 3 performance items each
+            # knowledge_chunks = chunk_items(knowledge_items)
+            # # performance_chunks = chunk_items(performance_items)
+
+            # logging.info(f"Knowledge chunks: {len(knowledge_chunks)}")
+            # logging.info(f"Performance chunks: {len(performance_chunks)}")
 
             # Delete existing sequence first
             FourDSequence.objects.filter(id=context['sequence_id']).delete()
