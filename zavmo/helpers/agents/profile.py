@@ -119,43 +119,49 @@ class GenerateTNAAssessments(StrictTool):
 
             # Delete existing sequence first
             FourDSequence.objects.filter(id=context['sequence_id']).delete()
+            # Create new sequence
+            sequence = FourDSequence.objects.create(
+                user=user,
+                current_stage=FourDSequence.Stage.DISCOVER
+            )
+            sequence.assessments.set(assessments)            
 
             sequences_to_assess = []
-            for n in range(max(len(knowledge_chunks), len(performance_chunks))):
-                sequence = FourDSequence.objects.create(
-                    user=user,
-                    current_stage=FourDSequence.Stage.DISCOVER
-                )
-                sequences_to_assess.append(sequence)
+            # for n in range(max(len(knowledge_chunks), len(performance_chunks))):
+            #     sequence = FourDSequence.objects.create(
+            #         user=user,
+            #         current_stage=FourDSequence.Stage.DISCOVER
+            #     )
+            #     sequences_to_assess.append(sequence)
 
-                # Add knowledge chunk to this sequence if available
-                if n < len(knowledge_chunks):
-                    for assessment in knowledge_chunks[n]:
-                        TNAassessment.objects.create(
-                            user=user,
-                            sequence=sequence,
-                            assessment_area=assessment['assessment_area'],
-                            blooms_taxonomy_criteria=assessment['blooms_taxonomy_criteria'],
-                            type=assessment['type']
-                        )
+            #     # Add knowledge chunk to this sequence if available
+            #     if n < len(knowledge_chunks):
+            #         for assessment in knowledge_chunks[n]:
+            #             TNAassessment.objects.create(
+            #                 user=user,
+            #                 sequence=sequence,
+            #                 assessment_area=assessment['assessment_area'],
+            #                 blooms_taxonomy_criteria=assessment['blooms_taxonomy_criteria'],
+            #                 type=assessment['type']
+            #             )
                 
-                # Add performance chunk to the same sequence if available
-                if n < len(performance_chunks):
-                    for assessment in performance_chunks[n]:
-                        TNAassessment.objects.create(
-                            user=user,
-                            sequence=sequence,
-                            assessment_area=assessment['assessment_area'],
-                            blooms_taxonomy_criteria=assessment['blooms_taxonomy_criteria'],
-                            type=assessment['type']
-                        )
+            #     # Add performance chunk to the same sequence if available
+            #     if n < len(performance_chunks):
+            #         for assessment in performance_chunks[n]:
+            #             TNAassessment.objects.create(
+            #                 user=user,
+            #                 sequence=sequence,
+            #                 assessment_area=assessment['assessment_area'],
+            #                 blooms_taxonomy_criteria=assessment['blooms_taxonomy_criteria'],
+            #                 type=assessment['type']
+            #             )
             
-            # Use the first sequence object
-            current_sequence = sequences_to_assess[0]
-            assessments_for_current_sequence = TNAassessment.objects.filter(
-                user=user, 
-                sequence=current_sequence
-            )
+            # # Use the first sequence object
+            # current_sequence = sequences_to_assess[0]
+            # assessments_for_current_sequence = TNAassessment.objects.filter(
+            #     user=user, 
+            #     sequence=current_sequence
+            # )
 
             context.update({
                 'sequence_id': current_sequence.id,  # Convert UUID to string
