@@ -28,9 +28,18 @@ def _get_user_and_sequence(request):
     """Get user and sequence_id from request."""
     user = request.user
     sequence_id = request.data.get('sequence_id')
+    
     if not sequence_id:
-        sequences = [sequence for sequence in FourDSequence.objects.filter(user=user).order_by('created_at') if sequence.current_stage != FourDSequence.Stage.COMPLETED]
-        sequence_id = sequences[0].id
+        # Get all incomplete sequences for the user, ordered by creation date
+        sequences = FourDSequence.objects.filter(
+            user=user,
+            current_stage__lt=FourDSequence.Stage.COMPLETED
+        ).order_by('created_at')
+        
+        if not sequences.exists():
+            sequence_id = ""
+            
+    logger.info(f"Using sequence {sequence_id} for user {user.email}")
     return user, sequence_id
 
 def _initialize_context(user, sequence_id):
@@ -48,30 +57,30 @@ def _initialize_context(user, sequence_id):
 def _determine_stage(user, context, sequence_id):
     """Determine current stage and update context."""
     profile = UserProfile.objects.get(user__email=user.email)
-    sequence = FourDSequence.objects.get(id=sequence_id)
+
     profile_is_complete, profile_error = profile.check_complete()
+    
     if not profile_is_complete:
-        context.update(_create_empty_context(user.email, context['sequence_id'], profile, sequence))
+        context.update(_create_empty_context(user.email, context['sequence_id'], profile))
         return 'profile'
 
-    if TNAassessment.objects.exists():
-        logger.info(f"TNA assessment exists so tna_assessment agent will run")
-        tna_assessments = TNAassessment.objects.filter(user=user, sequence_id=sequence_id)
-        for assessment in tna_assessments:
-            if not assessment.evidence_of_assessment:
-                context.update(_create_full_context(user.email, context['sequence_id'], profile, sequence))
-                logger.info(f"TNA assessment exists but is not complete so tna_assessment agent will run")
-                return 'tna_assessment'
-            
-    elif not TNAassessment.objects.exists():
-        context.update(_create_empty_context(user.email, context['sequence_id'], profile, sequence))
-        logger.info(f"TNA assessment does not exist so profile agent will run")
+    if sequence_id:
+        sequence = FourDSequence.objects.get(id=sequence_id)
+        # Check if sequence has any assessments
+        if sequence.assessments.exists():
+            # Check if all assessments are complete
+            incomplete_assessments = sequence.assessments.filter(evidence_of_assessment__isnull=True)
+            if incomplete_assessments.exists():
+                context.update(_create_full_context(user.email, context['sequence_id'], profile))
+                return 'tna_assessment'         
+    else:
+        context.update(_create_empty_context(user.email, context['sequence_id'], profile))
         return 'profile'
     
-    context.update(_create_full_context(user.email, context['sequence_id'], profile, sequence))
+    context.update(_create_full_context(user.email, context['sequence_id'], profile))
     return sequence.stage_display
 
-def _create_empty_context(email, sequence_id, profile, sequence):
+def _create_empty_context(email, sequence_id, profile):
     """Create context for incomplete profile.""" 
     
     tna_assessment_data = {
@@ -91,10 +100,10 @@ def _create_empty_context(email, sequence_id, profile, sequence):
         'demonstrate': {}
     }
 
-def _create_full_context(email, sequence_id, profile, sequence):
+def _create_full_context(email, sequence_id, profile):
     """Create context with all stage data."""
-    tna_assessments = sequence.tna_assessments.all()
-    logger.info(f"tna_assessments: {tna_assessments}")
+    sequence = FourDSequence.objects.get(id=sequence_id)
+    tna_assessments = sequence.assessments.all()
     all_assessments = [TNAassessmentSerializer(assessment).data for assessment in tna_assessments]
     completed_assessments = [assessment for assessment in all_assessments if assessment.get('evidence_of_assessment')]
     
@@ -103,12 +112,11 @@ def _create_full_context(email, sequence_id, profile, sequence):
         'current_assessment': len(completed_assessments) + 1,
         'assessments_data': completed_assessments
     }
-
     return {
         'email': email,
         'sequence_id': sequence_id,
         'profile': UserProfileSerializer(profile).data if profile else {},
-        'tna_assessment': tna_assessment_data,
+        'tna_assessment': tna_assessment_data,  
         'discover': DiscoverStageSerializer(sequence.discover_stage).data if sequence.discover_stage else {},
         'discuss': DiscussStageSerializer(sequence.discuss_stage).data if sequence.discuss_stage else {},
         'deliver': DeliverStageSerializer(sequence.deliver_stage).data if sequence.deliver_stage else {},
@@ -171,15 +179,14 @@ def _update_context_and_cache(user, sequence_id, context, message_history, respo
 
     context.update(response.context)
     sequence_id = context['sequence_id']
-
-    sequence = FourDSequence.objects.get(id=sequence_id)
-    
-    valid_stages = ['discover', 'discuss', 'deliver', 'demonstrate', 'completed']
-    if response.agent.id != sequence.stage_display:        
-        # Ensure the stage is valid before updating
-        if response.agent.id in valid_stages:
-            sequence.update_stage(response.agent.id)
-            
-        context['stage'] = response.agent.id
+    if sequence_id:
+        sequence=FourDSequence.objects.get(id=sequence_id)
+        valid_stages = ['discover', 'discuss', 'deliver', 'demonstrate', 'completed']
+        if response.agent.id != sequence.stage_display:        
+            # Ensure the stage is valid before updating
+            if response.agent.id in valid_stages:
+                sequence.update_stage(response.agent.id)
+                
+            context['stage'] = response.agent.id
     cache.set(f"{user.email}_{sequence_id}_{CONTEXT_SUFFIX}", context, timeout=DEFAULT_CACHE_TIMEOUT)
     cache.set(f"{user.email}_{sequence_id}_{HISTORY_SUFFIX}", message_history, timeout=DEFAULT_CACHE_TIMEOUT)

@@ -78,20 +78,22 @@ def sync_user(request):
             message = "User already exists."
             status_code = status.HTTP_200_OK
         # Check if there are any sequences for this user
-        sequences = FourDSequence.objects.filter(user=user)
-        if not sequences:
-            # Create a new sequence
-            sequence = FourDSequence(user=user)
-            sequence.save()
+        sequences_to_complete = FourDSequence.objects.filter(
+            user=user, 
+            current_stage__lt=FourDSequence.Stage.COMPLETED
+        )
+        if sequences_to_complete.exists():
+            sequence = sequences_to_complete.order_by('created_at').first()
         else:
-            sequence = sequences.order_by('-created_at').first()    # Initialize related stages with user_id
-            sequence.save()
+            sequence = None
 
         # Determine the stage_name
         profile = UserProfile.objects.filter(user=user).first()
         is_complete, error = profile.check_complete()
         if not is_complete:
             stage_name = 'profile'
+        elif sequence.assessments.filter(evidence_of_assessment__isnull=True).exists():
+            stage_name = 'tna_assessment'
         else:
             stage_name = sequence.stage_display
 
@@ -99,7 +101,7 @@ def sync_user(request):
             "message": message,
             "email": user.email,
             "stage": stage_name,
-            "sequence_id": sequence.id
+            "sequence_id": sequence.id if sequence else None
         }, status=status_code)
     
     except IntegrityError as e:

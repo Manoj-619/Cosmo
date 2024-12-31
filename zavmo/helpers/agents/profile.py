@@ -43,37 +43,68 @@ class BloomTaxonomyLevels(StrictTool):
         return self.model_dump_json()
 
 class GetSkillFromNOS(StrictTool):
-    """Use this tool to get a skill from the NOS document.
+    """Use this tool to get a competency from the NOS document.
     assessment_area: Name of the competency
-    blooms_taxonomy_criteria: Remember, Understand, Apply, Analyze, Evaluate, Create
-    type: 
-    - any competency listed right under **Performance criteria** is of type performance
-    - any competency listed right under **Knowledge and understanding** is of type knowledge        
+    blooms_taxonomy_criteria: Remember, Understand, Apply, Analyze, Evaluate, Create     
     """
     assessment_area:str = Field(description="Name of the competency")
     blooms_taxonomy_criteria: List[BloomTaxonomyLevels] = Field(description="Competency criterias on Bloom's Taxonomy levels")
-#    type: Literal["knowledge", "performance"] = Field(description="The type of the competency")
+    # type: Literal["knowledge", "performance"] = Field(description="The type of the competency")
 
     def execute(self, context: Dict):
         return self.model_dump_json() 
 
 class GetRequiredSkillsFromNOS(PermissiveTool):
-    """Use this tool if NOS document is shared by the user."""
+    """Use this tool if NOS document is shared to generate TNA assessments."""
     
-    nos: List[GetSkillFromNOS] = Field(description="List all competencies mentioned in the NOS document with corresponding criteria on Bloom's Taxonomy levels and type of the competency."
+    nos: List[GetSkillFromNOS] = Field(description="List upto 40 competencies mentioned in the NOS document from **Performance criteria** or **Knowledge and understanding** with corresponding criteria on Bloom's Taxonomy levels."
                                         ,max_length=50)
     
     def execute(self, context: Dict):
-        # Check whether nos_docs is in context
         if 'nos_docs' not in context:
             raise ValueError("NOS documents not found in context, use GetNOS tool first.")
         
-            # Save generated skills.
+        user_profile = UserProfile.objects.get(user__email=context['email'])
         
-        return Result(value=, context=context)
+        # Create sequences for every 5 skills
+        sequences = []
+        for i in range(0, len(self.nos), 5):
+            # First create the sequence
+            sequence = FourDSequence.objects.create(
+                user=user_profile.user,
+                current_stage=FourDSequence.Stage.DISCOVER
+            )
+            
+            # Create assessments for the sequence
+            for skill in self.nos[i:i+5]:
+                TNAassessment.objects.create(
+                    user=user_profile.user,
+                    assessment_area=skill.assessment_area,
+                    blooms_taxonomy_criteria=[bt.model_dump() for bt in skill.blooms_taxonomy_criteria],
+                    sequence=sequence
+                    )
+                
+            sequences.append(sequence)
         
+        # Update context with first sequence info
+        current_sequence = sequences[0]
+        context.update({
+            'sequence_id': current_sequence.id,
+            'sequences_to_complete': [s.id for s in sequences],
+            'tna_assessment': {
+                'total_assessments': current_sequence.assessments.count(),
+                'current_assessment': 1,
+                'assessment_data': []
+            }
+        })
+        
+        # Get assessment areas from first sequence
+        first_batch = self.nos[:5]
+        assessment_areas = "\n".join([skill.assessment_area for skill in first_batch])
+        return Result(value=f"assessment_areas: {assessment_areas}", context=context)
+    
 
-class GetNOSDocuments(StrictTool):
+class GetNOSDocument(StrictTool):
     """Use this tool to get the NOS document."""
     
     def execute(self, context: Dict):
@@ -83,126 +114,34 @@ class GetNOSDocuments(StrictTool):
                 current_role=user_profile.current_role)
         
         context['nos_docs'] = nos_docs
-        # knowledge_items = [
-        # # assessment for assessment in assessments if assessment['type'] == "knowledge"]
-        # # performance_items = [
-        # # assessment for assessment in assessments if assessment['type'] == "performance"]
-
-
         return Result(value=nos_docs, context=context)
 
-
-class GenerateTNAAssessments(StrictTool):
-    """Use this tool to generate TNA assessments, after updating the profile data.
-    As a proficient assistant, your task is to list all numberwise given  outlined in both the knowledge and performance sections of the shared NOS document.
-
-    For each competency, develop assessment criteria based on the six levels of Bloom's Taxonomy:
-
-    **Important**:
-    Do not skip any competency mentioned in the NOS document, as it represents the skills that the learner needs to develop in future to meet the National Occupational Standards(NOS).
-    """
-    
-    def execute(self, context: Dict):
-        try:
-            assessments = json.loads(completion.choices[0].message.tool_calls[0].function.arguments)['nos']
-            logging.info(f"Assessments: {assessments}")
-
-            # Create chunks of 3 knowledge and 3 performance items each
-
-            
-            # # Create chunks of 3 knowledge and 3 performance items each
-            # knowledge_chunks = chunk_items(knowledge_items)
-            # # performance_chunks = chunk_items(performance_items)
-
-            # logging.info(f"Knowledge chunks: {len(knowledge_chunks)}")
-            # logging.info(f"Performance chunks: {len(performance_chunks)}")
-
-            # Delete existing sequence first
-            FourDSequence.objects.filter(id=context['sequence_id']).delete()
-            # Create new sequence
-            sequence = FourDSequence.objects.create(
-                user=user,
-                current_stage=FourDSequence.Stage.DISCOVER
-            )
-            sequence.assessments.set(assessments)            
-
-            sequences_to_assess = []
-            # for n in range(max(len(knowledge_chunks), len(performance_chunks))):
-            #     sequence = FourDSequence.objects.create(
-            #         user=user,
-            #         current_stage=FourDSequence.Stage.DISCOVER
-            #     )
-            #     sequences_to_assess.append(sequence)
-
-            #     # Add knowledge chunk to this sequence if available
-            #     if n < len(knowledge_chunks):
-            #         for assessment in knowledge_chunks[n]:
-            #             TNAassessment.objects.create(
-            #                 user=user,
-            #                 sequence=sequence,
-            #                 assessment_area=assessment['assessment_area'],
-            #                 blooms_taxonomy_criteria=assessment['blooms_taxonomy_criteria'],
-            #                 type=assessment['type']
-            #             )
-                
-            #     # Add performance chunk to the same sequence if available
-            #     if n < len(performance_chunks):
-            #         for assessment in performance_chunks[n]:
-            #             TNAassessment.objects.create(
-            #                 user=user,
-            #                 sequence=sequence,
-            #                 assessment_area=assessment['assessment_area'],
-            #                 blooms_taxonomy_criteria=assessment['blooms_taxonomy_criteria'],
-            #                 type=assessment['type']
-            #             )
-            
-            # # Use the first sequence object
-            # current_sequence = sequences_to_assess[0]
-            # assessments_for_current_sequence = TNAassessment.objects.filter(
-            #     user=user, 
-            #     sequence=current_sequence
-            # )
-
-            context.update({
-                'sequence_id': current_sequence.id,  # Convert UUID to string
-                'sequences_to_complete': [s.id for s in sequences_to_assess if s.current_stage != FourDSequence.Stage.COMPLETED],
-                'tna_assessment': {
-                    'total_assessments': assessments_for_current_sequence.count(),
-                    'current_assessment': 1,
-                    'assessment_data': []
-                }
-            })
-
-            # Convert assessment data to serializable format
-            current_assessments_info = {
-                str(a.assessment_area): str(a.type) 
-                for a in assessments_for_current_sequence
-            }
-            
-            return Result(
-                value=f"TNA assessments: {current_assessments_info}", 
-                context=context
-            )
-        except Exception as e:
-            logging.error(f"Error in GenerateTNAAssessments: {e}")
-            raise
- 
 class transfer_to_tna_assessment_step(StrictTool):
-    """After updating the profile stage, transfer to the TNA Assessment step when the learner has completed the Profile stage."""
+    """After getting the assessment areas, transfer to the TNA Assessment step."""
     
     def execute(self, context: Dict):
-        """Transfer to the TNA Assessment stage when the learner has completed the Profile stage."""
+        """Transfer to the TNA Assessment step."""
         profile = UserProfile.objects.get(user__email=context['email'])
         is_complete, error = profile.check_complete()
         if not is_complete:
             raise ValueError(error)
-        elif not TNAassessment.objects.filter(user=profile.user).exists():
-            raise ValueError("No TNA assessments found for the learner. Please generate TNA assessments first.")
+        if not context['sequence_id']:
+            raise ValueError("No TNA assessments found for the learner. Please get the NOS document, generate required skills and TNA assessments.")
         summary = profile.get_summary()
+        assessments = FourDSequence.objects.get(id=context['sequence_id']).assessments.all()
+        assessment_areas = ", ".join([assessment.assessment_area for assessment in assessments])
         agent = tna_assessment_agent
         agent.start_message = f"""Here is the learner's profile: {summary}
         
+        TNA assessments that the learner needs to complete: {assessment_areas}
+
         Greet the learner and introduce about the TNA (Training Needs Analysis) Assessment step.
+        Present the TNA assessments that the learner needs to complete in furture in the form of a table.
+
+        |       Assessments       |
+        |-------------------------|
+        |     assessment area     |
+        |     assessment area     | 
         """
         agent.instructions = get_tna_assessment_instructions(context)
         return Result(value="Transferred to TNA Assessment step.",
@@ -259,7 +198,8 @@ profile_agent = Agent(
     functions=[
         update_profile_data,
         transfer_to_tna_assessment_step,
-        GenerateTNAAssessments
+        GetNOSDocument,
+        GetRequiredSkillsFromNOS
     ],
     tool_choice="auto",
     parallel_tool_calls=False

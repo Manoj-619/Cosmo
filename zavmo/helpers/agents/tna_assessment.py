@@ -9,6 +9,7 @@ from helpers.agents.common import get_tna_assessment_instructions
 from helpers.utils import get_logger
 from stage_app.models import  TNAassessment
 from helpers.agents.a_discover import discover_agent
+from stage_app.models import FourDSequence
 
 
 logger = get_logger(__name__)
@@ -20,7 +21,7 @@ class transfer_to_discover_stage(StrictTool):
     def execute(self, context: Dict):
         """Transfer to the Discovery stage when it is informed that all NOS areas are assessed."""       
         sequence_id = context['sequence_id']
-        tna_assessments = TNAassessment.objects.filter(user=context['user'], sequence_id=sequence_id)
+        tna_assessments = FourDSequence.objects.get(id=sequence_id).assessments.all()
         for assessment in tna_assessments:
             if not assessment.evidence_of_assessment:
                 raise ValueError("TNA Assessment is not complete for all NOS areas.")
