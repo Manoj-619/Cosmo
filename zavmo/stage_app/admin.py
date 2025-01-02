@@ -11,9 +11,10 @@ from .models import (
 )
 
 class FourDSequenceAdmin(admin.ModelAdmin):
-    ordering = ('-updated_at',)  # Assuming you have an updated_at field
-    # If you use a different field name for the update date, replace 'updated_at'
-    # with your actual field name (e.g., 'modified_date', 'last_updated', etc.)
+    ordering = ('-updated_at',)
+    list_display = ('id', 'user', 'current_stage', 'created_at', 'updated_at')
+    list_filter = ('current_stage', 'created_at')
+    search_fields = ('user__email', 'id')
 
 admin.site.register(Org)
 admin.site.register(FourDSequence, FourDSequenceAdmin)

@@ -43,7 +43,9 @@ def fetch_agent_response(agent: Agent, history: List, context: Dict) -> ChatComp
     if agent.start_message:
         init_messages.append({"role": "user", "content": agent.start_message})
 
-    messages = init_messages + filter_history(history)
+    messages_history = init_messages + filter_history(history)
+    # Remove context from messages
+    messages = [{k: v for k, v in message.items() if k != 'context'} for message in messages_history]
     tools = [function_to_json(f) for f in agent.functions]
 
     create_params = {
@@ -55,6 +57,7 @@ def fetch_agent_response(agent: Agent, history: List, context: Dict) -> ChatComp
     if tools:
         create_params["parallel_tool_calls"] = agent.parallel_tool_calls
     # logging.info(f"Agent instructions: {agent.instructions}")
+    logging.info(f"Model: {create_params['model']}")
     return openai_client.chat.completions.create(**create_params)
 
 
@@ -168,6 +171,8 @@ def run_step(agent: Agent, messages: List, context: Dict = {}, max_turns: int = 
     # If no active agent, we're done
     while active_agent and turns < max_turns:
         logging.info(f"Running step {turns+1} with agent {active_agent.name}")
+        logging.info("Context from run_step")
+        logging.info(context)
         completion = fetch_agent_response(
             active_agent, history, context=context)
 
@@ -180,9 +185,10 @@ def run_step(agent: Agent, messages: List, context: Dict = {}, max_turns: int = 
         message.sender = active_agent.name
         # Convert the message to dict and add to history
         message_dict = json.loads(message.model_dump_json())
-        message_dict["timestamp"] = get_utc_timestamp()
         # TODO: message_dict['intent'] = 
 
+        message_dict['context'] = context
+        message_dict['context']['timestamp'] = get_utc_timestamp()
         # If no tool calls, we're done with this turn
         if not message.tool_calls:
             history.append(message_dict)
@@ -203,8 +209,6 @@ def run_step(agent: Agent, messages: List, context: Dict = {}, max_turns: int = 
         if partial_response.stop:
             logging.info("Stopping agent chain")
             break
-        # Update context
-        context.update(partial_response.context)
 
         # Update active_agent if a new agent is returned
         if partial_response.agent and partial_response.agent != active_agent:

@@ -100,7 +100,6 @@ class TNAassessment(models.Model):
         verbose_name_plural = "TNA Assessments"
 
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='tna_assessments')
-    sequence = models.ForeignKey('FourDSequence', on_delete=models.CASCADE, related_name='tna_assessments')
     assessment_area = models.CharField(max_length=255, default=None, null=True)
     blooms_taxonomy_criteria = models.JSONField(default=list, blank=True, null=True, verbose_name="Bloom's Taxonomy Criteria")
     user_assessed_knowledge_level = models.PositiveSmallIntegerField(
@@ -128,6 +127,12 @@ class TNAassessment(models.Model):
         blank=True, null=True
     )
     evidence_of_assessment = models.TextField(blank=True, null=True, verbose_name="Evidence of Assessment")
+    type = models.CharField(max_length=50, blank=True, null=True, verbose_name="Type")
+    sequence = models.ForeignKey(
+        'FourDSequence',
+        on_delete=models.CASCADE,
+        related_name='tna_assessments'
+    )
 
     def __str__(self):
         return f"User {self.user.email} - Sequence {self.sequence.id} - TNA Assessment - Assessment Area: {self.assessment_area}"
@@ -141,6 +146,8 @@ class TNAassessment(models.Model):
             return False, "Zavmo assessed knowledge level is required"
         if not self.evidence_of_assessment:
             return False, "Evidence of assessment is required"
+        if not self.type:
+            return False, "Type is required"
         return True, None
     
     def get_summary(self):
@@ -149,6 +156,7 @@ class TNAassessment(models.Model):
         summary += f"**User Assessed Knowledge Level**: {self.user_assessed_knowledge_level}\n"
         summary += f"**Zavmo Assessed Knowledge Level**: {self.zavmo_assessed_knowledge_level}\n"
         summary += f"**Evidence of Assessment**: {self.evidence_of_assessment}\n\n"
+        summary += f"**Type**: {self.type}\n"
         return summary.strip()
 
 # Stage 1
@@ -327,6 +335,9 @@ class FourDSequence(models.Model):
     id = models.UUIDField(primary_key=True, 
                           default=uuid.uuid4, 
                           editable=False)
+    assessments = models.ManyToManyField(TNAassessment, 
+                                       related_name='sequences', 
+                                       blank=True)
     user        = models.ForeignKey(User, 
                                     on_delete=models.CASCADE, 
                                     related_name='four_d_sequences')

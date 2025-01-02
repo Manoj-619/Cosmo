@@ -9,6 +9,7 @@ from helpers.agents.common import get_tna_assessment_instructions
 from helpers.utils import get_logger
 from stage_app.models import  TNAassessment
 from helpers.agents.a_discover import discover_agent
+from stage_app.models import FourDSequence
 
 
 logger = get_logger(__name__)
@@ -18,18 +19,19 @@ class transfer_to_discover_stage(StrictTool):
     """Transfer to the Discovery stage when no NOS area is left to assess."""
     
     def execute(self, context: Dict):
-        """Transfer to the Discovery stage when it is informed that all NOS areas are assessed."""        
-        email       = context['email']
+        """Transfer to the Discovery stage when it is informed that all NOS areas are assessed."""       
         sequence_id = context['sequence_id']
-        tna_assessments = TNAassessment.objects.filter(user__email=email, sequence_id=sequence_id)
-        if tna_assessments.count() >= 5:
-            raise ValueError("TNA Assessment is not complete for all NOS areas.")
+        tna_assessments = FourDSequence.objects.get(id=sequence_id).assessments.all()
+        for assessment in tna_assessments:
+            if not assessment.evidence_of_assessment:
+                raise ValueError("TNA Assessment is not complete for all NOS areas.")
         
         assessment_details = "\n".join(
             f"Assessment Area: {assessment.assessment_area}, "
             f"User Level: {assessment.user_assessed_knowledge_level}, "
             f"Zavmo Level: {assessment.zavmo_assessed_knowledge_level}, "
-            f"Evidence: {assessment.evidence_of_assessment}"
+            f"Evidence: {assessment.evidence_of_assessment}, "
+            f"Type: {assessment.type}"
             for assessment in tna_assessments
         )
 
@@ -50,7 +52,7 @@ class SaveAssessmentArea(StrictTool):
     assessment_area: str = Field(description="The assessment area that was assessed.")
     user_assessed_knowledge_level: int = Field(description="The knowledge level in the assessment area self-assessed by the user, rated on a scale of 1 to 7.")
     zavmo_assessed_knowledge_level: int = Field(description="The knowledge level determined by Zavmo based on the assessment, rated on a scale of 1 to 7.")
-    evidence_of_assessment: str = Field(description="A brief description of the evidence for the assessment area, based on the conversation.")
+    evidence_of_assessment: str = Field(description="Generate a report of the assessment area, based on the learner's response. Including gaps in knowledge, areas of strength, and recommendations for training.")
     
     def execute(self, context: Dict):
         """
@@ -62,7 +64,8 @@ class SaveAssessmentArea(StrictTool):
         tna_assessment.evidence_of_assessment = self.evidence_of_assessment
         tna_assessment.save()
         tna_assessment_agent.instructions = get_tna_assessment_instructions(context)
-        context['tna_assessment'].append(self.model_dump())
+        context['tna_assessment']['assessments_data'].append(self.model_dump())
+        context['tna_assessment']['current_assessment'] += 1
         return Result(value=self.model_dump_json(), context=context)
 
     

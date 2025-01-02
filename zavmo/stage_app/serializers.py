@@ -39,8 +39,8 @@ class UserProfileSerializer(BaseStageSerializer):
 
 class TNAassessmentSerializer(BaseStageSerializer):
     class Meta:
-        model = TNAassessment
-        exclude = ('sequence', 'user')
+        model   = TNAassessment
+        exclude = ('user', 'blooms_taxonomy_criteria')
                
 class DiscoverStageSerializer(BaseStageSerializer):
     class Meta:
@@ -66,11 +66,11 @@ class FourDSequenceSerializer(serializers.ModelSerializer):
     uuid_str = serializers.SerializerMethodField()
     stage_name = serializers.CharField(source='stage_display', read_only=True)
     email = serializers.CharField(source='user.email', read_only=True)
+    assessments = TNAassessmentSerializer(many=True, read_only=True)
 
     def get_uuid_str(self, obj):
-        return str(obj.id)  # Ensure UUID is converted to string
-    
+        return str(obj.id)
 
     class Meta:
         model = FourDSequence
-        fields = ['uuid_str', 'created_at', 'updated_at', 'stage_name', 'email']
+        fields = ['uuid_str', 'created_at', 'updated_at', 'stage_name', 'email', 'assessments']

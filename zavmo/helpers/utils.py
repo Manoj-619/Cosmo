@@ -12,6 +12,9 @@ from datetime import datetime, timedelta, UTC
 load_dotenv()
 
 
+def chunk_items(items, chunk_size=3):
+    return [items[i:i + chunk_size] for i in range(0, len(items), chunk_size)]
+
 def timer(func):
     """Print the runtime of the decorated function"""
     @functools.wraps(func)  # This line preserves the name and docstring of the decorated function
