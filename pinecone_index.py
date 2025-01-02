@@ -2,6 +2,7 @@ import os
 import logging
 from typing import List, Dict, Union, Optional
 from pinecone import Pinecone, ServerlessSpec
+from tqdm import tqdm
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -47,10 +48,14 @@ class PineconeIndex:
         logger.info(f"Deleting index: {self.index_name}")
         pinecone_client.delete_index(self.index_name)
 
-    def upsert_vectors(self, vectors: List[Dict[str, Union[str, List[float], Dict]]]):
-        """Upsert vectors into the index."""
-        logger.info(f"Upserting {len(vectors)} vectors into the index")
-        self.index.upsert(vectors)
+    def upsert_vectors(self, vectors: List[Dict[str, Union[str, List[float], Dict]]], batch_size: int = 100):
+        """Upsert vectors into the index in batches."""
+        total_vectors = len(vectors)
+        logger.info(f"Upserting {total_vectors} vectors into the index in batches of {batch_size}")
+        
+        for i in tqdm(range(0, total_vectors, batch_size), desc="Upserting batches"):
+            batch = vectors[i:i + batch_size]
+            self.index.upsert(vectors=batch)
 
     def search_items(self, query_vectors: List[List[float]], top_k: int = 10) -> List[Dict]:
         """Search the index with query vectors."""
