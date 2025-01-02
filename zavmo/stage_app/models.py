@@ -349,7 +349,7 @@ class FourDSequence(models.Model):
     )
 
     def __str__(self):
-        return f"User {self.user.email} - Sequence {self.id} - {self.stage_display}"
+        return f"Sequence {self.id} - {self.stage_display}"
 
     @property
     def uuid_str(self):

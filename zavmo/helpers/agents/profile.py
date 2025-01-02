@@ -29,12 +29,12 @@ from helpers.utils import chunk_items
 class BloomTaxonomyLevels(StrictTool):
     """Use this tool to generate Bloom's Taxonomy levels for a given competency.
 
-    - Remember: Can the user recall relevant facts, definitions, or procedures related to this skill?
-    - Understand: Is the user able to explain or interpret the concepts associated with this skill?
-    - Apply: Can the user effectively utilize the skill in real-world scenarios or simulated tasks?
-    - Analyze: Is the user capable of deconstructing complex situations to identify components related to this skill?
-    - Evaluate: Can the user assess situations and justify decisions involving this skill?
-    - Create: Is the user able to design or innovate new approaches, presentations, or solutions based on this skill?    
+    - Remember: Can the user recall relevant facts, definitions, or procedures related to this competency?
+    - Understand: Is the user able to explain or interpret the concepts associated with this competency?
+    - Apply: Can the user effectively utilize the competency in real-world scenarios or simulated tasks?
+    - Analyze: Is the user capable of deconstructing complex situations to identify components related to this competency?
+    - Evaluate: Can the user assess situations and justify decisions involving this competency?
+    - Create: Is the user able to design or innovate new approaches, presentations, or solutions based on this competency?    
     """
     level: Literal["Remember", "Understand", "Apply", "Analyze", "Evaluate", "Create"] = Field(description="The level of Bloom's Taxonomy")
     criteria: str = Field(description="Generate very challenging criteria for assessing the competency on the level of Bloom's Taxonomy")
@@ -43,27 +43,28 @@ class BloomTaxonomyLevels(StrictTool):
         return self.model_dump_json()
 
 class GetSkillFromNOS(StrictTool):
-    """Use this tool to get a competency from the NOS document.
-    assessment_area: Name of the competency
-    blooms_taxonomy_criteria: Remember, Understand, Apply, Analyze, Evaluate, Create     
-    """
+    """Get a competency from the NOS document and generate its corresponding Bloom's Taxonomy criteria."""
+
     assessment_area:str = Field(description="Name of the competency")
-    blooms_taxonomy_criteria: List[BloomTaxonomyLevels] = Field(description="Competency criterias on Bloom's Taxonomy levels")
+    blooms_taxonomy_criteria: List[BloomTaxonomyLevels] = Field(description="Criterias on Bloom's Taxonomy levels for the competency")
     # type: Literal["knowledge", "performance"] = Field(description="The type of the competency")
 
     def execute(self, context: Dict):
         return self.model_dump_json() 
 
-class GetRequiredSkillsFromNOS(PermissiveTool):
-    """Use this tool if NOS document is shared to generate TNA assessments."""
-    
-    nos: List[GetSkillFromNOS] = Field(description="List upto 40 competencies mentioned in the NOS document from **Performance criteria** or **Knowledge and understanding** with corresponding criteria on Bloom's Taxonomy levels."
-                                        ,max_length=50)
+class GetRequiredSkillsFromNOS(StrictTool):
+    """Use this tool if NOS document is shared and generate TNA assessments data.
+
+    Instructions:
+    Count all numbered items in “Performance Criteria” and “Knowledge and Understanding” sections. 
+    Add these to determine the total number of competencies to be listed (e.g., 12 + 10 = 22). 
+    Generate a list of competencies and corresponding Bloom's Taxonomy criteria, covering all areas of the NOS document.
+    """
+    nos: List[GetSkillFromNOS] = Field(description="Generate a list of total number of competencies listed under **Performance Criteria** and **Knowledge and Understanding** sections with corresponding Bloom's Taxonomy criteria for each item, covering all areas of the NOS document.")
     
     def execute(self, context: Dict):
         if 'nos_docs' not in context:
             raise ValueError("NOS documents not found in context, use GetNOS tool first.")
-        
         user_profile = UserProfile.objects.get(user__email=context['email'])
         
         # Create sequences for every 5 skills
@@ -82,8 +83,8 @@ class GetRequiredSkillsFromNOS(PermissiveTool):
                     assessment_area=skill.assessment_area,
                     blooms_taxonomy_criteria=[bt.model_dump() for bt in skill.blooms_taxonomy_criteria],
                     sequence=sequence
-                    )
-                
+                )
+
             sequences.append(sequence)
         
         # Update context with first sequence info
@@ -114,7 +115,7 @@ class GetNOSDocument(StrictTool):
                 current_role=user_profile.current_role)
         
         context['nos_docs'] = nos_docs
-        return Result(value=nos_docs, context=context)
+        return Result(value=f"This is the NOS document with competencies outlined: \n\n{nos_docs}", context=context)
 
 class transfer_to_tna_assessment_step(StrictTool):
     """After getting the assessment areas, transfer to the TNA Assessment step."""
