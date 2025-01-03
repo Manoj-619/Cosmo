@@ -29,12 +29,12 @@ from helpers.utils import chunk_items
 class BloomTaxonomyLevels(StrictTool):
     """Use this tool to generate Bloom's Taxonomy levels for a given competency.
 
-    - Remember: Can the user recall relevant facts, definitions, or procedures related to this competency?
-    - Understand: Is the user able to explain or interpret the concepts associated with this competency?
-    - Apply: Can the user effectively utilize the competency in real-world scenarios or simulated tasks?
-    - Analyze: Is the user capable of deconstructing complex situations to identify components related to this competency?
-    - Evaluate: Can the user assess situations and justify decisions involving this competency?
-    - Create: Is the user able to design or innovate new approaches, presentations, or solutions based on this competency?    
+    - Remember: The user must be able to recall relevant facts, definitions, or procedures related to this competency?
+    - Understand: The user must be able to explain or interpret the concepts associated with this competency?
+    - Apply: The user must be able to effectively utilize the competency in real-world scenarios or simulated tasks?
+    - Analyze: The user must be able to deconstruct complex situations to identify components related to this competency?
+    - Evaluate: The user must be able to assess situations and justify decisions involving this competency?
+    - Create: The user must be able to design or innovate new approaches, presentations, or solutions based on this competency?    
     """
     level: Literal["Remember", "Understand", "Apply", "Analyze", "Evaluate", "Create"] = Field(description="The level of Bloom's Taxonomy")
     criteria: str = Field(description="Generate very challenging criteria for assessing the competency on the level of Bloom's Taxonomy")
@@ -68,7 +68,6 @@ class GetRequiredSkillsFromNOS(StrictTool):
         user_profile = UserProfile.objects.get(user__email=context['email'])
         
         # Create sequences for every 5 skills
-        sequences = []
         for i in range(0, len(self.nos), 5):
             # First create the sequence
             sequence = FourDSequence.objects.create(
@@ -85,17 +84,20 @@ class GetRequiredSkillsFromNOS(StrictTool):
                     sequence=sequence
                 )
 
-            sequences.append(sequence)
+        # Convert QuerySet to list before storing in context
+        all_sequences = list(FourDSequence.objects.filter(
+            user=user_profile.user
+        ).order_by('created_at').values_list('id', flat=True))
         
+        logging.info(f"All sequences: {all_sequences}")
         # Update context with first sequence info
-        current_sequence = sequences[0]
         context.update({
-            'sequence_id': current_sequence.id,
-            'sequences_to_complete': [s.id for s in sequences],
+            'sequence_id': all_sequences[0],
+            'sequences_to_complete': all_sequences,  
             'tna_assessment': {
-                'total_assessments': current_sequence.assessments.count(),
+                'total_assessments': len(all_sequences),
                 'current_assessment': 1,
-                'assessment_data': []
+                'assessments_data': []
             }
         })
         
@@ -115,6 +117,7 @@ class GetNOSDocument(StrictTool):
                 current_role=user_profile.current_role)
         
         context['nos_docs'] = nos_docs
+        logging.info(f"NOS document: {nos_docs}")
         return Result(value=f"This is the NOS document with competencies outlined: \n\n{nos_docs}", context=context)
 
 class transfer_to_tna_assessment_step(StrictTool):
@@ -129,20 +132,21 @@ class transfer_to_tna_assessment_step(StrictTool):
         if not context['sequence_id']:
             raise ValueError("No TNA assessments found for the learner. Please get the NOS document, generate required skills and TNA assessments.")
         summary = profile.get_summary()
-        assessments = FourDSequence.objects.get(id=context['sequence_id']).assessments.all()
+        assessments = TNAassessment.objects.filter(sequence_id=context['sequence_id'])
         assessment_areas = ", ".join([assessment.assessment_area for assessment in assessments])
         agent = tna_assessment_agent
-        agent.start_message = f"""Here is the learner's profile: {summary}
-        
-        TNA assessments that the learner needs to complete: {assessment_areas}
+        agent.start_message = f"""Here is the learner's profile: {summary} 
 
-        Greet the learner and introduce about the TNA (Training Needs Analysis) Assessment step.
-        Present the TNA assessments that the learner needs to complete in furture in the form of a table.
+        TNA assessments: {assessment_areas}
+        
+        Introduce the TNA Assessment step.
+        Present the TNA assessments that the learner should complete for current 4D sequence in the below form.
 
         |       Assessments       |
         |-------------------------|
         |     assessment area     |
         |     assessment area     | 
+
         """
         agent.instructions = get_tna_assessment_instructions(context)
         return Result(value="Transferred to TNA Assessment step.",

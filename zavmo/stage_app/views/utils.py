@@ -31,15 +31,15 @@ def _get_user_and_sequence(request):
     
     if not sequence_id:
         # Get all incomplete sequences for the user, ordered by creation date
-        sequences = FourDSequence.objects.filter(
-            user=user,
-            current_stage__lt=FourDSequence.Stage.COMPLETED
-        ).order_by('created_at')
+        sequences = FourDSequence.objects.filter(user=user).order_by('created_at')
+        for sequence in sequences:
+            if sequence.stage_display != 'completed':
+                sequence_id = sequence.id
+                break
         
         if not sequences.exists():
             sequence_id = ""
-            
-    logger.info(f"Using sequence {sequence_id} for user {user.email}")
+    logger.info(f"Sequence ID: {sequence_id}")
     return user, sequence_id
 
 def _initialize_context(user, sequence_id):
@@ -66,18 +66,20 @@ def _determine_stage(user, context, sequence_id):
 
     if sequence_id:
         sequence = FourDSequence.objects.get(id=sequence_id)
-        # Check if sequence has any assessments
-        if sequence.assessments.exists():
-            # Check if all assessments are complete
-            incomplete_assessments = sequence.assessments.filter(evidence_of_assessment__isnull=True)
-            if incomplete_assessments.exists():
-                context.update(_create_full_context(user.email, context['sequence_id'], profile))
-                return 'tna_assessment'         
+        # Check if all assessments are complete
+        incomplete_assessments = [assessment for assessment in TNAassessment.objects.filter(user=profile.user, sequence=sequence) if not assessment.evidence_of_assessment]
+        
+        if incomplete_assessments:
+            context.update(_create_full_context(user.email, context['sequence_id'], profile))
+            logger.info(f"Incomplete assessments found. Running tna_assessment agent.")
+            return 'tna_assessment'
     else:
         context.update(_create_empty_context(user.email, context['sequence_id'], profile))
+        logger.info(f"No sequence ID found. Running profile agent.")
         return 'profile'
     
     context.update(_create_full_context(user.email, context['sequence_id'], profile))
+
     return sequence.stage_display
 
 def _create_empty_context(email, sequence_id, profile):

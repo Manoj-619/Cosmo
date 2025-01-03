@@ -18,7 +18,7 @@ def chat_view(request):
     user, sequence_id = _get_user_and_sequence(request)
     context    = _initialize_context(user, sequence_id)
     stage_name = _determine_stage(user, context, sequence_id)
-    logger.info(f"Context: {context}")
+    
     if stage_name == 'completed':
         return DRFResponse({
             "type": "text",
@@ -36,7 +36,7 @@ def chat_view(request):
 
     message_history = _get_message_history(user.email, sequence_id, request.data.get('message'))
     response        = _process_agent_response(stage_name, message_history, context)
-
+    
     if not response.messages:
         return DRFResponse({
             "error": "No response generated from the agent",
