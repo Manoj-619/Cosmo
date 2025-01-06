@@ -9,6 +9,7 @@ from helpers.agents import a_discover, b_discuss,c_deliver,d_demonstrate, profil
 from helpers.agents.common import get_tna_assessment_instructions
 from helpers.constants import CONTEXT_SUFFIX, HISTORY_SUFFIX, DEFAULT_CACHE_TIMEOUT
 from helpers.swarm import run_step
+from django.db import utils as django_db_utils
 
 stage_order = ['profile', 'tna_assessment', 'discover', 'discuss', 'deliver', 'demonstrate']
 stage_models = [UserProfile, TNAassessment, DiscoverStage, DiscussStage, DeliverStage, DemonstrateStage]
@@ -182,13 +183,18 @@ def _update_context_and_cache(user, sequence_id, context, message_history, respo
     context.update(response.context)
     sequence_id = context['sequence_id']
     if sequence_id:
-        sequence=FourDSequence.objects.get(id=sequence_id)
+        sequence = FourDSequence.objects.get(id=sequence_id)
         valid_stages = ['discover', 'discuss', 'deliver', 'demonstrate', 'completed']
-        if response.agent.id != sequence.stage_display:        
-            # Ensure the stage is valid before updating
-            if response.agent.id in valid_stages:
+        
+        # Only update stage if it's different and valid
+        if response.agent.id != sequence.stage_display and response.agent.id in valid_stages:
+            # Check if stage already exists before updating
+            try:
                 sequence.update_stage(response.agent.id)
-                
-            context['stage'] = response.agent.id
+                context['stage'] = response.agent.id
+            except django_db_utils.IntegrityError:
+                logger.warning(f"Stage {response.agent.id} already exists for sequence {sequence_id}")
+                pass
+
     cache.set(f"{user.email}_{sequence_id}_{CONTEXT_SUFFIX}", context, timeout=DEFAULT_CACHE_TIMEOUT)
     cache.set(f"{user.email}_{sequence_id}_{HISTORY_SUFFIX}", message_history, timeout=DEFAULT_CACHE_TIMEOUT)

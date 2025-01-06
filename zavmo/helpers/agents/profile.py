@@ -68,7 +68,7 @@ class GetRequiredSkillsFromNOS(StrictTool):
         user_profile = UserProfile.objects.get(user__email=context['email'])
         
         # Create sequences for every 5 skills
-        for i in range(0, len(self.nos), 5):
+        for i in range(0, len(self.nos), 1):
             # First create the sequence
             sequence = FourDSequence.objects.create(
                 user=user_profile.user,
@@ -76,7 +76,7 @@ class GetRequiredSkillsFromNOS(StrictTool):
             )
             
             # Create assessments for the sequence
-            for skill in self.nos[i:i+5]:
+            for skill in self.nos[i:i+1]:
                 TNAassessment.objects.create(
                     user=user_profile.user,
                     assessment_area=skill.assessment_area,
@@ -102,7 +102,7 @@ class GetRequiredSkillsFromNOS(StrictTool):
         })
         
         # Get assessment areas from first sequence
-        first_batch = self.nos[:5]
+        first_batch = self.nos[:1]
         assessment_areas = "\n".join([skill.assessment_area for skill in first_batch])
         return Result(value=f"assessment_areas: {assessment_areas}", context=context)
     

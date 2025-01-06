@@ -10,7 +10,7 @@ from helpers.utils import get_logger
 from stage_app.models import  TNAassessment
 from helpers.agents.a_discover import discover_agent
 from stage_app.models import FourDSequence
-
+from helpers.search import fetch_ofqual_text
 
 logger = get_logger(__name__)
 
@@ -62,6 +62,7 @@ class SaveAssessmentArea(StrictTool):
         tna_assessment.user_assessed_knowledge_level  = self.user_assessed_knowledge_level
         tna_assessment.zavmo_assessed_knowledge_level = self.zavmo_assessed_knowledge_level
         tna_assessment.evidence_of_assessment = self.evidence_of_assessment
+        tna_assessment.raw_ofqual_text = fetch_ofqual_text(self.assessment_area)
         tna_assessment.save()
         tna_assessment_agent.instructions = get_tna_assessment_instructions(context)
         context['tna_assessment']['assessments_data'].append(self.model_dump())

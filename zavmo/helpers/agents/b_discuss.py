@@ -16,7 +16,7 @@ from helpers._types import (
     Result,
 )
 from helpers.utils import get_logger
-from stage_app.models import DiscussStage, UserProfile
+from stage_app.models import DiscussStage, UserProfile, TNAassessment
 from helpers.agents.common import get_agent_instructions
 from helpers.agents.c_deliver import deliver_agent
 
@@ -34,17 +34,17 @@ class Lesson(BaseModel):
 
 class Module(BaseModel):
     title: str = Field(description="The title of the module")
-    learning_outcomes: List[str] = Field(description="Learning outcomes for the module")
-    lessons: List[str] = Field(description="List of lessons in this module")
+    learning_outcomes: List[str] = Field(description="Learning outcomes for the module based on the NOS Assessment Areas and OFQUAL standards")
+    lessons: List[str] = Field(description="List of lessons in this module based on the NOS Assessment Areas and OFQUAL standards")
     duration: int = Field(description="The total duration of the module in hours")
 
 class Curriculum(StrictTool):
-    """Generate a detailed curriculum for the learner."""
+    """Generate a detailed curriculum for the learner based on the NOS Assessment Areas and OFQUAL standards."""
     title: str = Field(description="The title of the curriculum")
-    subject: str = Field(description="The main subject area of the curriculum")
+    subject: str = Field(description="The main subject area of the curriculum based on the NOS Assessment Areas.")
     level: str = Field(description="The difficulty level of the curriculum (e.g., beginner, intermediate, advanced)")
     prerequisites: List[str] = Field(description="Any prerequisites needed to undertake this curriculum")
-    modules: List[Module] = Field(description="List of modules included in the curriculum")
+    modules: List[Module] = Field(description="List of modules included in the curriculum based on the NOS Assessment Areas and OFQUAL standards")
         
     def execute(self, context: Dict):
         email       = context['email']
@@ -83,10 +83,18 @@ class update_discussion_data(StrictTool):
         discuss_stage.timeline        = self.timeline
         discuss_stage.save()
         
-        value = f"""Discussion data updated successfully for {email}        
+        assessment_areas = TNAassessment.objects.filter(user__email=email, sequence_id=sequence_id)
+        ## **Learner's Report for the assessment area:**\n{i.evidence_of_assessment}\n\n
+        nos_ofqual_data = "\n\n".join([f"**NOS Assessment Area**: {i.assessment_area}\n\n**Relevant OFQUAL Standards retreived for the assessment area:**\n{i.raw_ofqual_text}" for i in assessment_areas])
+        value = f"""Discussion data updated successfully for {email}
         
-        **Discussion data:**
-            {discuss_stage.get_summary()}
+        **Timeline**: {self.timeline}
+        **Learning Style**: {self.learning_style}
+
+        Data for Curriculum generation:
+        {nos_ofqual_data}
+
+        **Interest Areas**: {self.interest_areas}
         """
         logger.info(f"Discussion data updated successfully for {email}:\n\n{value}")
 
@@ -95,7 +103,8 @@ class update_discussion_data(StrictTool):
             "interest_areas": self.interest_areas,
             "learning_style": self.learning_style,
             "timeline": self.timeline,
-            "curriculum": discuss_stage.curriculum
+            "curriculum": discuss_stage.curriculum,
+            "nos_ofqual_data": nos_ofqual_data
         }
                 
         return Result(value=value, context=context)
