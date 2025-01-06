@@ -1,5 +1,5 @@
 from pydantic import Field
-from typing import Dict, List, Optional
+from typing import Dict
 from helpers._types import (
     Agent,
     StrictTool,
@@ -7,21 +7,20 @@ from helpers._types import (
 )
 from helpers.agents.common import get_tna_assessment_instructions
 from helpers.utils import get_logger
-from stage_app.models import  TNAassessment
-from helpers.agents.a_discover import discover_agent
-from stage_app.models import FourDSequence
+from stage_app.models import  TNAassessment, FourDSequence
+from helpers.agents.b_discuss import discuss_agent
 from helpers.search import fetch_ofqual_text
 
 logger = get_logger(__name__)
 
+## For handoff
 
-class transfer_to_discover_stage(StrictTool):
-    """Transfer to the Discovery stage when no NOS area is left to assess."""
-    
+class transfer_to_discussion_stage(StrictTool):
+    """Transfer to the Discussion stage when the learner has completed the TNA Assessment step."""    
     def execute(self, context: Dict):
         """Transfer to the Discovery stage when it is informed that all NOS areas are assessed."""       
         sequence_id = context['sequence_id']
-        tna_assessments = FourDSequence.objects.get(id=sequence_id).assessments.all()
+        tna_assessments = TNAassessment.objects.filter(user__email=context['email'], sequence_id=sequence_id)
         for assessment in tna_assessments:
             if not assessment.evidence_of_assessment:
                 raise ValueError("TNA Assessment is not complete for all NOS areas.")
@@ -30,20 +29,18 @@ class transfer_to_discover_stage(StrictTool):
             f"Assessment Area: {assessment.assessment_area}, "
             f"User Level: {assessment.user_assessed_knowledge_level}, "
             f"Zavmo Level: {assessment.zavmo_assessed_knowledge_level}, "
-            f"Evidence: {assessment.evidence_of_assessment}, "
-            f"Type: {assessment.type}"
+            f"Evidence: {assessment.evidence_of_assessment}"
             for assessment in tna_assessments
         )
 
-        agent = discover_agent
+        agent = discuss_agent
         agent.start_message = f"""
         **TNA Assessment Data:**
         {assessment_details}
 
         Greet the learner and introduce to Discovery stage.
         """
-        context['nos_areas_assessed'] = assessment_details
-        return Result(agent=agent, context=context)
+        return Result(value="Transferred to Discussion stage.", agent=agent, context=context)
 
 class SaveAssessmentArea(StrictTool):
     """
@@ -76,7 +73,7 @@ tna_assessment_agent = Agent(
     model="gpt-4o",
     #instructions=get_agent_instructions('tna_assessment'),
     functions=[SaveAssessmentArea,
-               transfer_to_discover_stage],
+               transfer_to_discussion_stage],
     tool_choice="auto",
     parallel_tool_calls=False
 )

@@ -56,6 +56,9 @@ def fetch_agent_response(agent: Agent, history: List, context: Dict) -> ChatComp
     }
     if tools:
         create_params["parallel_tool_calls"] = agent.parallel_tool_calls
+
+    # logging.info(f"messages: {messages}")
+    logging.info(f"instructions:{instructions}")
     return openai_client.chat.completions.create(**create_params)
 
 
@@ -184,8 +187,8 @@ def run_step(agent: Agent, messages: List, context: Dict = {}, max_turns: int = 
         message_dict = json.loads(message.model_dump_json())
         # TODO: message_dict['intent'] = 
 
-        message_dict['context'] = context
-        message_dict['context']['timestamp'] = get_utc_timestamp()
+        # message_dict['context'] = context
+        # message_dict['context']['timestamp'] = get_utc_timestamp()
         # If no tool calls, we're done with this turn
         if not message.tool_calls:
             history.append(message_dict)

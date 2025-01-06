@@ -61,7 +61,7 @@ examples: >
   Consultant: "Based on your responses, your validated proficiency level is Level X. Let's proceed to the next area of assessment."
 
 completion_condition: >
-  When no assessment area is shared or left to be assessed, the TNA Assessment stage will be completed.
+  When no assessment area is shared or left to be assessed, the TNA Assessment stage will be completed. Using the `transfer_to_discuss_stage` tool to transition to the Discussion stage.
 
-next_stage: "Discovery"
-next_stage_description: "The Discovery stage involves a detailed gap analysis between current competencies and future competencies required as per NOS. Learning goals, interests, and preferred learning styles will be identified, creating a roadmap for a personalized and engaging learning journey."
+next_stage: "Discussion"
+next_stage_description: "The Discussion stage is the second stage of the 4-D Learning Journey. The agent in this stage will define specific learning objectives and propose a personalised curriculum aligned with the NOS and OFQUAL standards."

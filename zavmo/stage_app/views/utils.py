@@ -64,16 +64,23 @@ def _determine_stage(user, context, sequence_id):
     if not profile_is_complete:
         context.update(_create_empty_context(user.email, context['sequence_id'], profile))
         return 'profile'
-
+    
     if sequence_id:
         sequence = FourDSequence.objects.get(id=sequence_id)
-        # Check if all assessments are complete
-        incomplete_assessments = [assessment for assessment in TNAassessment.objects.filter(user=profile.user, sequence=sequence) if not assessment.evidence_of_assessment]
-        
-        if incomplete_assessments:
-            context.update(_create_full_context(user.email, context['sequence_id'], profile))
-            logger.info(f"Incomplete assessments found. Running tna_assessment agent.")
-            return 'tna_assessment'
+        if sequence.stage_display == 'discover':
+            discover_is_complete = DiscoverStage.objects.get(user=profile.user, sequence=sequence).check_complete()
+            if not discover_is_complete:
+                context.update(_create_full_context(user.email, context['sequence_id'], profile))
+                logger.info(f"Incomplete discover stage found. Running discover agent.")
+                return 'discover'
+            
+            # Check if all assessments are complete
+            incomplete_assessments = [assessment for assessment in TNAassessment.objects.filter(user=profile.user, sequence=sequence) if not assessment.evidence_of_assessment]
+            
+            if incomplete_assessments:
+                context.update(_create_full_context(user.email, context['sequence_id'], profile))
+                logger.info(f"Incomplete assessments found. Running tna_assessment agent.")
+                return 'tna_assessment'
     else:
         context.update(_create_empty_context(user.email, context['sequence_id'], profile))
         logger.info(f"No sequence ID found. Running profile agent.")

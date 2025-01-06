@@ -9,20 +9,13 @@ from helpers._types import (
     Agent,
     StrictTool,
     PermissiveTool,
-    Result,
-    function_to_json
+    Result
 )
 from stage_app.models import UserProfile, TNAassessment, FourDSequence
 from helpers.agents.a_discover import discover_agent
-from helpers.agents.tna_assessment import tna_assessment_agent
-from helpers.agents.common import get_agent_instructions, get_tna_assessment_instructions
-from helpers.chat import get_prompt
+from helpers.agents.common import get_agent_instructions
 from helpers.search import fetch_nos_text
-from helpers.swarm import openai_client
-import json
 import logging
-from enum import Enum
-from helpers.utils import chunk_items
 
 
 ### For handoff
@@ -66,9 +59,11 @@ class GetRequiredSkillsFromNOS(StrictTool):
         if 'nos_docs' not in context:
             raise ValueError("NOS documents not found in context, use GetNOS tool first.")
         user_profile = UserProfile.objects.get(user__email=context['email'])
-        
-        # Create sequences for every 5 skills
-        for i in range(0, len(self.nos), 1):
+
+        n=1  ## Number of assessments per sequence
+
+        # Create sequences for every n number of assessments
+        for i in range(0, len(self.nos), n):
             # First create the sequence
             sequence = FourDSequence.objects.create(
                 user=user_profile.user,
@@ -76,7 +71,7 @@ class GetRequiredSkillsFromNOS(StrictTool):
             )
             
             # Create assessments for the sequence
-            for skill in self.nos[i:i+1]:
+            for skill in self.nos[i:i+n]:
                 TNAassessment.objects.create(
                     user=user_profile.user,
                     assessment_area=skill.assessment_area,
@@ -102,7 +97,7 @@ class GetRequiredSkillsFromNOS(StrictTool):
         })
         
         # Get assessment areas from first sequence
-        first_batch = self.nos[:1]
+        first_batch = self.nos[:n]
         assessment_areas = "\n".join([skill.assessment_area for skill in first_batch])
         return Result(value=f"assessment_areas: {assessment_areas}", context=context)
     
@@ -120,38 +115,23 @@ class GetNOSDocument(StrictTool):
         logging.info(f"NOS document: {nos_docs}")
         return Result(value=f"This is the NOS document with competencies outlined: \n\n{nos_docs}", context=context)
 
-class transfer_to_tna_assessment_step(StrictTool):
-    """After getting the assessment areas, transfer to the TNA Assessment step."""
+### For handoff
+
+class transfer_to_discover_stage(StrictTool):
+    """Transfer to the Discovery stage when the learner has completed the Profile stage."""
     
     def execute(self, context: Dict):
-        """Transfer to the TNA Assessment step."""
+        """Transfer to the Discovery stage when the learner has completed the Profile stage."""        
         profile = UserProfile.objects.get(user__email=context['email'])
         is_complete, error = profile.check_complete()
         if not is_complete:
             raise ValueError(error)
-        if not context['sequence_id']:
-            raise ValueError("No TNA assessments found for the learner. Please get the NOS document, generate required skills and TNA assessments.")
         summary = profile.get_summary()
-        assessments = TNAassessment.objects.filter(sequence_id=context['sequence_id'])
-        assessment_areas = ", ".join([assessment.assessment_area for assessment in assessments])
-        agent = tna_assessment_agent
-        agent.start_message = f"""Here is the learner's profile: {summary} 
-
-        TNA assessments: {assessment_areas}
+        agent = discover_agent
+        agent.start_message += f"Here is the learner's profile: {summary}"
         
-        Introduce the TNA Assessment step.
-        Present the TNA assessments that the learner should complete for current 4D sequence in the below form.
-
-        |       Assessments       |
-        |-------------------------|
-        |     assessment area     |
-        |     assessment area     | 
-
-        """
-        agent.instructions = get_tna_assessment_instructions(context)
-        return Result(value="Transferred to TNA Assessment step.",
-            agent=agent, 
-            context=context)
+        return Result(agent=agent, context=context)
+    
 
 ### For updating the data
 
@@ -202,9 +182,9 @@ profile_agent = Agent(
     instructions=get_agent_instructions('profile'),
     functions=[
         update_profile_data,
-        transfer_to_tna_assessment_step,
         GetNOSDocument,
-        GetRequiredSkillsFromNOS
+        GetRequiredSkillsFromNOS,
+        transfer_to_discover_stage
     ],
     tool_choice="auto",
     parallel_tool_calls=False

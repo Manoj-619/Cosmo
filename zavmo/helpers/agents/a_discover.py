@@ -8,48 +8,49 @@ Fields:
 """
 
 from pydantic import Field
-from typing import Dict, List
+from typing import Dict
 from helpers._types import (
     Agent,
     StrictTool,
     Result,
 )
-from stage_app.models import DiscoverStage, UserProfile
-from helpers.agents.b_discuss import discuss_agent
-from helpers.agents.common import get_agent_instructions
+from stage_app.models import DiscoverStage, UserProfile, TNAassessment
+from helpers.agents.tna_assessment import tna_assessment_agent
+from helpers.agents.common import get_tna_assessment_instructions, get_agent_instructions
 from helpers.utils import get_logger
 
 logger = get_logger(__name__)
 
-# TODO: Update dicover.yaml prompt - making it more specific to the Job Description of the user
-
-# TODO: Add tool for -> Training needs analysis
-
-
 ### For handoff
-class transfer_to_discussion_stage(StrictTool):
-    """Transfer to the Discussion stage when the learner approves the summary of the information gathered."""    
+class transfer_to_tna_assessment_step(StrictTool):
+    """After the learner has completed the Discover stage, transfer to the TNA Assessment step."""
+    
     def execute(self, context: Dict):
-        email = context['email']
-        sequence_id = context['sequence_id']
+        """Transfer to the TNA Assessment step."""
+        discover_stage = DiscoverStage.objects.get(user__email=context['email'], sequence_id=context['sequence_id'])
+        discover_is_complete = discover_stage.check_complete()
+        if not discover_is_complete:
+            raise ValueError("Discover stage is not complete. Please complete the Discover stage before proceeding to the TNA Assessment step.")
         
-        logger.info(f"Transferring to the Discussion stage for {context['email']}.")
-        discovery_object = DiscoverStage.objects.get(user__email=email, sequence_id=sequence_id)
-        is_complete, error = discovery_object.check_complete()
-        if not is_complete:
-            raise ValueError(error)
-        
-        agent               = discuss_agent        
+        assessments = TNAassessment.objects.filter(sequence_id=context['sequence_id'])
+        assessment_areas = ", ".join([assessment.assessment_area for assessment in assessments])
+        agent = tna_assessment_agent
         agent.start_message = f"""
-        **Discovery Data:**
-                
-        {discovery_object.get_summary()}
+        TNA assessments: {assessment_areas}
+        
+        Greet and introduce the TNA Assessment step.
+        Present the TNA assessments that the learner should complete for current 4D sequence in the below form.
+
+        |       Assessments       |
+        |-------------------------|
+        |     assessment area     |
+        |     assessment area     | 
+
         """
-        return Result(
-            value=self.model_dump_json(),
+        agent.instructions = get_tna_assessment_instructions(context)
+        return Result(value="Transferred to TNA Assessment step.",
             agent=agent, 
             context=context)
-
 
 ### For updating the data
 class update_discover_data(StrictTool):
@@ -89,7 +90,7 @@ discover_agent = Agent(
     instructions=get_agent_instructions('discover'),
     functions=[
         update_discover_data,
-        transfer_to_discussion_stage
+        transfer_to_tna_assessment_step
     ],
     tool_choice="auto",
     parallel_tool_calls=False

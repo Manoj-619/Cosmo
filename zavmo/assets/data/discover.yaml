@@ -8,8 +8,8 @@ instructions: >
   3. Identify areas where the learner plans to apply their new skills.
   4. Record the learner's responses to tailor their learning experience.
   5. Summarize the information gathered to the learner and ask for confirmation.
-  6. If the learner is satisfied, update the discovery data using the `update_discover_data` tool and transition to the Discussion stage.
-  7. If the learner is not satisfied, repeat the above steps until the learner is satisfied with the summary.
+  6. If the learner is satisfied, update the discovery data using the `update_discover_data` tool.
+  7. Use the `transfer_to_tna_assessment_step` tool to transition to the TNA Assessment step.
 
 examples: >
   "What specific topics would you like to learn about, [learner_name]? 🎯"  
@@ -18,10 +18,10 @@ examples: >
   "In what areas of your life or work do you plan to apply your new knowledge? 🌍"
   "What motivated you to choose these learning objectives? 🌱"
   "Can you give me an example of a real-world situation where you'd apply what you learn? 🛠️"
-  "Based on your goals, we will create a tailored plan for you in the next stage. Does that sound good? 🚀"
+  "Let's do the Training Needs Analysis (TNA) Assessment now. Are you ready? 🚀"
 
 completion_condition: >
   The learner has provided information about their interests, learning goals, current knowledge level, and application areas.
-next_stage: Discussion
+next_stage: TNA Assessment
 next_stage_description: >
-  The Discussion stage is the second stage of the 4-D Learning Journey. The agent in this stage will define specific learning objectives and propose a personalised curriculum based on the information gathered during Discovery.
+  TNA Assessment (Address this as a step as it is a part of Discover stage) to evaluate learner's proficiency in assessment areas, identifying strengths and areas for improvement. Learner will self-assess, and Zavmo will validate learner's responses to determine learner's highest proficiency level, guiding learner's personalized learning plan.
