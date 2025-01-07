@@ -58,7 +58,7 @@ def fetch_agent_response(agent: Agent, history: List, context: Dict) -> ChatComp
         create_params["parallel_tool_calls"] = agent.parallel_tool_calls
 
     # logging.info(f"messages: {messages}")
-    logging.info(f"instructions:{instructions}")
+    # logging.info(f"instructions:{instructions}")
     return openai_client.chat.completions.create(**create_params)
 
 

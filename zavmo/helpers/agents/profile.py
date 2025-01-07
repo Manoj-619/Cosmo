@@ -60,7 +60,7 @@ class GetRequiredSkillsFromNOS(StrictTool):
             raise ValueError("NOS documents not found in context, use GetNOS tool first.")
         user_profile = UserProfile.objects.get(user__email=context['email'])
 
-        n=1  ## Number of assessments per sequence
+        n=5 ## Number of assessments per sequence
 
         # Create sequences for every n number of assessments
         for i in range(0, len(self.nos), n):

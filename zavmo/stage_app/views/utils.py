@@ -11,12 +11,12 @@ from helpers.constants import CONTEXT_SUFFIX, HISTORY_SUFFIX, DEFAULT_CACHE_TIME
 from helpers.swarm import run_step
 from django.db import utils as django_db_utils
 
-stage_order = ['profile', 'tna_assessment', 'discover', 'discuss', 'deliver', 'demonstrate']
-stage_models = [UserProfile, TNAassessment, DiscoverStage, DiscussStage, DeliverStage, DemonstrateStage]
+stage_order = ['profile', 'discover', 'tna_assessment', 'discuss', 'deliver', 'demonstrate']
+stage_models = [UserProfile, DiscoverStage, TNAassessment, DiscussStage, DeliverStage, DemonstrateStage]
 
 agents = { 'profile': profile.profile_agent,
-           'tna_assessment': tna_assessment.tna_assessment_agent,
            'discover': a_discover.discover_agent,
+           'tna_assessment': tna_assessment.tna_assessment_agent,
            'discuss': b_discuss.discuss_agent,
            'deliver': c_deliver.deliver_agent,
            'demonstrate': d_demonstrate.demonstrate_agent,
@@ -68,7 +68,7 @@ def _determine_stage(user, context, sequence_id):
     if sequence_id:
         sequence = FourDSequence.objects.get(id=sequence_id)
         if sequence.stage_display == 'discover':
-            discover_is_complete = DiscoverStage.objects.get(user=profile.user, sequence=sequence).check_complete()
+            discover_is_complete, discover_error = DiscoverStage.objects.get(user=profile.user, sequence=sequence).check_complete()
             if not discover_is_complete:
                 context.update(_create_full_context(user.email, context['sequence_id'], profile))
                 logger.info(f"Incomplete discover stage found. Running discover agent.")
@@ -79,7 +79,6 @@ def _determine_stage(user, context, sequence_id):
             
             if incomplete_assessments:
                 context.update(_create_full_context(user.email, context['sequence_id'], profile))
-                logger.info(f"Incomplete assessments found. Running tna_assessment agent.")
                 return 'tna_assessment'
     else:
         context.update(_create_empty_context(user.email, context['sequence_id'], profile))
@@ -158,12 +157,13 @@ def _process_agent_response(stage_name, message_history, context, max_turns=10):
         if i == 0:
             stage_model = UserProfile.objects.get(user__email=email)
         elif i == 1:
-            stage_model = TNAassessment
-        elif i > 1:
             stage_model = stage_models[i].objects.get(user__email=email, sequence_id=sequence_id)
-        
+        elif i == 2:
+            stage_model = TNAassessment
+
+        ## Get Summary of previous stages    
         if stage_model == TNAassessment:
-            all_tna_assessments = TNAassessment.objects.filter(user__email=email, sequence_id=sequence_id)
+            all_tna_assessments    = TNAassessment.objects.filter(user__email=email, sequence_id=sequence_id)
             summary = "".join([s.get_summary() for s in all_tna_assessments])
         else:
             summary = stage_model.get_summary()

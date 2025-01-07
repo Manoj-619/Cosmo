@@ -34,18 +34,19 @@ class transfer_to_tna_assessment_step(StrictTool):
         
         assessments = TNAassessment.objects.filter(sequence_id=context['sequence_id'])
         assessment_areas = ", ".join([assessment.assessment_area for assessment in assessments])
+        logger.info(f"assessment_areas: {assessment_areas}")
         agent = tna_assessment_agent
-        agent.start_message = f"""
-        TNA assessments: {assessment_areas}
-        
-        Greet and introduce the TNA Assessment step.
-        Present the TNA assessments that the learner should complete for current 4D sequence in the below form.
+        agent.start_message = f"""Greet and introduce the TNA Assessment step.
+        Present the Assessments that the learner should complete for the current 4D sequence in the below shared table form. 
+        Current 4D Sequence Assessments For TNA are: 
+        {assessment_areas}
 
-        |       Assessments       |
-        |-------------------------|
-        |     assessment area     |
-        |     assessment area     | 
+        |       **Assessments For Training Need Analysis**     |
+        |------------------------------------------------------|
+        |              assessment area                         |
+        |              assessment area                         |
 
+        Then start the TNA assessment on Current NOS Area shared.
         """
         agent.instructions = get_tna_assessment_instructions(context)
         return Result(value="Transferred to TNA Assessment step.",
@@ -78,9 +79,9 @@ class update_discover_data(StrictTool):
         discover_stage.application_area = self.application_area
         discover_stage.save()        
         context['discover'] = self.model_dump() # JSON dump of pydantic model
-        logger.info(f"Updated DiscoverStage Data for {email}. The following data was updated:\n\n{str(self)}")
+        logger.info(f"Updated Discover stage Data for {email}. The following data was updated:\n\n{str(self)}")
         
-        return Result(value=self.model_dump_json(),
+        return Result(value=f"Updated Discover stage Data for {email}.",
                       context=context)
             
 discover_agent = Agent(

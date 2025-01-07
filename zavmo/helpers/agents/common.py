@@ -1,7 +1,7 @@
 import os
 import codecs
 import yaml
-from typing import Dict
+from typing import Dict, List
 from helpers.chat import get_prompt
 from stage_app.models import UserProfile, TNAassessment
 import json
@@ -83,8 +83,9 @@ def get_tna_assessment_instructions(context: Dict):
  
     tna_assessments = TNAassessment.objects.filter(user__email=context['email'], sequence_id=context['sequence_id'])
     
-    competencies_to_assess = [{'assessment_area':assessment.assessment_area, 'blooms_taxonomy_criteria':assessment.blooms_taxonomy_criteria} 
-                              for assessment in tna_assessments if not assessment.evidence_of_assessment]
+    competencies_to_assess = [{'assessment_area':assessment.assessment_area, 
+                               'blooms_taxonomy_criteria':assessment.blooms_taxonomy_criteria} 
+                                for assessment in tna_assessments if not assessment.evidence_of_assessment]
     
     system_content = compile_system_content(competencies_to_assess, prompt_context)
     return system_content 
