@@ -33,7 +33,7 @@ def fetch_nos_text(industry: str, current_role: str) -> List[str]:
             vector=query_vector,
             top_k=1,
             include_metadata=True,
-            filter={"industry": "Sales", "type":"Developed by"},
+            filter={"type":"Developed by"},
 
         )
     nos_id = nos_searched_from_relavant_occupations['matches'][0]['metadata']['nos_id']
@@ -71,7 +71,7 @@ def fetch_ofqual_text(query: str) -> List[str]:
     # Search for relevant qualifications without filters
     results = index.query(
         vector=query_vector,
-        top_k=3,
+        top_k=1,
         include_metadata=True
     )
 
