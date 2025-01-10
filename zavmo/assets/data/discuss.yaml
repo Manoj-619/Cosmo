@@ -4,7 +4,7 @@ description: >
   The Discussion stage structures a curriculum strictly designed around NOS assessment areas and OFQUAL occupational standards, while incorporating the learner's preferred conversational learning style and schedule to create a qualification-focused learning journey that meets recognized industry requirements.
 
 instructions: >
-  1. Ask the learner's about their specific interest areas, preferred learning style, and available study time per week, one at a time.
+  1. First, ask the learner's about their specific interest areas, preferred learning style, and available study time per week, one at a time.
   2. The learning style can be one of the following:
      - Case Study Discussions: Interactive cases tailored to learner's goals
      - Socratic Dialogue: Guided questioning to enhance critical thinking
@@ -12,9 +12,9 @@ instructions: >
      - Mentoring Conversations: One-on-one guided discussions
      - Storytelling Learning: Industry-relevant narrative discussions
     Present these options (along with brief descriptions) to the learner and ask them to choose one. These are the only learning options available. If the learner expresses a preference for a non-conversational format, politely explain that the learning experience is fully conversation-based for the time being.
-  3. Immediately after the user has provided their interest areas, learning style, and timeline, use the `update_discussion_data` tool with instructions to update the learner's interest areas, objectives, and timeline.
-  4. After the discussion data is updated, use the `Curriculum` tool to generate a curriculum based on the NOS Assessment Areas and OFQUAL standards.
-  5. Present the generated curriculum as a table to the learner and ask them to review it, explaining how it maps to their NOS Assessment Areas and OFQUAL requirements.
+  3. Second, immediately after the user has provided their interest areas, learning style, and timeline, use the `update_discussion_data` tool with instructions to update the learner's interest areas, objectives, and timeline.
+  4. Third, after the discussion data is updated, use the `Curriculum` tool to generate a curriculum based on the NOS Assessment Areas and OFQUAL standards.
+  5. Then present the generated curriculum as a table to the learner and ask them to review it, explaining how it maps to their NOS Assessment Areas and OFQUAL requirements.
   6. Ask the learner if they would like to make any changes to the curriculum while maintaining alignment with OFQUAL standards.
   7. If the learner is satisfied, transfer to the delivery stage using the `transfer_to_delivery_stage` tool.
 
@@ -31,11 +31,11 @@ examples:
 
     ### Modules
 
-    | Module | Duration | Learning Outcomes | Lessons |
-    |--------|----------|-------------------|---------|
-    | **Fundamentals of Business Strategy** | 10 hours | - Understand business strategy<br>- Analyse competitive environments | - Introduction to business strategy<br>- SWOT analysis |
-    | **Marketing and Sales** | 8 hours | - Develop effective marketing strategies<br>- Understand sales funnels | - Basics of marketing<br>- Sales funnel strategies |
-    | **Financial Management** | 12 hours | - Manage financial statements<br>- Budgeting and forecasting | - Introduction to financial statements<br>- Budgeting for small businesses |
+    | Module                      | Duration | Learning Outcomes | Lessons |
+    |-----------------------------|----------|-------------------|---------|
+    | **NOS Assessment Area**     | 10 hours | - Understand business strategy<br>- Analyse competitive environments | - Introduction to business strategy<br>- SWOT analysis |
+    | **NOS Assessment Area**     | 8 hours  | - Develop effective marketing strategies<br>- Understand sales funnels | - Basics of marketing<br>- Sales funnel strategies |
+    | **Learner's Interest Area** | 8 hours  | - Manage financial statements<br>- Budgeting and forecasting | - Introduction to financial statements<br>- Budgeting for small businesses |
 
     We included **Business Strategy** because understanding competitive environments is a must for anyone aiming to thrive in today's market. Next, we dive into **Marketing and Sales** so you can build powerful strategies to attract and convert customers. And finally, **Financial Management** will give you the tools to stay on top of your company's financial health. 📈💡
 
