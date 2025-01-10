@@ -2,7 +2,7 @@ name: TNA Assessment
 id: tna_assessment
 description: >
   The TNA assessment evaluates learner proficiency in an area of assessment shared from the NOS, starting with self-assessment, validation against criteria, and applying progression criteria to determine the highest level achieved.
-  
+
 instructions: > 
   1. **Present the assessment area in a friendly and engaging manner**:  
     - Do not formally mention that it is an assessment area, instead introduce the area of assessment in a friendly and engaging manner.
@@ -11,13 +11,17 @@ instructions: >
     - Based on the learner's self-assessed level, ask challenging questions aligned with the assessment area's criteria provided for that level. 
     - Validate the learner's proficiency at self-assessed level
   3. **Determine Zavmo Assessed Level**:
-    - It is important to keep moving forward following progression criteria (backward/forward) until the highest level where the learner meets criteria
+    - It is important to keep moving forward on levels following progression criteria (backward/forward) until the highest level where the learner meets criteria
   4. **Save the Assessment Area Details**:  
     - Use the `SaveAssessmentArea` tool to save the details of the area of assessment.
-  5. **Move to Next Assessment Area**:
-    - After saving the details of the area of assessment, move to the next assessment area.
-    - If no assessment area is shared to assess, the TNA Assessment step will be completed.
-
+  5. **Determine Knowledge Gaps and All Items of Qualification**:  
+    - Immediately after the assessment details are saved, use the `DetermineGaps` tool:
+      - to determine the gaps between learner's knowledge and qualifications provided in the OFQUAL unit.
+      - to list all items of qualification provided in the OFQUAL unit, ensuring to capture all numbered items (from 1, 1.1, to n.n) in sequence. 
+  6. **Move to Next Assessment Area**:
+    - After determining zavmo assessed level following progression criteria, save the details of the area of assessment, and move to the next assessment area.
+    - If no NOS area is shared to assess, the TNA Assessment step will be completed and using the `transfer_to_discuss_stage` tool transition to the Discussion stage.
+ 
 examples: >
   Input: 
 

@@ -45,7 +45,7 @@ class GetSkillFromNOS(StrictTool):
     def execute(self, context: Dict):
         return self.model_dump_json() 
 
-class GetRequiredSkillsFromNOS(StrictTool):
+class GetRequiredSkillsFromNOS(PermissiveTool):
     """Use this tool if NOS document is shared and generate TNA assessments data.
 
     Instructions:
@@ -53,7 +53,9 @@ class GetRequiredSkillsFromNOS(StrictTool):
     Add these to determine the total number of competencies to be listed (e.g., 12 + 10 = 22). 
     Generate a list of competencies and corresponding Bloom's Taxonomy criteria, covering all areas of the NOS document.
     """
-    nos: List[GetSkillFromNOS] = Field(description="Generate a list of total number of competencies listed under **Performance Criteria** and **Knowledge and Understanding** sections with corresponding Bloom's Taxonomy criteria for each item, covering all areas of the NOS document.")
+    analysis: str = Field(description="Analysis of the NOS document to determine the number of competencies to be listed. Taking total of - number of competencies mentioned under **Performance Criteria** and **Knowledge and Understanding** sections.")
+    nos: List[GetSkillFromNOS] = Field(description="Generate a list of upto 30 competencies mentioned under **Performance Criteria** and **Knowledge and Understanding** sections with corresponding Bloom's Taxonomy criteria at different levels for each item, covering all areas of the NOS document and every bloom's taxonomy level (Remember, Understand, Apply, Analyze, Evaluate, Create).", 
+                                       min_items = 10, max_items=30)
     
     def execute(self, context: Dict):
         if 'nos_docs' not in context:
@@ -88,19 +90,13 @@ class GetRequiredSkillsFromNOS(StrictTool):
         # Update context with first sequence info
         context.update({
             'sequence_id': all_sequences[0],
-            'sequences_to_complete': all_sequences,  
-            'tna_assessment': {
-                'total_assessments': len(all_sequences),
-                'current_assessment': 1,
-                'assessments_data': []
-            }
+            'sequences_to_complete': all_sequences,
         })
         
         # Get assessment areas from first sequence
         first_batch = self.nos[:n]
         assessment_areas = "\n".join([skill.assessment_area for skill in first_batch])
         return Result(value=f"assessment_areas: {assessment_areas}", context=context)
-    
 
 class GetNOSDocument(StrictTool):
     """Use this tool to get the NOS document."""

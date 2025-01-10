@@ -92,17 +92,11 @@ def _determine_stage(user, context, sequence_id):
 def _create_empty_context(email, sequence_id, profile):
     """Create context for incomplete profile.""" 
     
-    tna_assessment_data = {
-        'total_assessments': 0,
-        'current_assessment': 0,
-        'assessments_data': []
-    }
-
     return {
         'email': email,
         'sequence_id': sequence_id,
         'profile': UserProfileSerializer(profile).data if profile else {},
-        'tna_assessment': tna_assessment_data,
+        'tna_assessment': {},
         'discover': {},
         'discuss': {},
         'deliver': {},
@@ -112,13 +106,13 @@ def _create_empty_context(email, sequence_id, profile):
 def _create_full_context(email, sequence_id, profile):
     """Create context with all stage data."""
     sequence = FourDSequence.objects.get(id=sequence_id)
-    tna_assessments = sequence.assessments.all()
-    all_assessments = [TNAassessmentSerializer(assessment).data for assessment in tna_assessments]
+
+    all_assessments = [TNAassessmentSerializer(assessment).data for assessment in TNAassessment.objects.filter(user__email=email, sequence_id=sequence_id)]
     completed_assessments = [assessment for assessment in all_assessments if assessment.get('evidence_of_assessment')]
     
     tna_assessment_data = {
         'total_assessments': len(all_assessments),
-        'current_assessment': len(completed_assessments) + 1,
+        'current_assessment': len(completed_assessments) + 1 if len(completed_assessments) < len(all_assessments) else len(all_assessments),
         'assessments_data': completed_assessments
     }
     return {

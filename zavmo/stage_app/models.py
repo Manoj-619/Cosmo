@@ -134,7 +134,11 @@ class TNAassessment(models.Model):
         related_name='tna_assessments'
     )
     raw_ofqual_text = models.TextField(blank=True, null=True, verbose_name="Raw Ofqual Text")
-
+    knowledge_gaps = models.TextField(blank=True, null=True, verbose_name="Knowledge Gaps")
+    all_items_of_qualification = models.TextField(blank=True, null=True, verbose_name="All Items of Qualification")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
     def __str__(self):
         return f"User {self.user.email} - Sequence {self.sequence.id} - TNA Assessment - Assessment Area: {self.assessment_area}"
     
@@ -220,7 +224,7 @@ class DiscussStage(models.Model):
                                     db_column='sequence_id',
                                     related_name='discuss_stage')
     
-    # interest_areas = models.JSONField(blank=True, null=True, verbose_name="Interest Areas")
+    interest_areas = models.JSONField(blank=True, null=True, verbose_name="Interest Areas")
     learning_style = models.TextField(blank=True, null=True, verbose_name="Learning Style")
     timeline =  models.IntegerField(blank=True, null=True, verbose_name="Available Time (hours per week)")
     curriculum     = models.JSONField(blank=True, null=True, verbose_name="Curriculum Plan")
@@ -229,8 +233,8 @@ class DiscussStage(models.Model):
         return f"User {self.user.email} - Sequence {self.sequence.id} - Discuss Stage"
     
     def check_complete(self):
-        # if not self.interest_areas:
-        #     return False, "Interest areas are required"
+        if not self.interest_areas:
+            return False, "Interest areas are required"
         if not self.learning_style:
             return False, "Learning style is required"
         if not self.timeline:
@@ -242,6 +246,7 @@ class DiscussStage(models.Model):
     def get_summary(self):
         """Get a summary of the user's profile."""
         return f"""
+        **Interest Areas**: {self.interest_areas}
         **Learning Style**: {self.learning_style}
         **Available Time (hours per week)**: {self.timeline}
         **Curriculum**:
