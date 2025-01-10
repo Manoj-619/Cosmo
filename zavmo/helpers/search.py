@@ -65,8 +65,8 @@ def fetch_ofqual_text(query: str) -> List[str]:
     """
     query_vector = get_embedding(query)
 
-    # Query the Pinecone index
-    index = pinecone_client.Index('test-ofqual')
+    # Query the Pinecone index having unitwise data ingested
+    index = pinecone_client.Index('sales-ofqual') ## TODO: Change to ofqual index
     
     # Search for relevant qualifications without filters
     results = index.query(
