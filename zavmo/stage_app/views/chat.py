@@ -5,6 +5,7 @@ from rest_framework.decorators import api_view, authentication_classes, permissi
 from rest_framework.response import Response as DRFResponse
 from rest_framework import status
 from stage_app.views.utils import _get_user_and_sequence, _initialize_context, _determine_stage, _get_message_history, _process_agent_response, _update_context_and_cache
+from ..tasks import new_celery_task
 
 
 logger = get_logger(__name__)
@@ -36,7 +37,10 @@ def chat_view(request):
 
     message_history = _get_message_history(user.email, sequence_id, request.data.get('message'))
     response        = _process_agent_response(stage_name, message_history, context)
-    
+
+    #TODO : Trigger celery for xAPI
+    new_celery_task.apply_async()
+
     if not response.messages:
         return DRFResponse({
             "error": "No response generated from the agent",
