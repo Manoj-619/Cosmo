@@ -62,7 +62,8 @@ class GetRequiredSkillsFromNOS(PermissiveTool):
             raise ValueError("NOS documents not found in context, use GetNOS tool first.")
         user_profile = UserProfile.objects.get(user__email=context['email'])
 
-        n=5 ## Number of assessments per sequence
+        ## Number of assessments per sequence
+        n=3 ## TODO: Change to 5, after testing
 
         # Create sequences for every n number of assessments
         for i in range(0, len(self.nos), n):
