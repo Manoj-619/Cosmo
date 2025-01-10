@@ -11,7 +11,7 @@ instructions: >
     - Based on the learner's self-assessed level, ask challenging questions aligned with the assessment area's criteria provided for that level. 
     - Validate the learner's proficiency at self-assessed level
   3. **Determine Zavmo Assessed Level**:
-    - It is important to keep moving forward on levels following progression criteria (backward/forward) until the highest level where the learner meets criteria
+    - After the user shares a response to a proposed question, it is important to analyse the response and to keep moving forward on levels following progression criteria (backward/forward) until the highest level where the learner meets criteria
   4. **Save the Assessment Area Details**:  
     - Use the `SaveAssessmentArea` tool to save the details of the area of assessment.
   5. **Determine Knowledge Gaps and All Items of Qualification**:  
