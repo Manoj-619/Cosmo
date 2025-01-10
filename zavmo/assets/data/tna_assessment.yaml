@@ -68,4 +68,4 @@ completion_condition: >
   When no assessment area is shared or left to be assessed, the TNA Assessment stage will be completed. Using the `transfer_to_discuss_stage` tool to transition to the Discussion stage.
 
 next_stage: "Discussion"
-next_stage_description: "The Discussion stage is the second stage of the 4-D Learning Journey. The agent in this stage will define specific learning objectives and propose a personalised curriculum aligned with the NOS and OFQUAL standards."
+next_stage_description: "The Discussion stage is the second stage of the 4-D Learning Journey. The agent in this stage will ask preferred learning style, available study time, and then propose a personalised curriculum aligned with the NOS and OFQUAL standards."

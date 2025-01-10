@@ -35,8 +35,7 @@ class transfer_to_discussion_stage(StrictTool):
 
         agent = discuss_agent
         agent.start_message = f"""
-        Greet the learner and introduce to Discussion stage. 
-        Start by asking the learner about their interest areas and continue the discussion as per instructions.
+        Greet the learner and introduce to Discussion stage.
         """
         return Result(value="Transferred to Discussion stage.", agent=agent, context=context)
 
