@@ -94,10 +94,7 @@ class GetRequiredSkillsFromNOS(PermissiveTool):
             'sequences_to_complete': all_sequences,
         })
         
-        # Get assessment areas from first sequence
-        first_batch = self.nos[:n]
-        assessment_areas = "\n".join([skill.assessment_area for skill in first_batch])
-        return Result(value=f"assessment_areas: {assessment_areas}", context=context)
+        return Result(value=f"FourDSequences created, transfer to discovery stage", context=context)
 
 class GetNOSDocument(StrictTool):
     """Use this tool to get the NOS document."""
@@ -123,6 +120,8 @@ class transfer_to_discover_stage(StrictTool):
         is_complete, error = profile.check_complete()
         if not is_complete:
             raise ValueError(error)
+        if context['sequence_id'] == "":
+            raise ValueError("Get Required skills from NOS first.")
         summary = profile.get_summary()
         agent = discover_agent
         agent.start_message += f"Here is the learner's profile: {summary}"
