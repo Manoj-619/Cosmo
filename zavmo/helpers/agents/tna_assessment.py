@@ -87,7 +87,7 @@ class DetermineGaps(StrictTool):
         tna_assessment.knowledge_gaps = self.gaps
         tna_assessment.all_items_of_qualification = self.all_items_of_qualification
         tna_assessment.save()
-        return Result(value=f"Gaps determined successfully for assessment area: {tna_assessment.assessment_area}.", context=context)
+        return Result(value=f"Move to next NOS Assessment Area.", context=context)
 
 tna_assessment_agent = Agent(
     name="TNA Assessment",
