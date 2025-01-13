@@ -63,7 +63,7 @@ class GetRequiredSkillsFromNOS(PermissiveTool):
         user_profile = UserProfile.objects.get(user__email=context['email'])
 
         ## Number of assessments per sequence
-        n=3 ## TODO: Change to 5, after testing
+        n=5 
 
         # Create sequences for every n number of assessments
         for i in range(0, len(self.nos), n):
