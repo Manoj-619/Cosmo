@@ -22,40 +22,40 @@ import logging
 class BloomTaxonomyLevels(StrictTool):
     """Use this tool to generate Bloom's Taxonomy levels for a given competency.
 
-    - Remember: The user must be able to recall relevant facts, definitions, or procedures related to this competency?
-    - Understand: The user must be able to explain or interpret the concepts associated with this competency?
-    - Apply: The user must be able to effectively utilize the competency in real-world scenarios or simulated tasks?
-    - Analyze: The user must be able to deconstruct complex situations to identify components related to this competency?
-    - Evaluate: The user must be able to assess situations and justify decisions involving this competency?
-    - Create: The user must be able to design or innovate new approaches, presentations, or solutions based on this competency?    
+    - Remember: The user must be able to recall relevant facts, definitions, or procedures related to this [competency]?
+    - Understand: The user must be able to explain or interpret the concepts associated with this [competency]?
+    - Apply: The user must be able to effectively utilize the [competency] in real-world scenarios or simulated tasks?
+    - Analyze: The user must be able to deconstruct complex situations to identify components related to this [competency]?
+    - Evaluate: The user must be able to assess situations and justify decisions involving this [competency]?
+    - Create: The user must be able to design or innovate new approaches, presentations, or solutions based on this [competency]?    
     """
     level: Literal["Remember", "Understand", "Apply", "Analyze", "Evaluate", "Create"] = Field(description="The level of Bloom's Taxonomy")
-    criteria: str = Field(description="Generate very challenging criteria for assessing the competency on the level of Bloom's Taxonomy")
+    criteria: str = Field(description="Generate very challenging criteria for assessing the [competency] on the level of Bloom's Taxonomy")
 
     def execute(self, context: Dict):
         return self.model_dump_json()
 
 class GetSkillFromNOS(StrictTool):
-    """Get a competency from the NOS document and generate its corresponding Bloom's Taxonomy criteria."""
+    """Get a competency from the NOS document and generate its corresponding Bloom's Taxonomy criteria. Competency can be knowledge or performance based."""
 
     assessment_area:str = Field(description="Name of the competency")
-    blooms_taxonomy_criteria: List[BloomTaxonomyLevels] = Field(description="Criterias on Bloom's Taxonomy levels for the competency")
+    blooms_taxonomy_criteria: List[BloomTaxonomyLevels] = Field(description="Criterias on Bloom's Taxonomy levels for the [competency]")
     # type: Literal["knowledge", "performance"] = Field(description="The type of the competency")
 
     def execute(self, context: Dict):
         return self.model_dump_json() 
 
-class GetRequiredSkillsFromNOS(PermissiveTool):
-    """Use this tool if NOS document is shared and generate TNA assessments data.
+class GetCountOfCompetencies(StrictTool):
+    """Use this tool to get the count of competencies mentioned in the NOS document under different sections."""
+    count: int = Field(description="Get the total count of all competencies provided in the NOS document. Competencies are all the numbered items present in the NOS document and total count can be an addition of performance based and knowledge based competencies mentioned.")
 
-    Instructions:
-    Count all numbered items in “Performance Criteria” and “Knowledge and Understanding” sections. 
-    Add these to determine the total number of competencies to be listed (e.g., 12 + 10 = 22). 
-    Generate a list of competencies and corresponding Bloom's Taxonomy criteria, covering all areas of the NOS document.
-    """
-    analysis: str = Field(description="Analysis of the NOS document to determine the number of competencies to be listed. Taking total of - number of competencies mentioned under **Performance Criteria** and **Knowledge and Understanding** sections.")
-    nos: List[GetSkillFromNOS] = Field(description="Generate a list of upto 30 competencies mentioned under **Performance Criteria** and **Knowledge and Understanding** sections with corresponding Bloom's Taxonomy criteria at different levels for each item, covering all areas of the NOS document and every bloom's taxonomy level (Remember, Understand, Apply, Analyze, Evaluate, Create).", 
-                                       min_items = 10, max_items=30)
+    def execute(self, context: Dict):
+        return Result(value=f"List atmost {self.count} competencies from the NOS document. Total count of competencies to be listed is {self.count}.", context=context)
+
+class GetRequiredSkillsFromNOS(PermissiveTool):
+    """Use this tool to generate a list of competencies outlined in the NOS document."""
+    nos: List[GetSkillFromNOS] = Field(description="Based on the Total count of competencies, generate a list of upto 40 competencies from the NOS document. Competencies are all the numbered items in different representations present in the NOS document (these items can be performance based and knowledge based as well) also generate corresponding Bloom's Taxonomy criteria at every level (Remember, Understand, Apply, Analyze, Evaluate, Create) for each competency", 
+                                       min_items = 3, max_items=40)
     
     def execute(self, context: Dict):
         if 'nos_docs' not in context:
@@ -97,16 +97,13 @@ class GetRequiredSkillsFromNOS(PermissiveTool):
         return Result(value=f"FourDSequences created, transfer to discovery stage", context=context)
 
 class GetNOSDocument(StrictTool):
-    """Use this tool to get the NOS document."""
-    
+    current_role: str = Field(description="The learner's current role.")
+
     def execute(self, context: Dict):
-        user_profile = UserProfile.objects.get(user__email=context['email'])
-        nos_docs = fetch_nos_text(
-                industry=user_profile.current_industry, 
-                current_role=user_profile.current_role)
+        nos_docs = fetch_nos_text( 
+                current_role=self.current_role)
         
         context['nos_docs'] = nos_docs
-        logging.info(f"NOS document: {nos_docs}")
         return Result(value=f"This is the NOS document with competencies outlined: \n\n{nos_docs}", context=context)
 
 ### For handoff
@@ -179,9 +176,10 @@ profile_agent = Agent(
     functions=[
         update_profile_data,
         GetNOSDocument,
+        GetCountOfCompetencies,
         GetRequiredSkillsFromNOS,
         transfer_to_discover_stage
     ],
     tool_choice="auto",
-    parallel_tool_calls=False
+    parallel_tool_calls=True
 )

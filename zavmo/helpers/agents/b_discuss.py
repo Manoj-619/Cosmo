@@ -84,7 +84,7 @@ class update_discussion_data(StrictTool):
         discuss_stage.save()
         
         assessment_areas = TNAassessment.objects.filter(user__email=email, sequence_id=sequence_id)
-        nos_areas_with_ofqual_standards = "\n\n".join([f"**NOS Assessment Area**: {i.assessment_area}\n\n**OFQUAL Standards for the NOS Assessment Area**: \n{i.all_items_of_qualification}" for i in assessment_areas])
+        nos_areas_with_ofqual_standards = "\n\n".join([f"**NOS Assessment Area**: {i.assessment_area}\n\n**OFQUAL Standards identified based on learner's knowledge gaps for the NOS Assessment Area**: \n{i.knowledge_gaps}" for i in assessment_areas])
         
         value = f"""Discussion data updated successfully for {email}
         

@@ -26,11 +26,11 @@ class transfer_to_tna_assessment_step(StrictTool):
     """After the learner has completed the Discover stage, transfer to the TNA Assessment step."""
     
     def execute(self, context: Dict):
-        """Transfer to the TNA Assessment step."""
-        discover_stage = DiscoverStage.objects.get(user__email=context['email'], sequence_id=context['sequence_id'])
-        discover_is_complete = discover_stage.check_complete()
+        """After the learner has completed the Discover stage, transfer to the TNA Assessment step"""
+        discover_stage = DiscoverStage.objects.get(user__email=context['email'], sequence=context['sequence_id'])
+        discover_is_complete, error = discover_stage.check_complete()
         if not discover_is_complete:
-            raise ValueError("Discover stage is not complete. Please complete the Discover stage before proceeding to the TNA Assessment step.")
+            raise ValueError(error)
         
         assessments = TNAassessment.objects.filter(sequence_id=context['sequence_id'])
         assessment_areas = ", ".join([assessment.assessment_area for assessment in assessments])

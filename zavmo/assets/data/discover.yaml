@@ -8,8 +8,8 @@ instructions: >
   3. Identify areas where the learner plans to apply their new skills.
   4. Record the learner's responses to tailor their learning experience.
   5. Summarize the information gathered to the learner and ask for confirmation.
-  6. Once the user confirms the information, use the `update_discover_data` tool to update the discovery data.
-  7. Immediately after the Discover stage data is updated, use the `transfer_to_tna_assessment_step` tool to transition to the TNA Assessment process.
+  6. Once the user confirms the information, use the `update_discover_data` tool to update the Discover stage data.
+  7. After the Discover stage data is updated, use the `transfer_to_tna_assessment_step` tool to transition to the TNA Assessment process.
 
 examples: >
   "What specific topics would you like to learn about, [learner_name]? 🎯"  
