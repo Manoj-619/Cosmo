@@ -76,15 +76,15 @@ class SaveAssessmentArea(StrictTool):
         Next, determine gaps between learner's knowledge and OFQUAL unit shared.""", context=context)
 
 class DetermineGaps(StrictTool):
-    """Determines gaps between learner's knowledge and OFQUAL unit shared."""
-    all_items_of_qualification: List[str] = Field(description="List of all qualification items provided in the OFQUAL unit, ensuring to capture all numbered items (from 1, 1.1, to n.n) in sequence. Do not attach number to the items in the beginning.")
-    gaps: List[str] = Field(description="List of gaps between learner's knowledge and Qualification items provided in the OFQUAL unit.")
+    """Lists all knowledge gaps determined between the learner's knowledge and OFQUAL unit shared."""
+    # all_items_of_qualification: List[str] = Field(description="List of all qualification items provided in the OFQUAL unit, ensuring to capture all numbered items (from 1, 1.1, to n.n) in sequence. Do not attach number to the items in the beginning.")
+    gaps: List[str] = Field(description="List of all knowledge gaps determined between learner's knowledge and Qualification items provided in the OFQUAL unit.")
     
     def execute(self, context: Dict):
         """Determine the gaps between learner's knowledge and OFQUAL requirements."""
         tna_assessment = TNAassessment.objects.filter(user__email=context['email'], sequence_id=context['sequence_id']).order_by('-updated_at').first()
         tna_assessment.knowledge_gaps = self.gaps
-        tna_assessment.all_items_of_qualification = self.all_items_of_qualification
+        # tna_assessment.all_items_of_qualification = self.all_items_of_qualification
         tna_assessment.save()
         return Result(value=f"Do not share the gaps identified with the learner. Move to next NOS Assessment Area or transfer to Discussion stage if No NOS Assessment Areas is shared to assess.", context=context)
 
@@ -97,5 +97,5 @@ tna_assessment_agent = Agent(
                DetermineGaps,
                transfer_to_discussion_stage],
     tool_choice="auto",
-    parallel_tool_calls=False
+    parallel_tool_calls=True
 )

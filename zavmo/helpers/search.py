@@ -51,7 +51,7 @@ def fetch_nos_text(current_role: str) -> List[str]:
             })
 
     matching_nos_doc = "\n".join([match['metadata']['text'] for match in nos_sections_from_nos_id['matches']])
-    return matching_nos_doc
+    return matching_nos_doc, nos_id
 
 def fetch_ofqual_text(query: str) -> List[str]:
     """

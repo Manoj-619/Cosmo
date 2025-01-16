@@ -138,7 +138,7 @@ class TNAassessment(models.Model):
     all_items_of_qualification = models.TextField(blank=True, null=True, verbose_name="All Items of Qualification")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+    nos_id = models.CharField(max_length=50, blank=True, null=True, verbose_name="NOS ID")
     def __str__(self):
         return f"User {self.user.email} - Sequence {self.sequence.id} - TNA Assessment - Assessment Area: {self.assessment_area}"
     

@@ -14,7 +14,7 @@ from helpers._types import (
     StrictTool,
     Result,
 )
-from stage_app.models import DiscoverStage, UserProfile, TNAassessment
+from stage_app.models import DiscoverStage, UserProfile, TNAassessment, FourDSequence
 from helpers.agents.tna_assessment import tna_assessment_agent
 from helpers.agents.common import get_tna_assessment_instructions, get_agent_instructions
 from helpers.utils import get_logger
@@ -31,23 +31,21 @@ class transfer_to_tna_assessment_step(StrictTool):
         discover_is_complete, error = discover_stage.check_complete()
         if not discover_is_complete:
             raise ValueError(error)
-        
+        all_assessments = context['total_assessments_from_all_4D_sequences']
         assessments = TNAassessment.objects.filter(sequence_id=context['sequence_id'])
-        assessment_areas = ", ".join([assessment.assessment_area for assessment in assessments])
+        assessment_areas = [assessment.assessment_area for assessment in assessments]
+        nos_id = assessments.first().nos_id
         logger.info(f"assessment_areas: {assessment_areas}")
         agent = tna_assessment_agent
-        agent.start_message = f"""Greet and introduce the TNA Assessment step.
-        Present the Assessments that the learner should complete for the current 4D sequence in the below shared table form. 
-        Current 4D Sequence Assessments For TNA are: 
-        {assessment_areas}
-
-        |       **Assessments For Training Need Analysis**     |
-        |------------------------------------------------------|
-        |              assessment area                         |
-        |              assessment area                         |
-
-        Then start the TNA assessment on Current NOS Area shared.
-        """
+        agent.start_message = (
+            "Greet and introduce the TNA Assessment step, based on instructions and example shared on Introduction.\n"
+            f"Total NOS Areas: {all_assessments}\n"
+            f"Current Number Of Assessment Areas: {len(assessment_areas)}\n"
+            f"NOS ID: {nos_id}\n"
+            f"NOS Assessment Areas for current 4D Sequence: {', '.join(assessment_areas)}\n"
+            "Present the NOS Assessment Areas for current 4D Sequence in the example table form shared.\n"
+            "Then start the TNA assessment on Current NOS Area."
+        )
         agent.instructions = get_tna_assessment_instructions(context)
         return Result(value="Transferred to TNA Assessment step.",
             agent=agent, 
