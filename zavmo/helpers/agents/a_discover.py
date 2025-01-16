@@ -45,12 +45,15 @@ class transfer_to_tna_assessment_step(StrictTool):
             f"NOS Assessment Areas for current 4D Sequence to be presented: {', '.join(assessment_areas)}\n"
             "Present the NOS Assessment Areas for current 4D Sequence in the below shared table form.\n"
             
-            "| **NOS ID** | [NOS ID] |"
+            "| **NOS ID** |\n"
+            "|------------|\n"
+            "|  [NOS ID]  |\n\n"
 
-            "|  **Assessments For Training Needs Analysis**  |"
-            "|            [Assessment Area 1]                |"
-            "|            [Assessment Area 2]                |"
-            "|            [Assessment Area 3]                |"
+            "|  **Assessments For Training Needs Analysis**  |\n"
+            "|-----------------------------------------------|\n"
+            "|            [Assessment Area 1]                |\n"
+            "|            [Assessment Area 2]                |\n"
+            "|            [Assessment Area 3]                |\n"
             
             "Then start the TNA assessment on Current NOS Area."
         )
