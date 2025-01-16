@@ -46,8 +46,8 @@ class GetSkillFromNOS(StrictTool):
         return self.model_dump_json() 
 
 class GetCountOfCompetencies(StrictTool):
-    """Use this tool to get the count of competencies mentioned in the NOS document under different sections."""
-    count: int = Field(description="Get the total count of all competencies provided in the NOS document. Competencies are all the numbered items present in the NOS document and total count can be an addition of performance based and knowledge based competencies mentioned.")
+    """Use this tool to get the count of NOS competencies mentioned in the NOS document."""
+    count: int = Field(description="Total count of NOS competencies mentioned in the NOS document.")
 
     def execute(self, context: Dict):
         return Result(value=f"List atmost {self.count} competencies from the NOS document. Total count of competencies to be listed is {self.count}.", context=context)
