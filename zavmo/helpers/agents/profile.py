@@ -45,16 +45,16 @@ class GetSkillFromNOS(StrictTool):
     def execute(self, context: Dict):
         return self.model_dump_json() 
 
-# class GetCountOfCompetencies(StrictTool):
-#     """Use this tool to get the count of competencies mentioned in the NOS document under different sections."""
-#     count: int = Field(description="Get the total count of all competencies provided in the NOS document. Competencies are all the numbered items present in the NOS document and total count can be an addition of performance based and knowledge based competencies mentioned.")
+class GetCountOfCompetencies(StrictTool):
+    """Use this tool to get the count of competencies mentioned in the NOS document under different sections."""
+    count: int = Field(description="Get the total count of all competencies provided in the NOS document. Competencies are all the numbered items present in the NOS document and total count can be an addition of performance based and knowledge based competencies mentioned.")
 
-#     def execute(self, context: Dict):
-#         return Result(value=f"List atmost {self.count} competencies from the NOS document. Total count of competencies to be listed is {self.count}.", context=context)
+    def execute(self, context: Dict):
+        return Result(value=f"List atmost {self.count} competencies from the NOS document. Total count of competencies to be listed is {self.count}.", context=context)
 
 class GetRequiredSkillsFromNOS(PermissiveTool):
     """Use this tool to generate a list of competencies outlined in the NOS document."""
-    nos: List[GetSkillFromNOS] = Field(description="Generate a list of upto 40 competencies from the NOS document. Competencies are all the numbered items in different representations present in the NOS document (these items can be performance based and knowledge based as well) also generate corresponding Bloom's Taxonomy criteria at every level (Remember, Understand, Apply, Analyze, Evaluate, Create) for each competency", 
+    nos: List[GetSkillFromNOS] = Field(description="Based on the count of competencies, list upto 40 competencies from the NOS document. Competencies are all the numbered items in different representations present in the NOS document (these items can be performance based and knowledge based as well) also generate corresponding Bloom's Taxonomy criteria at every level (Remember, Understand, Apply, Analyze, Evaluate, Create) for each competency", 
                                        min_items = 10, max_items=40)
     
     def execute(self, context: Dict):
@@ -179,7 +179,7 @@ profile_agent = Agent(
     functions=[
         update_profile_data,
         GetNOSDocument,
-        # GetCountOfCompetencies,
+        GetCountOfCompetencies,
         GetRequiredSkillsFromNOS,
         transfer_to_discover_stage
     ],

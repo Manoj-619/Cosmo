@@ -42,8 +42,16 @@ class transfer_to_tna_assessment_step(StrictTool):
             f"Total NOS Areas: {all_assessments}\n"
             f"Current Number Of Assessment Areas: {len(assessment_areas)}\n"
             f"NOS ID: {nos_id}\n"
-            f"NOS Assessment Areas for current 4D Sequence: {', '.join(assessment_areas)}\n"
-            "Present the NOS Assessment Areas for current 4D Sequence in the example table form shared.\n"
+            f"NOS Assessment Areas for current 4D Sequence to be presented: {', '.join(assessment_areas)}\n"
+            "Present the NOS Assessment Areas for current 4D Sequence in the below shared table form.\n"
+            
+            "| **NOS ID** | [NOS ID] |"
+
+            "|  **Assessments For Training Needs Analysis**  |"
+            "|            [Assessment Area 1]                |"
+            "|            [Assessment Area 2]                |"
+            "|            [Assessment Area 3]                |"
+            
             "Then start the TNA assessment on Current NOS Area."
         )
         agent.instructions = get_tna_assessment_instructions(context)
