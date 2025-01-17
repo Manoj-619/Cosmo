@@ -109,11 +109,10 @@ class mark_completed(StrictTool):
             context['tna_assessment'] = {
                 'total_assessments': assessments_for_current_sequence.count(),
                 'current_assessment':1,
-                'assessment_data':[]
+                'assessments':[]
             }
             value = f"4D Sequence {sequence_id} marked as completed. Lets continue with the next sequence having new NOS competencies."
         else:
-            sequence = FourDSequence.objects.create(user=user)
             value = f"4D Sequence {sequence_id} marked as completed. Lets start a new 4D learning journey."
         return Result(value=value, context=context)
 

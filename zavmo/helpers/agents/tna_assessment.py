@@ -8,6 +8,8 @@ from helpers._types import (
 from helpers.agents.common import get_tna_assessment_instructions
 from helpers.utils import get_logger
 from stage_app.models import  TNAassessment, FourDSequence
+from stage_app.serializers import TNAassessmentSerializer
+import json
 from helpers.agents.b_discuss import discuss_agent
 from helpers.search import fetch_ofqual_text
 
@@ -60,11 +62,12 @@ class SaveAssessmentArea(StrictTool):
         tna_assessment.raw_ofqual_text = ofqual_text
         tna_assessment.save()
         tna_assessment_agent.instructions = get_tna_assessment_instructions(context)
-
-        assesssed_areas = context['tna_assessment']['assessments_data']
-        assesssed_areas.append(self.model_dump())
-        context['tna_assessment']['assessments_data'] = assesssed_areas
-
+        
+        # Update the assessments in context by appending updated assessments
+        current_assessments = json.loads(context['tna_assessment']['assessments']) if context['tna_assessment']['assessments'] else []
+        current_assessments.append(TNAassessmentSerializer(tna_assessment).data)
+        context['tna_assessment']['assessments'] = json.dumps(current_assessments)
+        
         context['tna_assessment']['current_assessment'] += 1
         return Result(value=f"""Saved details for the Assessment area: {self.assessment_area}.
                       

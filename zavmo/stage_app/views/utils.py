@@ -10,6 +10,7 @@ from helpers.agents.common import get_tna_assessment_instructions
 from helpers.constants import CONTEXT_SUFFIX, HISTORY_SUFFIX, DEFAULT_CACHE_TIMEOUT
 from helpers.swarm import run_step
 from django.db import utils as django_db_utils
+import json
 
 stage_order = ['profile', 'discover', 'tna_assessment', 'discuss', 'deliver', 'demonstrate']
 stage_models = [UserProfile, DiscoverStage, TNAassessment, DiscussStage, DeliverStage, DemonstrateStage]
@@ -114,7 +115,7 @@ def _create_full_context(email, sequence_id, profile):
     tna_assessment_data = {
         'total_assessments': len(all_assessments),
         'current_assessment': len(completed_assessments) + 1 if len(completed_assessments) < len(all_assessments) else len(all_assessments),
-        'assessments_data': completed_assessments
+        'assessments': json.dumps(all_assessments)
     }
     return {
         'email': email,
@@ -176,7 +177,7 @@ def _process_agent_response(stage_name, message_history, context, max_turns=10):
         Number of NOS Areas to complete in current 4D Sequence: {number_of_assessments_for_current_4D_sequence},
         NOS Assessment Areas for current 4D Sequence to be presented: {', '.join([assessment.assessment_area for assessment in all_tna_assessments_for_current_4D_sequence])}
 
-        ## Presenting NOS Areas from **NOS ID**: {nos_id}
+        Presenting NOS Areas from **NOS ID**: {nos_id}
 
         |       **Assessments For Training Needs Analysis**      |
         |--------------------------------------------------------|

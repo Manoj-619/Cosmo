@@ -15,6 +15,7 @@ from helpers._types import (
     Result,
 )
 from stage_app.models import DiscoverStage, UserProfile, TNAassessment, FourDSequence
+from stage_app.serializers import TNAassessmentSerializer
 from helpers.agents.tna_assessment import tna_assessment_agent
 from helpers.agents.common import get_tna_assessment_instructions, get_agent_instructions
 from helpers.utils import get_logger
@@ -42,10 +43,10 @@ class transfer_to_tna_assessment_step(StrictTool):
             "Greet and introduce the TNA Assessment step, based on instructions and example shared on Introduction.\n"
             f"Total NOS Areas: {all_assessments}\n"
             f"Current Number Of Assessment Areas: {len(assessment_areas)}\n"
-            f"NOS Assessment Areas for current 4D Sequence to be presented: {', '.join(assessment_areas)}\n"
-            "Present the NOS Assessment Areas for current 4D Sequence in the below shared table form.\n"
+            f"NOS Assessment Areas for current 4D Sequence to be presented: {', '.join(assessment_areas)}\n\n"
+            "Present the NOS Assessment Areas for current 4D Sequence in the below shared table form.\n\n"
             
-            f"## Presenting NOS Areas from **NOS ID**: {nos_id}\n"
+            f"Presenting NOS Areas from **NOS ID**: {nos_id}\n"
 
             "|  **Assessments For Training Needs Analysis**  |\n"
             "|-----------------------------------------------|\n"
@@ -56,6 +57,7 @@ class transfer_to_tna_assessment_step(StrictTool):
             "Then start the TNA assessment on Current NOS Area."
         )
         agent.instructions = get_tna_assessment_instructions(context)
+        context['tna_assessment']['assessments'] = json.dumps([TNAassessmentSerializer(assessment).data for assessment in assessments])
         return Result(value="Transferred to TNA Assessment step.",
             agent=agent, 
             context=context)
