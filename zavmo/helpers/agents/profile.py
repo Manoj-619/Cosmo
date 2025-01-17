@@ -12,10 +12,12 @@ from helpers._types import (
     Result
 )
 from stage_app.models import UserProfile, TNAassessment, FourDSequence
+from stage_app.serializers import TNAassessmentSerializer
 from helpers.agents.a_discover import discover_agent
 from helpers.agents.common import get_agent_instructions
 from helpers.search import fetch_nos_text
 import logging
+import json
 
 
 ### For handoff
@@ -93,7 +95,8 @@ class GetRequiredSkillsFromNOS(PermissiveTool):
         context.update({
             'sequence_id': all_sequences[0],
             'total_assessments_from_all_4D_sequences': total_assessments,
-            'sequences_to_complete': all_sequences
+            'sequences_to_complete': all_sequences,
+            'assessments': json.dumps(TNAassessmentSerializer(all_sequences[0]).data)
         })
         
         return Result(value=f"FourDSequences created, transfer to discovery stage", context=context)
@@ -136,8 +139,6 @@ class update_profile_data(StrictTool):
     
     first_name: str = Field(description="The learner's first name.")
     last_name: str        = Field(description="The learner's last name.")
-    age: int              = Field(description="The learner's age.")  
-    edu_level: int        = Field(description="The learner's education level, represented as an integer. 1: Primary School, 2: Middle School, 3: High School, 4: Associate Degree, 5: Bachelor's Degree, 6: Master's Degree, 7: PhD")
     current_role: str     = Field(description="The learner's current role.")
     current_industry: str = Field(description="The industry in which the learner is currently working in.")
     years_of_experience: int = Field(description="The number of years the learner has worked in their current industry.")
@@ -158,8 +159,6 @@ class update_profile_data(StrictTool):
         # Update the UserProfile object
         profile.first_name = self.first_name
         profile.last_name = self.last_name
-        profile.age = self.age
-        profile.edu_level = self.edu_level
         profile.current_role = self.current_role
         profile.current_industry = self.current_industry
         profile.years_of_experience = self.years_of_experience

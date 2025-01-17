@@ -18,6 +18,7 @@ from stage_app.models import DiscoverStage, UserProfile, TNAassessment, FourDSeq
 from helpers.agents.tna_assessment import tna_assessment_agent
 from helpers.agents.common import get_tna_assessment_instructions, get_agent_instructions
 from helpers.utils import get_logger
+import json
 
 logger = get_logger(__name__)
 
@@ -41,13 +42,10 @@ class transfer_to_tna_assessment_step(StrictTool):
             "Greet and introduce the TNA Assessment step, based on instructions and example shared on Introduction.\n"
             f"Total NOS Areas: {all_assessments}\n"
             f"Current Number Of Assessment Areas: {len(assessment_areas)}\n"
-            f"NOS ID: {nos_id}\n"
             f"NOS Assessment Areas for current 4D Sequence to be presented: {', '.join(assessment_areas)}\n"
             "Present the NOS Assessment Areas for current 4D Sequence in the below shared table form.\n"
             
-            "| **NOS ID** |\n"
-            "|------------|\n"
-            "|  [NOS ID]  |\n\n"
+            f"## Presenting NOS Areas from **NOS ID**: {nos_id}\n"
 
             "|  **Assessments For Training Needs Analysis**  |\n"
             "|-----------------------------------------------|\n"
