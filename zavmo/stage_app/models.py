@@ -22,19 +22,6 @@ class UserProfile(models.Model):
     # Saved information (Already known to us)
     first_name      = models.CharField(max_length=100, blank=True, null=True, verbose_name="First Name")
     last_name       = models.CharField(max_length=100, blank=True, null=True, verbose_name="Last Name")
-    age             = models.PositiveIntegerField(null=True, blank=True, verbose_name="Age")
-    edu_level = models.PositiveSmallIntegerField(
-        choices=[
-            (1, 'Primary School'),
-            (2, 'Middle School'),
-            (3, 'High School'),
-            (4, 'Associate Degree'),
-            (5, 'Bachelor\'s Degree'),
-            (6, 'Master\'s Degree'),
-            (7, 'PhD')
-        ],
-        null=True, blank=True, verbose_name="Education Level"
-    )
     
     current_role    = models.CharField(max_length=100, blank=True, null=True, verbose_name="Current Role")
     current_industry = models.CharField(max_length=100, blank=True, null=True, verbose_name="Current Industry")
@@ -51,19 +38,11 @@ class UserProfile(models.Model):
         """Get a dump of the Django model as a string."""
         return f"{self.user.email} - Profile"
 
-    @property
-    def edu_level_display(self):
-        if self.edu_level is None:
-            return None
-        # Get choices from the field definition, not the value
-        return dict(self._meta.get_field('edu_level').choices)[self.edu_level]
     
     def get_summary(self):
         """Get a summary of the user's profile."""
         return f"""
         **Name**: {self.first_name} {self.last_name}
-        **Age**: {self.age}
-        **Education Level**: {self.edu_level_display}
         **Current Role**: {self.current_role}
         **Current Industry**: {self.current_industry}
         **Years of experience**: {self.years_of_experience}
@@ -77,8 +56,6 @@ class UserProfile(models.Model):
         required_fields = {
             'first_name': 'First name is required',
             'last_name': 'Last name is required',
-            'age': 'Age is required',
-            'edu_level': 'Education level is required',
             'current_role': 'Current role is required',
             'current_industry': 'Current industry is required',
             'years_of_experience': 'Years of experience is required',
