@@ -107,7 +107,7 @@ class GetNOSDocument(StrictTool):
         
         context['nos_id']   = nos_id
         context['nos_docs'] = nos_docs
-        return Result(value=f"This is the NOS (National Occupational Standards) document with competencies outlined: \n\n{nos_docs}", context=context)
+        return Result(value=f"This is the NOS (National Occupational Standards) document with competencies outlined: \n\n{nos_docs}\n\n Now get the count of competencies using the `GetCountOfCompetencies` tool and then get the required skills using the `GetRequiredSkillsFromNOS` tool based on the count and NOS document shared here.", context=context)
 
 ### For handoff
 
