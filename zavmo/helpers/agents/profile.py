@@ -46,15 +46,15 @@ class GetSkillFromNOS(StrictTool):
         return self.model_dump_json() 
 
 class GetCountOfCompetencies(StrictTool):
-    """This tool is designed to analyze and extract the number of distinct items or elements present in a National Occupational Standards (NOS) document."""
-    count: int = Field(description="Analyze and extract the number of distinct items or elements present in a National Occupational Standards (NOS) document.")
+    """This tool is designed to analyze and extract the number of distinct items or elements present (with prefix 1,2,..etc or K1,K2,..etc) in a National Occupational Standards (NOS) document."""
+    count: int = Field(description="Analyze and extract the number of distinct items or elements present (with prefix 1,2,..etc or K1,K2,..etc) in a National Occupational Standards (NOS) document.")
 
     def execute(self, context: Dict):
         return Result(value=f"List atmost {self.count} competencies from the NOS document. Total count of competencies to be listed is {self.count}.", context=context)
 
 class GetRequiredSkillsFromNOS(PermissiveTool):
     """Use this tool to generate a list of competencies outlined in the NOS document."""
-    nos: List[GetSkillFromNOS] = Field(description="Based on the count of competencies, list upto 40 competencies from the NOS document. Competencies are all the numbered items in different representations present in the NOS document (these items can be performance based and knowledge based as well) also generate corresponding Bloom's Taxonomy criteria at every level (Remember, Understand, Apply, Analyze, Evaluate, Create) for each competency", 
+    nos: List[GetSkillFromNOS] = Field(description="Based on the count of competencies, list upto 40 competencies (items with prefix 1,2,..etc or K1,K2,..etc) from the NOS document along with corresponding Bloom's Taxonomy criteria at every level (Remember, Understand, Apply, Analyze, Evaluate, Create) for each competency", 
                                        min_items = 10, max_items=40)
     
     def execute(self, context: Dict):
@@ -107,7 +107,7 @@ class GetNOSDocument(StrictTool):
         
         context['nos_id']   = nos_id
         context['nos_docs'] = nos_docs
-        return Result(value=f"This is the NOS document with competencies outlined: \n\n{nos_docs}", context=context)
+        return Result(value=f"This is the NOS (National Occupational Standards) document with competencies outlined: \n\n{nos_docs}", context=context)
 
 ### For handoff
 
