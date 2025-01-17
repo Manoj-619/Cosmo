@@ -109,13 +109,15 @@ def _create_full_context(email, sequence_id, profile):
     """Create context with all stage data."""
     sequence = FourDSequence.objects.get(id=sequence_id)
 
-    all_assessments = [TNAassessmentSerializer(assessment).data for assessment in TNAassessment.objects.filter(user__email=email, sequence_id=sequence_id)]
-    completed_assessments = [assessment for assessment in all_assessments if assessment.get('evidence_of_assessment')]
+    tna_assessments            = TNAassessment.objects.filter(user__email=email, sequence_id=sequence_id)
+    all_structured_assessments = [TNAassessmentSerializer(assessment).data for assessment in tna_assessments]
+    completed_assessments      = [assessment for assessment in all_structured_assessments if assessment.get('evidence_of_assessment')]
     
     tna_assessment_data = {
-        'total_assessments': len(all_assessments),
-        'current_assessment': len(completed_assessments) + 1 if len(completed_assessments) < len(all_assessments) else len(all_assessments),
-        'assessments': json.dumps(all_assessments)
+        'nos_id': tna_assessments.first().nos_id,
+        'total_assessments': len(all_structured_assessments),
+        'current_assessment': len(completed_assessments) + 1 if len(completed_assessments) < len(all_structured_assessments) else len(all_structured_assessments),
+        'assessments': json.dumps(all_structured_assessments)
     }
     return {
         'email': email,

@@ -60,7 +60,7 @@ class GetRequiredSkillsFromNOS(PermissiveTool):
                                        min_items = 10, max_items=40)
     
     def execute(self, context: Dict):
-        if 'nos_docs' not in context:
+        if context['tna_assessment']['nos_id'] == '':
             raise ValueError("NOS documents not found in context, use GetNOS tool first.")
         user_profile = UserProfile.objects.get(user__email=context['email'])
 
@@ -82,7 +82,7 @@ class GetRequiredSkillsFromNOS(PermissiveTool):
                     assessment_area=skill.assessment_area,
                     blooms_taxonomy_criteria=[bt.model_dump() for bt in skill.blooms_taxonomy_criteria],
                     sequence=sequence,
-                    nos_id=context['nos_id']
+                    nos_id=context['tna_assessment']['nos_id']
                 )
                 total_assessments += 1
         # Convert QuerySet to list before storing in context
@@ -96,21 +96,20 @@ class GetRequiredSkillsFromNOS(PermissiveTool):
             'sequence_id': all_sequences[0],
             'total_assessments_from_all_4D_sequences': total_assessments,
             'sequences_to_complete': all_sequences,
-            'assessments': json.dumps(TNAassessmentSerializer(all_sequences[0]).data)
-        })
-        
+            })
+        context['tna_assessment']['assessments'] = json.dumps(TNAassessmentSerializer(all_sequences[0]).data)
         return Result(value=f"FourDSequences created, transfer to discovery stage", context=context)
 
 class GetNOSDocument(StrictTool):
     current_role: str = Field(description="The learner's current role.")
 
     def execute(self, context: Dict):
-        nos_docs, nos_id = fetch_nos_text( 
+        nos_doc, nos_id = fetch_nos_text( 
                 current_role=self.current_role)
         
-        context['nos_id']   = nos_id
-        context['nos_docs'] = nos_docs
-        return Result(value=f"This is the NOS (National Occupational Standards) document with competencies outlined: \n\n{nos_docs}\n\n Now get the count of competencies using the `GetCountOfCompetencies` tool and then get the required skills using the `GetRequiredSkillsFromNOS` tool based on the count and NOS document shared here.", context=context)
+        context['tna_assessment']['nos_id']   = nos_id
+        context['nos_doc'] = nos_doc
+        return Result(value=f"This is the NOS (National Occupational Standards) document with competencies outlined: \n\n{nos_doc}\n\n Now get the count of competencies using the `GetCountOfCompetencies` tool and then get the required skills using the `GetRequiredSkillsFromNOS` tool based on the count and NOS document shared here.", context=context)
 
 ### For handoff
 
@@ -130,7 +129,6 @@ class transfer_to_discover_stage(StrictTool):
         agent.start_message += f"Here is the learner's profile: {summary}"
         
         return Result(agent=agent, context=context)
-    
 
 ### For updating the data
 
