@@ -2,7 +2,7 @@ from rest_framework.response import Response as DRFResponse
 from rest_framework import status
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from django.contrib.auth.models import User
-from stage_app.models import Org, UserProfile, FourDSequence, TNAassessment
+from stage_app.models import Org, UserProfile, FourDSequence, TNAassessment, DiscoverStage
 from stage_app.serializers import UserDetailSerializer, UserProfileSerializer, FourDSequenceSerializer
 from zavmo.authentication import CustomJWTAuthentication
 from rest_framework.permissions import IsAuthenticated
@@ -76,6 +76,7 @@ def sync_user(request):
             logger.info(f"UserProfile created for user {user.username}")
         else:
             message = "User already exists."
+            
             status_code = status.HTTP_200_OK
         # Check if there are any sequences for this user
         sequences_to_complete = FourDSequence.objects.filter(
@@ -92,15 +93,28 @@ def sync_user(request):
         is_complete, error = profile.check_complete()
         if not is_complete:
             stage_name = 'profile'
-        elif sequence.assessments.filter(evidence_of_assessment__isnull=True).exists():
-            stage_name = 'tna_assessment'
+
         else:
-            stage_name = sequence.stage_display
+            discover_stage = DiscoverStage.objects.get(user=user, sequence=sequence)
+            discover_is_complete, error = discover_stage.check_complete()
+            if not discover_is_complete:
+                stage_name = 'discover'
+                    
+            else:
+                tna_assessments = TNAassessment.objects.filter(user=user, sequence=sequence)
+                for assessment in tna_assessments:
+                    if not assessment.evidence_of_assessment:
+                        stage_name = 'tna_assessment'
+                        break
+                    else:
+                        stage_name = sequence.stage_display
 
         return DRFResponse({
             "message": message,
             "email": user.email,
             "stage": stage_name,
+            "first_name": profile.first_name if is_complete else None,
+            "last_name": profile.last_name if is_complete else None,
             "sequence_id": sequence.id if sequence else None
         }, status=status_code)
     
