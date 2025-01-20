@@ -19,9 +19,9 @@ def get_embedding(text: str, model: str = "text-embedding-3-small") -> List[floa
     return embedding
 
 
-def fetch_nos_text(industry: str, current_role: str) -> List[str]:
+def fetch_nos_text(current_role: str) -> List[str]:
     """
-    Fetch NOS text from Pinecone based on industry and current role.
+    Fetch NOS text from Pinecone based on current role.
     
     """
     query_vector = get_embedding(f"Occupation relevant to {current_role}")  
@@ -51,7 +51,7 @@ def fetch_nos_text(industry: str, current_role: str) -> List[str]:
             })
 
     matching_nos_doc = "\n".join([match['metadata']['text'] for match in nos_sections_from_nos_id['matches']])
-    return matching_nos_doc
+    return matching_nos_doc, nos_id
 
 def fetch_ofqual_text(query: str) -> List[str]:
     """
@@ -65,8 +65,8 @@ def fetch_ofqual_text(query: str) -> List[str]:
     """
     query_vector = get_embedding(query)
 
-    # Query the Pinecone index
-    index = pinecone_client.Index('test-ofqual')
+    # Query the Pinecone index having unitwise data ingested
+    index = pinecone_client.Index('sales-ofqual') ## TODO: Change to ofqual index
     
     # Search for relevant qualifications without filters
     results = index.query(

@@ -2,23 +2,44 @@ name: TNA Assessment
 id: tna_assessment
 description: >
   The TNA assessment evaluates learner proficiency in an area of assessment shared from the NOS, starting with self-assessment, validation against criteria, and applying progression criteria to determine the highest level achieved.
-  
+
 instructions: > 
-  1. **Present the assessment area in a friendly and engaging manner**:  
-    - Do not formally mention that it is an assessment area, instead introduce the area of assessment in a friendly and engaging manner.
+  1. After an introduction based on the guidelines provided, present the Current NOS Assessment Area in a friendly and engaging manner:  
+    - Do not formally mention that it is an assessment area.
     - Ask the learner to self-assess their proficiency in the shared area of assessment on a scale of 1-7.
-  2. **Assess at Self-Assessed Level**:  
+  2. Assess at Self-Assessed Level:  
     - Based on the learner's self-assessed level, ask challenging questions aligned with the assessment area's criteria provided for that level. 
     - Validate the learner's proficiency at self-assessed level
-  3. **Determine Zavmo Assessed Level**:
-    - It is important to keep moving forward following progression criteria (backward/forward) until the highest level where the learner meets criteria
-  4. **Save the Assessment Area Details**:  
-    - Use the `SaveAssessmentArea` tool to save the details of the area of assessment.
-  5. **Move to Next Assessment Area**:
-    - After saving the details of the area of assessment, move to the next assessment area.
-    - If no assessment area is shared to assess, the TNA Assessment step will be completed.
-
+  3. Determine Zavmo Assessed Level:
+    - After the user shares a response to a proposed question, 
+      - Follow the progression criteria (backward/forward) until the highest level where the learner meets criteria.
+      - Share feedback on the response and the level achieved.
+  4. After being confident that the highest level is determined, Simultaneously, 
+    - Save the details of the NOS Assessment area using the `SaveAssessmentArea` tool.
+    - Determine the gaps between learner's knowledge and OFQUAL requirements using the `DetermineGaps` tool.
+  5. Move to Next NOSAssessment Area:
+    - After determining zavmo assessed level following progression criteria, save the details of the area of assessment, and move to the next assessment area.
+    - If no NOS area is shared to assess, the TNA Assessment step will be completed and using the `transfer_to_discuss_stage` tool transition to the Discussion stage.
+ 
 examples: >
+  "Welcome to the Training Needs Analysis Assessment step! We have identified the National Occupational Standards (NOS) that align with your professional development needs.
+  
+  These standards are industry-recognized benchmarks that define the knowledge and skills required for current job role, ensuring your learning is directly applicable to workplace requirements.
+
+  Across your learning journey, there are **[Total NOS Areas]** NOS areas in total. 
+  For your current 4D sequence, you will focus on completing **[Current Number Of Assessment Areas]** NOS area(s).
+
+
+  Presenting NOS Areas from **NOS ID**: [NOS ID]
+
+  |       **Assessments For Training Needs Analysis**      |
+  |--------------------------------------------------------|
+  |             - [Assessment Area 1]                      |
+  |             - [Assessment Area 2]                      |
+  
+  Let's begin with our first assessment area. I'll introduce each topic naturally as we go along, and you can share your thoughts and experiences freely. Ready to start?"
+  
+  #### Continued interaction:
   Input: 
 
   NOS assessment area with criteria is shared below:
@@ -64,4 +85,4 @@ completion_condition: >
   When no assessment area is shared or left to be assessed, the TNA Assessment stage will be completed. Using the `transfer_to_discuss_stage` tool to transition to the Discussion stage.
 
 next_stage: "Discussion"
-next_stage_description: "The Discussion stage is the second stage of the 4-D Learning Journey. The agent in this stage will define specific learning objectives and propose a personalised curriculum aligned with the NOS and OFQUAL standards."
+next_stage_description: "The Discussion stage is the second stage of the 4-D Learning Journey. The agent in this stage will ask preferred learning style, available study time, and then propose a personalised curriculum aligned with the NOS and OFQUAL standards."

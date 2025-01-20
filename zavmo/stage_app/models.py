@@ -22,19 +22,6 @@ class UserProfile(models.Model):
     # Saved information (Already known to us)
     first_name      = models.CharField(max_length=100, blank=True, null=True, verbose_name="First Name")
     last_name       = models.CharField(max_length=100, blank=True, null=True, verbose_name="Last Name")
-    age             = models.PositiveIntegerField(null=True, blank=True, verbose_name="Age")
-    edu_level = models.PositiveSmallIntegerField(
-        choices=[
-            (1, 'Primary School'),
-            (2, 'Middle School'),
-            (3, 'High School'),
-            (4, 'Associate Degree'),
-            (5, 'Bachelor\'s Degree'),
-            (6, 'Master\'s Degree'),
-            (7, 'PhD')
-        ],
-        null=True, blank=True, verbose_name="Education Level"
-    )
     
     current_role    = models.CharField(max_length=100, blank=True, null=True, verbose_name="Current Role")
     current_industry = models.CharField(max_length=100, blank=True, null=True, verbose_name="Current Industry")
@@ -51,19 +38,11 @@ class UserProfile(models.Model):
         """Get a dump of the Django model as a string."""
         return f"{self.user.email} - Profile"
 
-    @property
-    def edu_level_display(self):
-        if self.edu_level is None:
-            return None
-        # Get choices from the field definition, not the value
-        return dict(self._meta.get_field('edu_level').choices)[self.edu_level]
     
     def get_summary(self):
         """Get a summary of the user's profile."""
         return f"""
         **Name**: {self.first_name} {self.last_name}
-        **Age**: {self.age}
-        **Education Level**: {self.edu_level_display}
         **Current Role**: {self.current_role}
         **Current Industry**: {self.current_industry}
         **Years of experience**: {self.years_of_experience}
@@ -77,8 +56,6 @@ class UserProfile(models.Model):
         required_fields = {
             'first_name': 'First name is required',
             'last_name': 'Last name is required',
-            'age': 'Age is required',
-            'edu_level': 'Education level is required',
             'current_role': 'Current role is required',
             'current_industry': 'Current industry is required',
             'years_of_experience': 'Years of experience is required',
@@ -134,7 +111,11 @@ class TNAassessment(models.Model):
         related_name='tna_assessments'
     )
     raw_ofqual_text = models.TextField(blank=True, null=True, verbose_name="Raw Ofqual Text")
-
+    knowledge_gaps = models.TextField(blank=True, null=True, verbose_name="Knowledge Gaps")
+    all_items_of_qualification = models.TextField(blank=True, null=True, verbose_name="All Items of Qualification")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    nos_id = models.CharField(max_length=50, blank=True, null=True, verbose_name="NOS ID")
     def __str__(self):
         return f"User {self.user.email} - Sequence {self.sequence.id} - TNA Assessment - Assessment Area: {self.assessment_area}"
     
@@ -220,7 +201,7 @@ class DiscussStage(models.Model):
                                     db_column='sequence_id',
                                     related_name='discuss_stage')
     
-    # interest_areas = models.JSONField(blank=True, null=True, verbose_name="Interest Areas")
+    interest_areas = models.JSONField(blank=True, null=True, verbose_name="Interest Areas")
     learning_style = models.TextField(blank=True, null=True, verbose_name="Learning Style")
     timeline =  models.IntegerField(blank=True, null=True, verbose_name="Available Time (hours per week)")
     curriculum     = models.JSONField(blank=True, null=True, verbose_name="Curriculum Plan")
@@ -229,8 +210,8 @@ class DiscussStage(models.Model):
         return f"User {self.user.email} - Sequence {self.sequence.id} - Discuss Stage"
     
     def check_complete(self):
-        # if not self.interest_areas:
-        #     return False, "Interest areas are required"
+        if not self.interest_areas:
+            return False, "Interest areas are required"
         if not self.learning_style:
             return False, "Learning style is required"
         if not self.timeline:
@@ -242,6 +223,7 @@ class DiscussStage(models.Model):
     def get_summary(self):
         """Get a summary of the user's profile."""
         return f"""
+        **Interest Areas**: {self.interest_areas}
         **Learning Style**: {self.learning_style}
         **Available Time (hours per week)**: {self.timeline}
         **Curriculum**:

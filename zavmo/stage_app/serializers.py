@@ -34,14 +34,14 @@ class UserProfileSerializer(BaseStageSerializer):
     org_name = serializers.CharField(source='org.org_name', read_only=True)
     class Meta:
         model = UserProfile
-        fields = ['id', 'email', 'org_id', 'org_name', 'first_name', 'last_name', 'age', 'edu_level', 'current_role']
+        fields = ['id', 'email', 'org_id', 'org_name', 'first_name', 'last_name', 'current_role']
 
 
 class TNAassessmentSerializer(BaseStageSerializer):
     class Meta:
         model   = TNAassessment
-        exclude = ('user', 'blooms_taxonomy_criteria')
-               
+        fields = ['assessment_area', 'evidence_of_assessment', 'user_assessed_knowledge_level', 'zavmo_assessed_knowledge_level']
+
 class DiscoverStageSerializer(BaseStageSerializer):
     class Meta:
         model = DiscoverStage

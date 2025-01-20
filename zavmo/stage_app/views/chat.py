@@ -50,8 +50,8 @@ def chat_view(request):
             "sequence_id": sequence_id,
             "stage_data": {
                 "profile": context.get('profile', {}),
-                "tna_assessment": context.get('tna_assessment', {}),
                 "discover": context.get('discover', {}),
+                "tna_assessment": context.get('tna_assessment', {}),
                 "discuss": context.get('discuss', {}),
                 "deliver": context.get('deliver', {}),
                 "demonstrate": context.get('demonstrate', {})
@@ -67,8 +67,9 @@ def chat_view(request):
         "sequence_id": sequence_id,
         "stage_data": {
             "profile": context.get('profile', {}),
-            "tna_assessment": context.get('tna_assessment', {}),
             "discover": context.get('discover', {}),
+            "tna_assessment": context.get('tna_assessment', {}),
+            "assessments": context.get('assessments', {}),
             "discuss": context.get('discuss', {}),
             "deliver": context.get('deliver', {}),
             "demonstrate": context.get('demonstrate', {})

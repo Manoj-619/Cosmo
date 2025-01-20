@@ -14,10 +14,12 @@ from helpers._types import (
     StrictTool,
     Result,
 )
-from stage_app.models import DiscoverStage, UserProfile, TNAassessment
+from stage_app.models import DiscoverStage, UserProfile, TNAassessment, FourDSequence
+from stage_app.serializers import TNAassessmentSerializer
 from helpers.agents.tna_assessment import tna_assessment_agent
 from helpers.agents.common import get_tna_assessment_instructions, get_agent_instructions
 from helpers.utils import get_logger
+import json
 
 logger = get_logger(__name__)
 
@@ -26,6 +28,7 @@ class transfer_to_tna_assessment_step(StrictTool):
     """After the learner has completed the Discover stage, transfer to the TNA Assessment step."""
     
     def execute(self, context: Dict):
+<<<<<<< HEAD
         """Transfer to the TNA Assessment step."""
         discover_stage = DiscoverStage.objects.get(user__email=context['email'], sequence_id=context['sequence_id'])
         discover_is_complete, error = discover_stage.check_complete()
@@ -33,21 +36,42 @@ class transfer_to_tna_assessment_step(StrictTool):
             raise ValueError(error)
         assessments = TNAassessment.objects.filter(sequence_id=context['sequence_id'])
         assessment_areas = ", ".join([assessment.assessment_area for assessment in assessments])
+=======
+        """After the learner has completed the Discover stage, transfer to the TNA Assessment step"""
+        discover_stage = DiscoverStage.objects.get(user__email=context['email'], sequence=context['sequence_id'])
+        discover_is_complete, error = discover_stage.check_complete()
+        if not discover_is_complete:
+            raise ValueError(error)
+        logger.info("transfer to tna context")
+        logger.info(context)
+        all_assessments  = context['tna_assessment']['total_nos_areas']
+        assessments      = TNAassessment.objects.filter(sequence_id=context['sequence_id'])
+        assessment_areas = [assessment.assessment_area for assessment in assessments]
+        nos_id = assessments.first().nos_id
+>>>>>>> corporate-user-flow
         logger.info(f"assessment_areas: {assessment_areas}")
         agent = tna_assessment_agent
-        agent.start_message = f"""Greet and introduce the TNA Assessment step.
-        Present the Assessments that the learner should complete for the current 4D sequence in the below shared table form. 
-        Current 4D Sequence Assessments For TNA are: 
-        {assessment_areas}
+        agent.start_message = (
+            "Greet and introduce the TNA Assessment step, based on instructions and example shared on Introduction.\n"
+            f"Total NOS Areas: {all_assessments}\n"
+            f"Current Number Of Assessment Areas: {len(assessment_areas)}\n"
+            f"NOS Assessment Areas for current 4D Sequence to be presented: {', '.join(assessment_areas)}\n\n"
+            "Present the NOS Assessment Areas for current 4D Sequence in the below shared table form.\n\n"
+            
+            f"Presenting NOS Areas from **NOS ID**: {nos_id}\n"
 
-        |       **Assessments For Training Need Analysis**     |
-        |------------------------------------------------------|
-        |              assessment area                         |
-        |              assessment area                         |
-
-        Then start the TNA assessment on Current NOS Area shared.
-        """
+            "|  **Assessments For Training Needs Analysis**  |\n"
+            "|-----------------------------------------------|\n"
+            "|            [Assessment Area 1]                |\n"
+            "|            [Assessment Area 2]                |\n"
+            "|            [Assessment Area 3]                |\n"
+            
+            "Then start the TNA assessment on Current NOS Area."
+        )
         agent.instructions = get_tna_assessment_instructions(context)
+        context['tna_assessment']['current_assessment'] = 1
+        context['tna_assessment']['current_nos_areas']  = len(assessments)
+        context['tna_assessment']['assessments']        = [TNAassessmentSerializer(assessment).data for assessment in assessments]
         return Result(value="Transferred to TNA Assessment step.",
             agent=agent, 
             context=context)

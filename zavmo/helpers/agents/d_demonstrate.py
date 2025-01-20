@@ -15,8 +15,10 @@ from helpers._types import (
     StrictTool,
     Result,
 )
+import json
 from helpers.agents.common import get_agent_instructions
 from stage_app.models import FourDSequence, DemonstrateStage, TNAassessment
+from stage_app.serializers import TNAassessmentSerializer
 from django.contrib.auth.models import User
 from helpers.utils import get_logger
 
@@ -107,13 +109,13 @@ class mark_completed(StrictTool):
             context['sequence_id'] = next_sequence
             context['sequences_to_complete'] = sequences_to_complete
             context['tna_assessment'] = {
+                'nos_id': assessments_for_current_sequence.first().nos_id,
                 'total_assessments': assessments_for_current_sequence.count(),
                 'current_assessment':1,
-                'assessment_data':[]
+                'assessments':json.dumps([TNAassessmentSerializer(assessment).data for assessment in assessments_for_current_sequence])
             }
             value = f"4D Sequence {sequence_id} marked as completed. Lets continue with the next sequence having new NOS competencies."
         else:
-            sequence = FourDSequence.objects.create(user=user)
             value = f"4D Sequence {sequence_id} marked as completed. Lets start a new 4D learning journey."
         return Result(value=value, context=context)
 
