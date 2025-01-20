@@ -116,30 +116,29 @@ class TNAassessment(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     nos_id = models.CharField(max_length=50, blank=True, null=True, verbose_name="NOS ID")
+    status = models.CharField(
+        max_length=20,
+        choices=[
+            ('To Assess', 'To Assess'),
+            ('In Progress', 'In Progress'),
+            ('Completed', 'Completed')
+        ],
+        default='To Assess'
+    )
     def __str__(self):
         return f"User {self.user.email} - Sequence {self.sequence.id} - TNA Assessment - Assessment Area: {self.assessment_area}"
     
     def check_complete(self):
-        if not self.assessment_area:
-            return False, "Assessment area is required"
-        if not self.user_assessed_knowledge_level:
-            return False, "User assessed knowledge level is required"
-        if not self.zavmo_assessed_knowledge_level:
-            return False, "Zavmo assessed knowledge level is required"
-        if not self.evidence_of_assessment:
-            return False, "Evidence of assessment is required"
-        # if not self.type:
-        #     return False, "Type is required"
+        if not self.status:
+            return False, f"NOS Assessment Area: {self.assessment_area} is not assessed yet."
         return True, None
-    
-    def get_summary(self):
-        summary=""
-        summary += f"**Assessment Area**: {self.assessment_area}\n"
-        summary += f"**User Assessed Knowledge Level**: {self.user_assessed_knowledge_level}\n"
-        summary += f"**Zavmo Assessed Knowledge Level**: {self.zavmo_assessed_knowledge_level}\n"
-        summary += f"**Evidence of Assessment**: {self.evidence_of_assessment}\n\n"
-        return summary.strip()
 
+    def get_summary(self):
+        return f"""
+        **Assessment Area**: {self.assessment_area}
+        **Status**: {self.status}
+        **Evidence of Assessment**: {self.evidence_of_assessment}
+        """
 # Stage 1
 class DiscoverStage(models.Model):
     user           = models.ForeignKey(User, on_delete=models.CASCADE, related_name='discover_stage')

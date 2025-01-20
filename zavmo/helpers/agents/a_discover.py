@@ -33,35 +33,42 @@ class transfer_to_tna_assessment_step(StrictTool):
         discover_is_complete, error = discover_stage.check_complete()
         if not discover_is_complete:
             raise ValueError(error)
-        logger.info("transfer to tna context")
-        logger.info(context)
-        all_assessments  = context['tna_assessment']['total_nos_areas']
-        assessments      = TNAassessment.objects.filter(sequence_id=context['sequence_id'])
+        
+        all_assessments = context['tna_assessment']['total_nos_areas']
+        assessments = TNAassessment.objects.filter(sequence_id=context['sequence_id'])
         assessment_areas = [assessment.assessment_area for assessment in assessments]
         nos_id = assessments.first().nos_id
-        logger.info(f"assessment_areas: {assessment_areas}")
         agent = tna_assessment_agent
+        current_assessment_areas = '\n-'.join(assessment_areas)
+        
+        # Format the message with proper error handling
         agent.start_message = (
             "Greet and introduce the TNA Assessment step, based on instructions and example shared on Introduction.\n"
             f"Total NOS Areas: {all_assessments}\n"
             f"Current Number Of Assessment Areas: {len(assessment_areas)}\n"
-            f"NOS Assessment Areas for current 4D Sequence to be presented: {', '.join(assessment_areas)}\n\n"
+            "NOS Assessment Areas for current 4D Sequence to be presented:"
+            f"\n-{current_assessment_areas}\n\n"
             "Present the NOS Assessment Areas for current 4D Sequence in the below shared table form.\n\n"
-            
-            f"Presenting NOS Areas from **NOS ID**: {nos_id}\n"
-
+            + (f"Presenting NOS Areas from **NOS ID**: {nos_id}\n" if nos_id else "\n")
+            + "\n"
             "|  **Assessments For Training Needs Analysis**  |\n"
             "|-----------------------------------------------|\n"
             "|            [Assessment Area 1]                |\n"
             "|            [Assessment Area 2]                |\n"
             "|            [Assessment Area 3]                |\n"
-            
             "Then start the TNA assessment on Current NOS Area."
         )
+
         agent.instructions = get_tna_assessment_instructions(context)
-        context['tna_assessment']['current_assessment'] = 1
-        context['tna_assessment']['current_nos_areas']  = len(assessments)
-        context['tna_assessment']['assessments']        = [TNAassessmentSerializer(assessment).data for assessment in assessments]
+        
+        # Update context with proper integer values
+        context['tna_assessment'] = {
+            'current_assessment': 1,
+            'current_nos_areas': len(assessments),
+            'total_nos_areas': all_assessments,
+            'assessments': [TNAassessmentSerializer(assessment).data for assessment in assessments]
+        }
+        
         return Result(value="Transferred to TNA Assessment step.",
             agent=agent, 
             context=context)

@@ -21,7 +21,7 @@ instructions: >
     - After determining zavmo assessed level following progression criteria, save the details of the area of assessment, and move to the next assessment area.
     - If no NOS area is shared to assess, the TNA Assessment step will be completed and using the `transfer_to_discuss_stage` tool transition to the Discussion stage.
  
-examples: >
+examples: |
   "Welcome to the Training Needs Analysis Assessment step! We have identified the National Occupational Standards (NOS) that align with your professional development needs.
   
   These standards are industry-recognized benchmarks that define the knowledge and skills required for current job role, ensuring your learning is directly applicable to workplace requirements.

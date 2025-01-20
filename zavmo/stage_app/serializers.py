@@ -40,7 +40,7 @@ class UserProfileSerializer(BaseStageSerializer):
 class TNAassessmentSerializer(BaseStageSerializer):
     class Meta:
         model   = TNAassessment
-        fields = ['assessment_area', 'evidence_of_assessment', 'user_assessed_knowledge_level', 'zavmo_assessed_knowledge_level']
+        fields = ['assessment_area', 'evidence_of_assessment', 'user_assessed_knowledge_level', 'zavmo_assessed_knowledge_level', 'status']
 
 class DiscoverStageSerializer(BaseStageSerializer):
     class Meta:
