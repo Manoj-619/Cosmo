@@ -63,11 +63,12 @@ class SaveAssessmentArea(StrictTool):
         tna_assessment.save()
         tna_assessment_agent.instructions = get_tna_assessment_instructions(context)
         
-        # Update the assessments in context by appending updated assessments
-        current_assessments = json.loads(context['tna_assessment']['assessments']) if context['tna_assessment']['assessments'] else []
-        current_assessments.append(TNAassessmentSerializer(tna_assessment).data)
-        context['tna_assessment']['assessments'] = json.dumps(current_assessments)
-        
+        # Update the assessments data in context
+        context['tna_assessment']['assessments'] = [
+            item if item.get('assessment_area') != self.assessment_area 
+            else TNAassessmentSerializer(tna_assessment).data 
+            for item in context['tna_assessment']['assessments']
+        ]
         context['tna_assessment']['current_assessment'] += 1
         return Result(value=f"""Saved details for the Assessment area: {self.assessment_area}.
                       

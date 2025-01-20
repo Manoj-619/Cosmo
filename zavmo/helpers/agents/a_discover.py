@@ -33,8 +33,10 @@ class transfer_to_tna_assessment_step(StrictTool):
         discover_is_complete, error = discover_stage.check_complete()
         if not discover_is_complete:
             raise ValueError(error)
-        all_assessments = context['total_assessments_from_all_4D_sequences']
-        assessments = TNAassessment.objects.filter(sequence_id=context['sequence_id'])
+        logger.info("transfer to tna context")
+        logger.info(context)
+        all_assessments  = context['tna_assessment']['total_nos_areas']
+        assessments      = TNAassessment.objects.filter(sequence_id=context['sequence_id'])
         assessment_areas = [assessment.assessment_area for assessment in assessments]
         nos_id = assessments.first().nos_id
         logger.info(f"assessment_areas: {assessment_areas}")
@@ -57,7 +59,9 @@ class transfer_to_tna_assessment_step(StrictTool):
             "Then start the TNA assessment on Current NOS Area."
         )
         agent.instructions = get_tna_assessment_instructions(context)
-        context['tna_assessment']['assessments'] = json.dumps([TNAassessmentSerializer(assessment).data for assessment in assessments])
+        context['tna_assessment']['current_assessment'] = 1
+        context['tna_assessment']['current_nos_areas']  = len(assessments)
+        context['tna_assessment']['assessments']        = [TNAassessmentSerializer(assessment).data for assessment in assessments]
         return Result(value="Transferred to TNA Assessment step.",
             agent=agent, 
             context=context)

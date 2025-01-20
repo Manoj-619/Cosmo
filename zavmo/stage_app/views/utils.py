@@ -109,15 +109,18 @@ def _create_full_context(email, sequence_id, profile):
     """Create context with all stage data."""
     sequence = FourDSequence.objects.get(id=sequence_id)
 
-    tna_assessments            = TNAassessment.objects.filter(user__email=email, sequence_id=sequence_id)
-    all_structured_assessments = [TNAassessmentSerializer(assessment).data for assessment in tna_assessments]
-    completed_assessments      = [assessment for assessment in all_structured_assessments if assessment.get('evidence_of_assessment')]
+    all_tna_assessments = TNAassessment.objects.filter(user=profile.user)
+
+    current_tna_assessments    = TNAassessment.objects.filter(user__email=email, sequence_id=sequence_id)
+    current_assessments_structured = [TNAassessmentSerializer(assessment).data for assessment in current_tna_assessments]
+    completed_assessments      = [assessment for assessment in current_assessments_structured if assessment.get('evidence_of_assessment')]
     
     tna_assessment_data = {
-        'nos_id': tna_assessments.first().nos_id,
-        'total_assessments': len(all_structured_assessments),
-        'current_assessment': len(completed_assessments) + 1 if len(completed_assessments) < len(all_structured_assessments) else len(all_structured_assessments),
-        'assessments': json.dumps(all_structured_assessments)
+        'nos_id': current_tna_assessments.first().nos_id,
+        'total_nos_areas': all_tna_assessments.count(),
+        'current_nos_areas': len(current_assessments_structured),
+        'current_assessment': len(completed_assessments) + 1 if len(completed_assessments) < len(current_assessments_structured) else len(current_assessments_structured),
+        'assessments': current_assessments_structured
     }
     return {
         'email': email,
@@ -161,7 +164,7 @@ def _process_agent_response(stage_name, message_history, context, max_turns=10):
 
         ## Get Summary of previous stages    
         if stage_model == TNAassessment:
-            all_tna_assessments_for_current_4D_sequence    = TNAassessment.objects.filter(user__email=email, sequence_id=sequence_id)
+            all_tna_assessments_for_current_4D_sequence = TNAassessment.objects.filter(user__email=email, sequence_id=sequence_id)
             summary = "".join([s.get_summary() for s in all_tna_assessments_for_current_4D_sequence])
         else:
             summary = stage_model.get_summary()
@@ -172,9 +175,9 @@ def _process_agent_response(stage_name, message_history, context, max_turns=10):
         """ 
     if stage_name == 'tna_assessment':
         agent.instructions = get_tna_assessment_instructions(context)
-        all_assessments = context['total_assessments_from_all_4D_sequences']
-        number_of_assessments_for_current_4D_sequence = len(all_tna_assessments_for_current_4D_sequence)
-        nos_id = all_tna_assessments_for_current_4D_sequence.first().nos_id
+        all_assessments    = context['tna_assessment']['total_nos_areas']
+        number_of_assessments_for_current_4D_sequence = context['tna_assessment']['current_nos_areas']
+        nos_id = context['tna_assessment']['nos_id']
         agent.start_message = f"""Total NOS Areas: {all_assessments},
         Number of NOS Areas to complete in current 4D Sequence: {number_of_assessments_for_current_4D_sequence},
         NOS Assessment Areas for current 4D Sequence to be presented: {', '.join([assessment.assessment_area for assessment in all_tna_assessments_for_current_4D_sequence])}
