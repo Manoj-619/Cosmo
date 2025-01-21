@@ -42,7 +42,7 @@ def get_yaml_data(yaml_path, yaml_dir="assets/data"):
         raise
 
 
-def compile_system_content(competencies_to_assess,prompt_context):
+def compile_system_content(competency_to_assess,prompt_context):
     """
     Compile system content for the TNA assessment agent.
 
@@ -54,10 +54,11 @@ def compile_system_content(competencies_to_assess,prompt_context):
     Returns:
         str: System content for the TNA assessment agent.
     """
-    if competencies_to_assess:
-        criterias = competencies_to_assess[0]['blooms_taxonomy_criteria']
+    if competency_to_assess:
+        competency_to_assess = competency_to_assess[0]
+        criterias = competency_to_assess['blooms_taxonomy_criteria']
         criterias = "\n".join([f"- {c['level']}: {c['criteria']}" for c in criterias])
-        prompt_context['nos_area_with_criteria'] = f"""Assessment Area: **{competencies_to_assess[0]['assessment_area']}**\n**Criteria:**\n{criterias}\n\n**Important**:\n - Save the details of the assessment area before moving to the next assessment area."""
+        prompt_context['nos_area_with_criteria'] = f"""Assessment Area: **{competency_to_assess['assessment_area']}**\n**Criteria:**\n{criterias}\n\n**Important**:\n - Save the details of the assessment area before moving to the next assessment area."""
     else:
         prompt_context['nos_area_with_criteria'] = "No NOS Areas left to assess."
 
@@ -83,11 +84,11 @@ def get_tna_assessment_instructions(context: Dict):
  
     tna_assessments = TNAassessment.objects.filter(user__email=context['email'], sequence_id=context['sequence_id'])
     
-    competencies_to_assess = [{'assessment_area':assessment.assessment_area, 
+    competency_to_assess = [{'assessment_area':assessment.assessment_area, 
                                'blooms_taxonomy_criteria':assessment.blooms_taxonomy_criteria} 
-                                for assessment in tna_assessments if not assessment.evidence_of_assessment]
+                                for assessment in tna_assessments if assessment.status == 'In Progress']
     
-    system_content = compile_system_content(competencies_to_assess, prompt_context)
+    system_content = compile_system_content(competency_to_assess, prompt_context)
     return system_content 
 
 ###### Agent Instructions ######

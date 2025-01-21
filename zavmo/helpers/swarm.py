@@ -59,7 +59,7 @@ def fetch_agent_response(agent: Agent, history: List, context: Dict) -> ChatComp
 
     # logging.info(f"messages: {messages}")
     logging.info(agent.start_message)
-    # logging.info(f"instructions:{instructions}")
+    logging.info(f"instructions:{instructions}")
     return openai_client.chat.completions.create(**create_params)
 
 

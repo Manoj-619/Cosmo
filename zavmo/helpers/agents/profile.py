@@ -79,14 +79,15 @@ class GetRequiredSkillsFromNOS(PermissiveTool):
             
             # Create assessments for the sequence
             for skill in self.nos[i:i+n]:
+                total_assessments += 1
                 TNAassessment.objects.create(
                     user=user_profile.user,
                     assessment_area=skill.assessment_area,
                     blooms_taxonomy_criteria=[bt.model_dump() for bt in skill.blooms_taxonomy_criteria],
                     sequence=sequence,
-                    nos_id=context['tna_assessment']['nos_id']
+                    nos_id=context['tna_assessment']['nos_id'],
+                    status='In Progress' if total_assessments==1 else 'To Assess'
                 )
-                total_assessments += 1
 
         # Convert QuerySet to list before storing in context
         all_sequences = list(FourDSequence.objects.filter(
@@ -97,7 +98,7 @@ class GetRequiredSkillsFromNOS(PermissiveTool):
         context.update({'sequence_id': all_sequences[0]})
         context['sequences_to_complete']             = all_sequences
         context['tna_assessment']['total_nos_areas'] = total_assessments
-        logging.info(context)
+        
         return Result(value=f"FourDSequences created, transfer to discovery stage", context=context)
 
 class GetNOSDocument(StrictTool):

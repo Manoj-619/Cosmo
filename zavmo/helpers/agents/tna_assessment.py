@@ -54,22 +54,42 @@ class SaveAssessmentArea(StrictTool):
         """
         Save the details of an assessment area.
         """
-        tna_assessment = TNAassessment.objects.get(user__email=context['email'], sequence_id=context['sequence_id'], assessment_area=self.assessment_area)
-        tna_assessment.user_assessed_knowledge_level  = self.user_assessed_knowledge_level
-        tna_assessment.zavmo_assessed_knowledge_level = self.zavmo_assessed_knowledge_level
-        tna_assessment.evidence_of_assessment = self.evidence_of_assessment
-        ofqual_text = fetch_ofqual_text(self.assessment_area)
-        tna_assessment.raw_ofqual_text = ofqual_text
-        tna_assessment.save()
-        tna_assessment_agent.instructions = get_tna_assessment_instructions(context)
         
-        # Update the assessments data in context
-        context['tna_assessment']['assessments'] = [
-            item if item.get('assessment_area') != self.assessment_area 
-            else TNAassessmentSerializer(tna_assessment).data 
-            for item in context['tna_assessment']['assessments']
-        ]
+        # Update the assessments data in context with proper status handling
+        updated_assessments = []
+        next_assessment_marked = False
+        
+        for item in context['tna_assessment']['assessments']:
+            if item.get('assessment_area') == self.assessment_area:
+                # completed assessment
+                tna_assessment = TNAassessment.objects.get(user__email=context['email'], sequence_id=context['sequence_id'], assessment_area=self.assessment_area)
+                tna_assessment.user_assessed_knowledge_level  = self.user_assessed_knowledge_level
+                tna_assessment.zavmo_assessed_knowledge_level = self.zavmo_assessed_knowledge_level
+                tna_assessment.evidence_of_assessment = self.evidence_of_assessment
+                ofqual_text = fetch_ofqual_text(self.assessment_area)
+                tna_assessment.raw_ofqual_text = ofqual_text
+                tna_assessment.status = 'Completed'
+                tna_assessment.save()
+                item.update(TNAassessmentSerializer(tna_assessment).data)
+            elif not next_assessment_marked and item.get('evidence_of_assessment') is None:
+                # Mark the next unassessed area as 'In Progress'
+                tna_assessment = TNAassessment.objects.get(user__email=context['email'], sequence_id=context['sequence_id'], assessment_area=item.get('assessment_area'))
+                tna_assessment.status = 'In Progress'
+                tna_assessment.save()
+                next_assessment_marked = True
+                item.update(TNAassessmentSerializer(tna_assessment).data)
+            else:
+                # All other areas should be 'To Assess'
+                tna_assessment = TNAassessment.objects.get(user__email=context['email'], sequence_id=context['sequence_id'], assessment_area=item.get('assessment_area'))
+                tna_assessment.status = 'To Assess'
+                tna_assessment.save()
+                item.update(TNAassessmentSerializer(tna_assessment).data)
+            updated_assessments.append(item)
+        
+        tna_assessment_agent.instructions = get_tna_assessment_instructions(context)
+        context['tna_assessment']['assessments'] = updated_assessments
         context['tna_assessment']['current_assessment'] += 1
+        
         return Result(value=f"""Saved details for the Assessment area: {self.assessment_area}.
                       
         **Learner's knowledge:** {self.evidence_of_assessment}.
