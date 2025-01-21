@@ -66,7 +66,52 @@ API_CONFIG = {
             "mbox": context['email']
             }
         }
-    }
+    },
+     "module_start_api": {
+        "url": "https://learninglocker.zavmo.ai/v1/statements/moduleStart",
+        "payload_builder": lambda context: {
+            "actor": {
+                "name": f"{context['profile']['first_name']} {context['profile']['last_name']}",
+                "mbox": context['email']
+            },
+            "module": {
+                "title": context['discuss']['module'].get('title', "Unknown Module"),
+                "lessons": context['discuss']['module'].get('lessons', []),
+                "duration": context['discuss']['module'].get('duration', "Unknown Duration"),
+                "learning_outcomes": context['discuss']['module'].get('learning_outcomes', "No outcomes defined")
+            }
+        }
+    },
+    "lesson_start_api": {
+        "url": "https://learninglocker.zavmo.ai/v1/statements/lessonStart",
+        "payload_builder": lambda context: {
+            "actor": {
+                "name": f"{context['profile']['first_name']} {context['profile']['last_name']}",
+                "mbox": context['email']
+            },
+            "lesson": {
+                "title": context['discuss']['lesson'].get('title', "Unknown Title"),
+                "description": context['discuss']['lesson'].get('description', "No description available"),
+                "module": context['discuss']['lesson'].get('module', "Unknown Module"),
+                "learningObjective": context['discuss']['lesson'].get('learningObjective', "No objectives specified")
+            }
+        }
+    },
+    "lesson_progression_api": {
+        "url": "https://learninglocker.zavmo.ai/v1/statements/lessonProgression",
+        "payload_builder": lambda context: {
+            "actor": {
+                "name": f"{context['profile']['first_name']} {context['profile']['last_name']}",
+                "mbox": context['email']
+            },
+            "lesson": {
+                "title": context['discuss']['lesson'].get('title', "Unknown Title"),
+                "module": context['discuss']['lesson'].get('module', "Unknown Module")
+            }
+        }
+    },
+
+
 }
 
 
