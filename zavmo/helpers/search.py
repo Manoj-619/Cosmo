@@ -1,4 +1,7 @@
 import os
+import base64
+import zlib
+import json
 from typing import List, Dict
 from pinecone import Pinecone
 from openai import OpenAI
@@ -53,6 +56,14 @@ def fetch_nos_text(current_role: str) -> List[str]:
     matching_nos_doc = "\n".join([match['metadata']['text'] for match in nos_sections_from_nos_id['matches']])
     return matching_nos_doc, nos_id
 
+def decompress_text(compressed_str):
+    """Decompress text from base64 string back to original format."""
+    if not compressed_str:
+        return ''
+    compressed_bytes = base64.b64decode(compressed_str.encode('utf-8'))
+    decompressed = zlib.decompress(compressed_bytes)
+    return json.loads(decompressed.decode('utf-8'))
+
 def fetch_ofqual_text(query: str) -> List[str]:
     """
     Fetch qualification text from Ofqual index based on search query.
@@ -61,7 +72,7 @@ def fetch_ofqual_text(query: str) -> List[str]:
         query (str): Search query text
         
     Returns:
-        List[str]: List of relevant qualification text sections
+        tuple[str, str]: Tuple containing (text, markscheme) from the qualification
     """
     query_vector = get_embedding(query)
 
@@ -75,5 +86,7 @@ def fetch_ofqual_text(query: str) -> List[str]:
         include_metadata=True
     )
 
-    raw_ofqual_text = "\n\n".join([match['metadata']['text'] for match in results['matches']])
-    return raw_ofqual_text
+    text = decompress_text(results['matches'][0]['metadata']['text'])
+    markscheme = decompress_text(results['matches'][0]['metadata']['markscheme'])
+    
+    return text, markscheme
