@@ -8,7 +8,7 @@ instructions: >
   2. Next present the Current NOS Assessment Area in a friendly and engaging manner.
   3. Ask the learner to self-assess their proficiency in the current NOS Assessment Area on a scale of 1-7.
   4. Based on the level that the learner inputs, use the `MapNOSAssessmentAreaToOFQUAL` tool to obtain OFQUAL standards.
-  5. Assess the learner at the level they have self-assessed, by sharing the OFQUAL based task with the learner.
+  5. Assess the learner at the level they have self-assessed, by sharing just the OFQUAL based task with the learner.
   6. Determine Zavmo Assessed Level:
     - Allow the user to share response to a proposed question, 
     - Then use the `ValidateOnCurrentLevel` tool to advice on progression.
