@@ -12,6 +12,15 @@ from datetime import datetime, timedelta, UTC
 load_dotenv()
 
 
+def batch_list(data, batch_size):
+    """Generate batches of data with a given batch size."""
+    batches = []
+    for i in range(0, len(data), batch_size):
+        batch = data[i:i + batch_size]
+        batches.append(batch)
+    return batches
+
+
 def chunk_items(items, chunk_size=3):
     return [items[i:i + chunk_size] for i in range(0, len(items), chunk_size)]
 
