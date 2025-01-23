@@ -115,6 +115,7 @@ def _create_full_context(email, sequence_id, profile):
     current_assessments_structured = [TNAassessmentSerializer(assessment).data for assessment in current_tna_assessments]
     
     tna_assessment_data = {
+        'nos_id': current_tna_assessments.first().nos_id,
         'total_nos_areas': all_tna_assessments.count(),
         'current_nos_areas': len(current_assessments_structured),
         'assessments': current_assessments_structured

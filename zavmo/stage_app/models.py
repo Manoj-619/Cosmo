@@ -34,6 +34,11 @@ class UserProfile(models.Model):
     job_duration    = models.PositiveIntegerField(null=True, blank=True, verbose_name="Job Duration")
     manager         = models.CharField(max_length=100, blank=True, null=True, verbose_name="Manager")
     department      = models.CharField(max_length=100, blank=True, null=True, verbose_name="Department")
+    main_purpose    = models.TextField(blank=True, null=True, verbose_name="Main Purpose")
+    responsibilities = models.TextField(blank=True, null=True, verbose_name="Responsibilities")
+    manager_responsibilities = models.TextField(blank=True, null=True, verbose_name="Manager's Responsibilities")
+    work_experience_in_current_role = models.TextField(blank=True, null=True, verbose_name="Work Experience in Current Role")
+
     def __str__(self):
         """Get a dump of the Django model as a string."""
         return f"{self.user.email} - Profile"
@@ -61,7 +66,11 @@ class UserProfile(models.Model):
             'years_of_experience': 'Years of experience is required',
             'job_duration': 'Job duration is required',
             'manager': 'Manager is required',
-            'department': 'Department is required'
+            'department': 'Department is required',
+            'main_purpose': 'Main purpose is required',
+            'responsibilities': 'Responsibilities are required',
+            'manager_responsibilities': 'Manager\'s responsibilities are required',
+            'work_experience_in_current_role': 'Work experience in current role is required',
         }
 
         for field, message in required_fields.items():

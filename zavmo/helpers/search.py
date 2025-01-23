@@ -23,12 +23,12 @@ def get_embedding(text: str, model: str = "text-embedding-3-small") -> List[floa
     return embedding
 
 
-def fetch_nos_text(current_role: str) -> List[str]:
+def fetch_nos_text(query: str) -> List[str]:
     """
     Fetch NOS text from Pinecone based on current role.
     
     """
-    query_vector = get_embedding(f"Occupation relevant to {current_role}")  
+    query_vector = get_embedding(query)  
 
     # Query the Pinecone index
     ## Get NOS ID

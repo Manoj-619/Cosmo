@@ -91,11 +91,10 @@ class GetRequiredSkillsFromNOS(PermissiveTool):
         return Result(value=f"FourDSequences created, transfer to discovery stage", context=context)
 
 class GetNOSDocument(StrictTool):
-    current_role: str = Field(description="The learner's current role.")
-
     def execute(self, context: Dict):
-        nos_doc, nos_id = fetch_nos_text( 
-                current_role=self.current_role)
+        profile = UserProfile.objects.get(user__email=context['email'])
+        query = f"Current Role: {profile.current_role} \nCurrent Industry: {profile.current_industry} \nWork experience in current role: {profile.work_experience_in_current_role} \nMain purpose: {profile.main_purpose} \nResponsibilities: {profile.responsibilities} \nManager's responsibilities: {profile.manager_responsibilities}"
+        nos_doc, nos_id = fetch_nos_text(query)
         
         context['tna_assessment']['nos_id']   = nos_id
         context['nos_doc'] = nos_doc
@@ -133,7 +132,11 @@ class update_profile_data(StrictTool):
     department: str       = Field(description="The department the learner works in.")
     manager: str      = Field(description="The name of the person the learner reports to.")
     job_duration: int = Field(description="The number of years the learner has worked in their current job.")
-   
+    work_experience_in_current_role: str = Field(description="A detailed description of the learner's work experience in their current role.")
+    main_purpose:  str = Field(description="The main purpose of the learner's current role.")
+    responsibilities: str = Field(description="The responsibilities of the learner's current role.")
+    manager_responsibilities: str = Field(description="The responsibilities of the learner's manager.")
+
     def execute(self, context: Dict):
         # Get email and sequence_id from context
         email       = context.get('email')
@@ -153,6 +156,10 @@ class update_profile_data(StrictTool):
         profile.manager = self.manager
         profile.department = self.department
         profile.job_duration = self.job_duration
+        profile.work_experience_in_current_role = self.work_experience_in_current_role
+        profile.main_purpose = self.main_purpose
+        profile.responsibilities = self.responsibilities
+        profile.manager_responsibilities = self.manager_responsibilities
         profile.save()
         
         context['profile'] = self.model_dump()
