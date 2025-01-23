@@ -59,11 +59,10 @@ class transfer_to_tna_assessment_step(StrictTool):
             "Then start the TNA assessment on Current NOS Area."
         )
 
-        agent.instructions = get_tna_assessment_instructions(context)
+        agent.instructions = get_tna_assessment_instructions(context, level="")
         
         # Update context with proper integer values
         context['tna_assessment'] = {
-            'current_assessment': 1,
             'current_nos_areas': len(assessments),
             'total_nos_areas': all_assessments,
             'assessments': [TNAassessmentSerializer(assessment).data for assessment in assessments]

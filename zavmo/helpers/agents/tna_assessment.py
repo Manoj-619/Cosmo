@@ -1,5 +1,5 @@
 from pydantic import Field
-from typing import Dict, List
+from typing import Dict, List, Literal
 from helpers._types import (
     Agent,
     StrictTool,
@@ -41,6 +41,61 @@ class transfer_to_discussion_stage(StrictTool):
         """
         return Result(value="Transferred to Discussion stage.", agent=agent, context=context)
 
+class MapNOSAssessmentAreaToOFQUAL(StrictTool):
+    """Map the NOS assessment area to OFQUAL."""
+    assessment_area: str = Field(description="Exact name of current NOS assessment area.")
+    level: Literal["Remember", "Understand", "Apply", "Analyze", "Evaluate", "Create"] = Field(description="The level mapped to Bloom's Taxonomy level based on the learner's proficiency level as input on the scale of 1-7.")
+    
+    def execute(self, context: Dict):
+        # Fetch OFQUAL text and criteria
+        raw_ofqual_text, criteria_of_qualification = fetch_ofqual_text(self.assessment_area)
+        
+        # Update the TNA assessment record
+        tna_assessment = TNAassessment.objects.get(
+            user__email=context['email'], 
+            sequence_id=context['sequence_id'], 
+            assessment_area=self.assessment_area
+        )
+        tna_assessment.raw_ofqual_text = raw_ofqual_text
+        tna_assessment.criterias = criteria_of_qualification
+        tna_assessment.save()
+        
+        tna_assessment_agent.instructions = get_tna_assessment_instructions(context, self.level)
+        return Result(value=f"level: {self.level}", context=context)
+
+class ValidateOnCurrentLevel(StrictTool):
+    """Validate the learner's response to advice on progression."""
+    result: Literal["FAIL", "PASS", "MERIT", "DISTINCTION"] = Field(description="""The result of the assessment. It is based on the learner's response against the OFQUAL's benchmarking responses. 
+                                                                    The learner's response could match one of the OFQUAL's benchmarking responses - Fail, Pass, Merit, Distinction. Evaluate strictly based on criterias and benchmarking responses shared from OFQUAL.""")
+    current_bloom_taxonomy_level: Literal["Remember", "Understand", "Apply", "Analyze", "Evaluate", "Create"] = Field(description="The current Bloom's Taxonomy level of the assessment area the learner is currently on.")
+
+    def execute(self, context: Dict):
+
+        all_levels = ["Remember", "Understand", "Apply", "Analyze", "Evaluate", "Create"]
+
+        if self.result == "FAIL":
+            if self.current_bloom_taxonomy_level == "Remember":
+                return Result(value=f"Based on validation, it is advised to save the details of the assessment area and then move to next NOS assessment area.", context=context)
+            else:
+                next_lower_level = all_levels[all_levels.index(self.current_bloom_taxonomy_level) - 1]
+                tna_assessment_agent.instructions = get_tna_assessment_instructions(context, next_lower_level)
+                return Result(value=f"Inform learner that based on validation, it is advised to move to next lower level.", context=context)
+        
+        if self.result == "PASS":
+            tna_assessment_agent.instructions = get_tna_assessment_instructions(context, "")
+            return Result(value=f"""Inform learner that based on evaluating the learner's response against the OFQUAL's benchmarking responses, Pass grade is achieved which is great. 
+                                It is advised to save the details of the assessment area and move to next NOS assessment area.""", context=context)
+        
+        if self.result == "MERIT" or self.result == "DISTINCTION":
+            if self.current_bloom_taxonomy_level == "Create":
+                return Result(value=f"""Inform learner that based on evaluating the learner's response against the OFQUAL's benchmarking responses, {self.result} is achieved. 
+                              The learner has reached the highest level. It is advised to save the details of the assessment area and move to next NOS assessment area.""", context=context)
+            else:
+                next_higher_level = all_levels[all_levels.index(self.current_bloom_taxonomy_level) + 1]
+                tna_assessment_agent.instructions = get_tna_assessment_instructions(context, next_higher_level)
+                return Result(value=f"""Inform learner that based on evaluating the learner's response against the OFQUAL's benchmarking responses, {self.result} is achieved. 
+                                It is advised to move to next higher level and continue assessment process on next shared level and corresponding task.""", context=context)
+
 class SaveAssessmentArea(StrictTool):
     """
     Save the details of an assessment area.
@@ -49,12 +104,13 @@ class SaveAssessmentArea(StrictTool):
     user_assessed_knowledge_level: int = Field(description="The knowledge level in the assessment area self-assessed by the user, rated on a scale of 1 to 7.")
     zavmo_assessed_knowledge_level: int = Field(description="The knowledge level determined by Zavmo based on the assessment, rated on a scale of 1 to 7.")
     evidence_of_assessment: str = Field(description="You will list the gaps you determined that will require improvements later.")
+    gaps: List[str] = Field(description="List of all knowledge gaps determined between learner's knowledge and OFQUAL requirements.")
     
     def execute(self, context: Dict):
         """
         Save the details of an assessment area.
         """
-        
+        logger.info(f"evidence_of_assessment: {self.evidence_of_assessment}")
         # Update the assessments data in context with proper status handling
         updated_assessments = []
         next_assessment_marked = False
@@ -66,8 +122,7 @@ class SaveAssessmentArea(StrictTool):
                 tna_assessment.user_assessed_knowledge_level  = self.user_assessed_knowledge_level
                 tna_assessment.zavmo_assessed_knowledge_level = self.zavmo_assessed_knowledge_level
                 tna_assessment.evidence_of_assessment = self.evidence_of_assessment
-                ofqual_text = fetch_ofqual_text(self.assessment_area)
-                tna_assessment.raw_ofqual_text = ofqual_text
+                tna_assessment.knowledge_gaps = self.gaps
                 tna_assessment.status = 'Completed'
                 tna_assessment.save()
                 item.update(TNAassessmentSerializer(tna_assessment).data)
@@ -80,37 +135,13 @@ class SaveAssessmentArea(StrictTool):
                 item.update(TNAassessmentSerializer(tna_assessment).data)
             else:
                 # All other areas should be 'To Assess'
-                tna_assessment = TNAassessment.objects.get(user__email=context['email'], sequence_id=context['sequence_id'], assessment_area=item.get('assessment_area'))
-                tna_assessment.status = 'To Assess'
-                tna_assessment.save()
                 item.update(TNAassessmentSerializer(tna_assessment).data)
             updated_assessments.append(item)
         
-        tna_assessment_agent.instructions = get_tna_assessment_instructions(context)
+        tna_assessment_agent.instructions = get_tna_assessment_instructions(context, level="")
         context['tna_assessment']['assessments'] = updated_assessments
-        context['tna_assessment']['current_assessment'] += 1
         
-        return Result(value=f"""Saved details for the Assessment area: {self.assessment_area}.
-                      
-        **Learner's knowledge:** {self.evidence_of_assessment}.
-            
-        **OFQUAL unit:** 
-        {ofqual_text}
-        
-        Next, determine gaps between learner's knowledge and OFQUAL unit shared.""", context=context)
-
-class DetermineGaps(StrictTool):
-    """Lists all knowledge gaps determined between the learner's knowledge and OFQUAL unit shared."""
-    # all_items_of_qualification: List[str] = Field(description="List of all qualification items provided in the OFQUAL unit, ensuring to capture all numbered items (from 1, 1.1, to n.n) in sequence. Do not attach number to the items in the beginning.")
-    gaps: List[str] = Field(description="List of all knowledge gaps determined between learner's knowledge and Qualification items provided in the OFQUAL unit.")
-    
-    def execute(self, context: Dict):
-        """Determine the gaps between learner's knowledge and OFQUAL requirements."""
-        tna_assessment = TNAassessment.objects.filter(user__email=context['email'], sequence_id=context['sequence_id']).order_by('-updated_at').first()
-        tna_assessment.knowledge_gaps = self.gaps
-        # tna_assessment.all_items_of_qualification = self.all_items_of_qualification
-        tna_assessment.save()
-        return Result(value=f"Do not share the gaps identified with the learner. Move to next NOS Assessment Area or transfer to Discussion stage if No NOS Assessment Areas is shared to assess.", context=context)
+        return Result(value=f"""Saved details for the Assessment area: {self.assessment_area}.""", context=context)
 
 tna_assessment_agent = Agent(
     name="TNA Assessment",
@@ -118,7 +149,8 @@ tna_assessment_agent = Agent(
     model="gpt-4o",
     #instructions=get_agent_instructions('tna_assessment'),
     functions=[SaveAssessmentArea,
-               DetermineGaps,
+               MapNOSAssessmentAreaToOFQUAL,
+               ValidateOnCurrentLevel,
                transfer_to_discussion_stage],
     tool_choice="auto",
     parallel_tool_calls=True

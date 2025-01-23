@@ -5,6 +5,7 @@ import json
 from typing import List, Dict
 from pinecone import Pinecone
 from openai import OpenAI
+import ast
 
 # Initialize Pinecone client
 pinecone_client = Pinecone(api_key=os.getenv('PINECONE_API_KEY'))
@@ -77,7 +78,7 @@ def fetch_ofqual_text(query: str) -> List[str]:
     query_vector = get_embedding(query)
 
     # Query the Pinecone index having unitwise data ingested
-    index = pinecone_client.Index('sales-ofqual') ## TODO: Change to ofqual index
+    index = pinecone_client.Index('centrica-ofqual') ## TODO: Change to ofqual index
     
     # Search for relevant qualifications without filters
     results = index.query(
@@ -87,6 +88,6 @@ def fetch_ofqual_text(query: str) -> List[str]:
     )
 
     text = decompress_text(results['matches'][0]['metadata']['text'])
-    markscheme = decompress_text(results['matches'][0]['metadata']['markscheme'])
+    markscheme = ast.literal_eval(decompress_text(results['matches'][0]['metadata']['markscheme']))
     
     return text, markscheme
