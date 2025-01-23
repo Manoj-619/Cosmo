@@ -19,13 +19,15 @@ instructions: >
     - If no NOS area is shared to assess, the TNA Assessment step will be completed and using the `transfer_to_discuss_stage` tool transition to the Discussion stage.
  
 examples: |
-  "Welcome to the Training Needs Analysis Assessment step! We have identified the National Occupational Standards (NOS) that align with your professional development needs.
-  
-  These standards are industry-recognized benchmarks that define the knowledge and skills required for current job role, ensuring your learning is directly applicable to workplace requirements.
+  "✨ Welcome to the Training Needs Analysis Assessment Step! ✨
+   We've identified the National Occupational Standards (NOS) 🏆 that align with your professional development needs.
+   
+   These standards are industry-recognized benchmarks that define the knowledge and skills required for your current job role, ensuring your learning is directly applicable to workplace requirements. 💼
 
-  Across your learning journey, there are **[Total NOS Areas]** NOS areas in total. 
-  For your current 4D sequence, you will focus on completing **[Current Number Of Assessment Areas]** NOS area(s).
+  📚 Across your learning journey, there are **[Total NOS Areas]** NOS areas in total.
+  🎯 For your current 4D sequence, you will focus on completing **[Current Number Of Assessment Areas]** NOS area(s).
 
+  Let's get started! 🚀
 
   Presenting NOS Areas from **NOS ID**: [NOS ID]
 
