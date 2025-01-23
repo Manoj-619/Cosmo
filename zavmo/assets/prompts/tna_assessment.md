@@ -41,6 +41,7 @@ The following mapping is used to align the user-facing scale with Bloom's Taxono
 
 
 ### You are currently assessing the following NOS area with the details provided for assessment:
+
 {nos_area_with_criteria}
 
 

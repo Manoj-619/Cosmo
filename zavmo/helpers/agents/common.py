@@ -88,6 +88,7 @@ def get_tna_assessment_instructions(context: Dict, level: str):
                 f"- **Expectations:** {expectations_text}\n\n"
                 f"- **Benchmarking Responses for validation:** \n\n{benchmarking_responses}\n\n"
             )
+            logging.info(f"OFQUAL based instructions: {ofqual_based_instructions}")
             prompt_context['nos_area_with_criteria'] = ofqual_based_instructions
         else:
             prompt_context['nos_area_with_criteria'] = f"Assessment Area: **{competency_to_assess[0]['assessment_area']}**"
@@ -97,6 +98,7 @@ def get_tna_assessment_instructions(context: Dict, level: str):
     system_content  = get_prompt('tna_assessment.md', 
                                     context=prompt_context,
                                     prompt_dir="assets/prompts")
+                                    
     return system_content
 
 ###### Agent Instructions ######
