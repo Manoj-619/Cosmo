@@ -34,6 +34,11 @@ class UserProfile(models.Model):
     job_duration    = models.PositiveIntegerField(null=True, blank=True, verbose_name="Job Duration")
     manager         = models.CharField(max_length=100, blank=True, null=True, verbose_name="Manager")
     department      = models.CharField(max_length=100, blank=True, null=True, verbose_name="Department")
+    main_purpose    = models.TextField(blank=True, null=True, verbose_name="Main Purpose")
+    responsibilities = models.TextField(blank=True, null=True, verbose_name="Responsibilities")
+    manager_responsibilities = models.TextField(blank=True, null=True, verbose_name="Manager's Responsibilities")
+    work_experience_in_current_role = models.TextField(blank=True, null=True, verbose_name="Work Experience in Current Role")
+
     def __str__(self):
         """Get a dump of the Django model as a string."""
         return f"{self.user.email} - Profile"
@@ -61,7 +66,11 @@ class UserProfile(models.Model):
             'years_of_experience': 'Years of experience is required',
             'job_duration': 'Job duration is required',
             'manager': 'Manager is required',
-            'department': 'Department is required'
+            'department': 'Department is required',
+            'main_purpose': 'Main purpose is required',
+            'responsibilities': 'Responsibilities are required',
+            'manager_responsibilities': 'Manager\'s responsibilities are required',
+            'work_experience_in_current_role': 'Work experience in current role is required',
         }
 
         for field, message in required_fields.items():
@@ -78,7 +87,7 @@ class TNAassessment(models.Model):
 
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='tna_assessments')
     assessment_area = models.CharField(max_length=255, default=None, null=True)
-    blooms_taxonomy_criteria = models.JSONField(default=list, blank=True, null=True, verbose_name="Bloom's Taxonomy Criteria")
+    criterias       = models.JSONField(default=list, blank=True, null=True, verbose_name="Bloom's Taxonomy Criteria")
     user_assessed_knowledge_level = models.PositiveSmallIntegerField(
         choices=[
             (1, 'Novice (Basic awareness)'),
@@ -112,7 +121,6 @@ class TNAassessment(models.Model):
     )
     raw_ofqual_text = models.TextField(blank=True, null=True, verbose_name="Raw Ofqual Text")
     knowledge_gaps = models.TextField(blank=True, null=True, verbose_name="Knowledge Gaps")
-    all_items_of_qualification = models.TextField(blank=True, null=True, verbose_name="All Items of Qualification")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     nos_id = models.CharField(max_length=50, blank=True, null=True, verbose_name="NOS ID")
@@ -125,6 +133,7 @@ class TNAassessment(models.Model):
         ],
         default='To Assess'
     )
+    finalized_blooms_taxonomy_level = models.CharField(max_length=20, blank=True, null=True, verbose_name="Finalized Bloom's Taxonomy Level")
     def __str__(self):
         return f"User {self.user.email} - Sequence {self.sequence.id} - TNA Assessment - Assessment Area: {self.assessment_area}"
     

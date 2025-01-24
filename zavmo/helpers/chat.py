@@ -8,6 +8,8 @@ from dotenv import load_dotenv
 from pydantic import BaseModel
 from typing import Union, List, Any, Callable
 import functools
+from helpers.utils import batch_list
+
 load_dotenv(override=True)
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
@@ -265,3 +267,50 @@ def validate_message_history(message_history):
         elif msg['role'] == 'user':
             valid_history.append(msg)
     return valid_history
+
+
+
+def get_openai_client():
+    openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+    return openai_client
+
+
+def get_openai_embedding(text, model="text-embedding-3-small", **kwargs):
+    """
+    Get the embeddings of the text from OpenAI API.
+
+    Args:
+        text (str): Text to get embeddings for.
+        model (str): Model to use for embeddings.
+    Returns:
+        list: Embeddings of the text.
+    """
+    response = client.embeddings.create(
+        model=model,
+        input=[text],
+        **kwargs,
+    )
+    return response.data[0].embedding
+
+
+def get_batch_openai_embedding(texts: list, model="text-embedding-3-small", **kwargs):
+    """
+    Get embeddings of a batch of texts from OpenAI API.
+
+    Args:
+        texts (list): List of texts to get embeddings for.
+        model (str): Model to use for embeddings.
+        **kwargs: Additional arguments to pass to the OpenAI API.
+    Returns:
+        list[list]: List of embeddings of the texts.
+    """
+    text_batches = batch_list(texts, 1024) if len(texts) > 1024 else [texts]
+    embeddings = []
+    for text_batch in text_batches:
+        response = client.embeddings.create(
+            model=model,
+            input=text_batch,
+            **kwargs,
+        )
+        embeddings += [r.embedding for r in response.data]
+    return embeddings

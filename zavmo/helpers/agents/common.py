@@ -1,7 +1,7 @@
 import os
 import codecs
 import yaml
-from typing import Dict, List
+from typing import Dict, List, Literal
 from helpers.chat import get_prompt
 from stage_app.models import UserProfile, TNAassessment
 import json
@@ -42,32 +42,8 @@ def get_yaml_data(yaml_path, yaml_dir="assets/data"):
         raise
 
 
-def compile_system_content(competency_to_assess,prompt_context):
-    """
-    Compile system content for the TNA assessment agent.
 
-    Args:
-        competencies_to_assess (list): List of competencies to assess.
-        all_competencies (list): List of all NOS competencies with criteria from a JSON file.
-        prompt_context (dict): Context for the prompt.
-
-    Returns:
-        str: System content for the TNA assessment agent.
-    """
-    if competency_to_assess:
-        competency_to_assess = competency_to_assess[0]
-        criterias = competency_to_assess['blooms_taxonomy_criteria']
-        criterias = "\n".join([f"- {c['level']}: {c['criteria']}" for c in criterias])
-        prompt_context['nos_area_with_criteria'] = f"""Assessment Area: **{competency_to_assess['assessment_area']}**\n**Criteria:**\n{criterias}\n\n**Important**:\n - Save the details of the assessment area before moving to the next assessment area."""
-    else:
-        prompt_context['nos_area_with_criteria'] = "No NOS Areas left to assess."
-
-    system_content  = get_prompt('tna_assessment.md', 
-                                    context=prompt_context,
-                                    prompt_dir="assets/prompts")
-    return system_content
-
-def get_tna_assessment_instructions(context: Dict):
+def get_tna_assessment_instructions(context: Dict, level: str):
     """
     Compile instructions for the tna assessment agent.
 
@@ -85,11 +61,45 @@ def get_tna_assessment_instructions(context: Dict):
     tna_assessments = TNAassessment.objects.filter(user__email=context['email'], sequence_id=context['sequence_id'])
     
     competency_to_assess = [{'assessment_area':assessment.assessment_area, 
-                               'blooms_taxonomy_criteria':assessment.blooms_taxonomy_criteria} 
+                               'criterias':assessment.criterias} 
                                 for assessment in tna_assessments if assessment.status == 'In Progress']
     
-    system_content = compile_system_content(competency_to_assess, prompt_context)
-    return system_content 
+
+    ## bloom's taxonomy level based instructions
+
+    if competency_to_assess:
+        criterias = competency_to_assess[0]['criterias']
+        if level:
+            level_based_marks_scheme = [item for item in criterias if item['bloom_taxonomy_level'] == level][0]
+            criteria     = level_based_marks_scheme['criteria']
+            expectations = level_based_marks_scheme['expectations']
+            task         = level_based_marks_scheme['task']
+            benchmarking_response = level_based_marks_scheme['benchmarking_responses']
+            benchmarking_responses = "\n\n".join([f"**{grade.upper().replace('_', '')}:** {description}" for grade, description in benchmarking_response])
+            
+            criteria_text = "\n".join(criteria)
+            expectations_text = "\n".join(expectations)
+            
+            ofqual_based_instructions = (
+                f"- **Assessment Area:** {competency_to_assess[0]['assessment_area']}\n"
+                f"- **Current Bloom's Taxonomy Level mapped to User facing level:** {level} (While addressing about the level, use the level in User facing scale)\n"
+                f"- **Criteria:** {criteria_text}\n\n"
+                f"- **Task:** {task}\n\n"
+                f"- **Expectations:** {expectations_text}\n\n"
+                f"- **Benchmarking Responses for validation:** \n\n{benchmarking_responses}\n\n"
+            )
+            logging.info(f"OFQUAL based instructions: {ofqual_based_instructions}")
+            prompt_context['nos_area_with_criteria'] = ofqual_based_instructions
+        else:
+            prompt_context['nos_area_with_criteria'] = f"Assessment Area: **{competency_to_assess[0]['assessment_area']}**"
+    else:
+        prompt_context['nos_area_with_criteria'] = "No NOS Areas left to assess."
+
+    system_content  = get_prompt('tna_assessment.md', 
+                                    context=prompt_context,
+                                    prompt_dir="assets/prompts")
+                                    
+    return system_content
 
 ###### Agent Instructions ######
 
