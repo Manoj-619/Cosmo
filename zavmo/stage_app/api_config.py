@@ -110,7 +110,30 @@ API_CONFIG = {
             }
         }
     },
-
+    "feedback_api": {
+        "url": "https://learninglocker.zavmo.ai/v1/statements/feedback",
+        "payload_builder": lambda context: {
+            "actor": {
+                "name": f"{context['profile']['first_name']} {context['profile']['last_name']}",
+                "mbox": context['email']
+            },
+            "feedback": {
+                "text": context['deliver'].get('feedback_text', "No feedback provided")
+            }
+        }
+    },
+    "assessment_api": {
+        "url": "https://learninglocker.zavmo.ai/v1/statements/assessment",
+        "payload_builder": lambda context: {
+            "learner": {
+                "name": f"{context['profile']['first_name']} {context['profile']['last_name']}",
+                "email": context['email']
+            },
+            "assessment": {
+                "evaluations": context['tna_assessment'].get('evaluations', [])
+            }
+        }
+    }
 
 }
 

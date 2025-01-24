@@ -48,6 +48,7 @@ class Curriculum(StrictTool):
 
     def execute(self, context: Dict):
         email       = context['email']
+        name        = context['profile']['first_name'] + " " + context['profile']['last_name']
         sequence_id = context['sequence_id']
         
         if not email or not sequence_id:
@@ -55,8 +56,13 @@ class Curriculum(StrictTool):
              
         discuss_stage = DiscussStage.objects.get(user__email=email, sequence_id=sequence_id)
         discuss_stage.curriculum = self.model_dump()
+        logger.info(f"interest_areas: {discuss_stage.interest_areas}")
+        logger.info(f"learning_style: {discuss_stage.learning_style}")
+        logger.info(f"timeline: {discuss_stage.timeline}")
         discuss_stage.save()
-                    
+        
+        #TODO: xAPI call to update the discuss data (curriculum)
+
         context['discuss']['curriculum'] = self.model_dump()
         
         logger.info(f"Generated Curriculum for {email}:\n\n{str(self.model_dump())}")
@@ -81,8 +87,11 @@ class update_discussion_data(StrictTool):
         discuss_stage.interest_areas  = self.interest_areas
         discuss_stage.learning_style  = self.learning_style
         discuss_stage.timeline        = self.timeline
+        logger.info(f"Curriculum: {discuss_stage.curriculum}.")
         discuss_stage.save()
         
+        #TODO: xAPI call to update the discuss data (interest_areas, learning_style, timeline)
+
         assessment_areas = TNAassessment.objects.filter(user__email=email, sequence_id=sequence_id)
         nos_areas_with_ofqual_standards = "\n\n".join([f"**NOS Assessment Area**: {i.assessment_area}\n\n**OFQUAL Standards identified based on learner's knowledge gaps for the NOS Assessment Area**: \n{i.knowledge_gaps}" for i in assessment_areas])
         

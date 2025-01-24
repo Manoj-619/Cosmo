@@ -16,6 +16,7 @@ from stage_app.serializers import TNAassessmentSerializer
 from helpers.agents.a_discover import discover_agent
 from helpers.agents.common import get_agent_instructions
 from helpers.search import fetch_nos_text
+from stage_app.tasks import xAPI_profile_celery_task
 import logging
 import json
 
@@ -165,6 +166,8 @@ class update_profile_data(StrictTool):
         profile.department = self.department
         profile.job_duration = self.job_duration
         profile.save()
+
+        xAPI_profile_celery_task.apply_async(args=[json.loads(self.model_dump_json()),email])
         
         context['profile'] = self.model_dump()
         return Result(value=self.model_dump_json(), context=context)

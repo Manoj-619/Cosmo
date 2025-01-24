@@ -56,6 +56,7 @@ class evaluate_answer(StrictTool):
         # Update evaluations in the DemonstrateStage object and save
         demonstrate_object.evaluations.append(evaluation)
         demonstrate_object.save()
+        #TODO: xAPI call to update the demonstrate data (evaluations)
         
         return Result(value=str(evaluation), context=context)
 
@@ -85,6 +86,7 @@ class update_self_assessment_and_feedback(StrictTool):
         demonstrate_stage.feedback_summary    = self.feedback_summary
         demonstrate_stage.save()
         
+        #TODO: xAPI call to update the demonstrate data (understanding_level, feedback_summary)
         return Result(value="Demonstration data updated successfully", context=context)
     
 

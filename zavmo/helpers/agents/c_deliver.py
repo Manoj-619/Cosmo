@@ -92,9 +92,14 @@ class Lesson(StrictTool):
             sequence_id=sequence_id
         )
         lesson_number = len(deliver_stage.lessons) + 1
+        deliver_stage.lesson_number = lesson_number
         deliver_stage.lessons.append(new_lesson)
         deliver_stage.save()
-        
+
+        #TODO: xAPI call to update the deliver data (lessons)  
+
+        context['deliver']['lesson_number'] = lesson_number
+        context['deliver']['lesson_data']=self.model_dump_json()
         return Result(value=self.model_dump_json(), context=context)
 
 

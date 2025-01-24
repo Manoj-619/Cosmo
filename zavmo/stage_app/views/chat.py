@@ -5,7 +5,7 @@ from rest_framework.decorators import api_view, authentication_classes, permissi
 from rest_framework.response import Response as DRFResponse
 from rest_framework import status
 from stage_app.views.utils import _get_user_and_sequence, _initialize_context, _determine_stage, _get_message_history, _process_agent_response, _update_context_and_cache
-from ..tasks import xAPI_celery_task
+from ..tasks import xAPI_chat_celery_task
 
 
 logger = get_logger(__name__)
@@ -36,12 +36,27 @@ def chat_view(request):
         })
 
     message_history = _get_message_history(user.email, sequence_id, request.data.get('message'))
-    response        = _process_agent_response(stage_name, message_history, context)
 
-    try:
-        xAPI_celery_task.apply_async(args=[context])
-    except Exception as e:
-        logger.error(f"Error triggering xAPI_celery_task: {e}")
+    # Get the latest user message from the message history
+    if message_history and message_history[-1].get("role") == "user":
+        latest_user_message = message_history[-1].get("content")
+        if len(message_history) > 1 and message_history[-2].get("role")=="assistant":
+            latest_stage=message_history[-2].get("sender")
+            # TODO: GET THE LATEST ZAVMO MESSAGE
+        else:
+            latest_stage=None
+    else:
+        latest_user_message = None  # No new user message yet
+
+    if latest_user_message:
+        xAPI_chat_celery_task.apply_async(args=[latest_user_message, latest_stage,context['email']])
+
+    response = _process_agent_response(stage_name, message_history, context)
+
+    # try:
+    #     xAPI_celery_task.apply_async(args=[context])
+    # except Exception as e:
+    #     logger.error(f"Error triggering xAPI_celery_task: {e}")
 
     if not response.messages:
         return DRFResponse({

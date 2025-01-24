@@ -19,6 +19,7 @@ from stage_app.serializers import TNAassessmentSerializer
 from helpers.agents.tna_assessment import tna_assessment_agent
 from helpers.agents.common import get_tna_assessment_instructions, get_agent_instructions
 from helpers.utils import get_logger
+from stage_app.tasks import xAPI_discover_celery_task
 import json
 
 logger = get_logger(__name__)
@@ -85,6 +86,7 @@ class update_discover_data(StrictTool):
     def execute(self, context: Dict):
         # Get email and sequence_id from context
         email       = context.get('email')
+        name        =context['profile']['first_name'] + " " + context['profile']['last_name']
         sequence_id = context.get('sequence_id')
         
         if not email or not sequence_id:
@@ -97,7 +99,11 @@ class update_discover_data(StrictTool):
         
         discover_stage.knowledge_level = self.knowledge_level
         discover_stage.application_area = self.application_area
-        discover_stage.save()        
+        discover_stage.save() 
+
+        xAPI_discover_celery_task.apply_async(args=[json.loads(self.model_dump_json()),email,name])
+        #TODO: xAPI call to update the discover data (learning_goals, learning_goal_rationale, knowledge_level, application_area)
+
         context['discover'] = self.model_dump() # JSON dump of pydantic model
         logger.info(f"Updated Discover stage Data for {email}. The following data was updated:\n\n{str(self)}")
         
