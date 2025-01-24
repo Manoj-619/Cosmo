@@ -25,16 +25,8 @@ class transfer_to_discussion_stage(StrictTool):
         tna_assessments = TNAassessment.objects.filter(user__email=context['email'], sequence_id=sequence_id)
         for assessment in tna_assessments:
             if not assessment.evidence_of_assessment:
-                raise ValueError("TNA Assessment is not complete for all NOS areas.")
+                raise ValueError(f"Save the details of the assessment area: {assessment.assessment_area} before transitioning to Discussion stage. If Assessment is not taken on this area, start the assessment process on this area, before saving the details.")
         
-        assessment_details = "\n".join(
-            f"Assessment Area: {assessment.assessment_area}, "
-            f"User Level: {assessment.user_assessed_knowledge_level}, "
-            f"Zavmo Level: {assessment.zavmo_assessed_knowledge_level}, "
-            f"Evidence: {assessment.evidence_of_assessment}"
-            for assessment in tna_assessments
-        )
-
         agent = discuss_agent
         agent.start_message = f"""
         Greet the learner and introduce to Discussion stage.
@@ -42,7 +34,7 @@ class transfer_to_discussion_stage(StrictTool):
         return Result(value="Transferred to Discussion stage.", agent=agent, context=context)
 
 class MapNOSAssessmentAreaToOFQUAL(StrictTool):
-    """Map the NOS assessment area to OFQUAL."""
+    """Use this tool immediately after the learner has shared a self assessed level on the scale of 1-7 to map the NOS assessment area to OFQUAL."""
     assessment_area: str = Field(description="Exact name of current NOS assessment area.")
     level: Literal["Remember", "Understand", "Apply", "Analyze", "Evaluate", "Create"] = Field(description="The level mapped to Bloom's Taxonomy level based on the learner's proficiency level as input on the scale of 1-7.")
     
@@ -65,12 +57,12 @@ class MapNOSAssessmentAreaToOFQUAL(StrictTool):
 
 class ValidateOnCurrentLevel(StrictTool):
     """Validate the learner's response to advice on progression."""
+    assessment_area: str = Field(description="Exact name of current NOS assessment area.")
     result: Literal["FAIL", "PASS", "MERIT", "DISTINCTION"] = Field(description="""The result of the assessment. It is based on the learner's response against the OFQUAL's benchmarking responses. 
                                                                     The learner's response could match one of the OFQUAL's benchmarking responses - Fail, Pass, Merit, Distinction. Evaluate strictly based on criterias and benchmarking responses shared from OFQUAL.""")
     current_bloom_taxonomy_level: Literal["Remember", "Understand", "Apply", "Analyze", "Evaluate", "Create"] = Field(description="The current Bloom's Taxonomy level of the assessment area the learner is currently on.")
-
+    
     def execute(self, context: Dict):
-
         all_levels = ["Remember", "Understand", "Apply", "Analyze", "Evaluate", "Create"]
 
         if self.result == "FAIL":
@@ -103,8 +95,8 @@ class SaveAssessmentArea(StrictTool):
     assessment_area: str = Field(description="The assessment area that was assessed.")
     user_assessed_knowledge_level: int = Field(description="The knowledge level in the assessment area self-assessed by the user, rated on a scale of 1 to 7.")
     zavmo_assessed_knowledge_level: int = Field(description="The knowledge level determined by Zavmo based on the assessment, rated on a scale of 1 to 7.")
-    evidence_of_assessment: str = Field(description="You will list the gaps you determined that will require improvements later.")
-    gaps: List[str] = Field(description="List of all knowledge gaps determined between learner's knowledge and OFQUAL requirements.")
+    evidence_of_assessment: str = Field(description="A report of the assessment process for the assessment area and the learner's response to the proposed assessment questions.")
+    gaps: List[str] = Field(description="List of all knowledge gaps determined for learner's responses validating against OFQUAL requirements such as benchmarking response (DISTINCTION), expectations, and criterias provided for the Assessment Area.")
     
     def execute(self, context: Dict):
         """
@@ -125,18 +117,14 @@ class SaveAssessmentArea(StrictTool):
                 tna_assessment.knowledge_gaps = self.gaps
                 tna_assessment.status = 'Completed'
                 tna_assessment.save()
-            elif not next_assessment_marked and item.get('evidence_of_assessment') is None:
-                # Mark the next unassessed area as 'In Progress'
-                tna_assessment = TNAassessment.objects.get(user__email=context['email'], sequence_id=context['sequence_id'], assessment_area=item.get('assessment_area'))
-                tna_assessment.status = 'In Progress'
-                tna_assessment.save()
-                next_assessment_marked = True
+            
             else:
-                # Get the existing assessment for this area
                 tna_assessment = TNAassessment.objects.get(user__email=context['email'], sequence_id=context['sequence_id'], assessment_area=item.get('assessment_area'))
-                if not tna_assessment.evidence_of_assessment:
-                    tna_assessment.status = 'To Assess'
+                if not next_assessment_marked and item.get('evidence_of_assessment') is None:
+                # Mark the next unassessed area as 'In Progress'
+                    tna_assessment.status = 'In Progress'
                     tna_assessment.save()
+                    next_assessment_marked = True
             
             updated_assessments.append(TNAassessmentSerializer(tna_assessment).data)
         

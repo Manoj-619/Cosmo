@@ -36,10 +36,9 @@ class transfer_to_tna_assessment_step(StrictTool):
         
         all_assessments = context['tna_assessment']['total_nos_areas']
         assessments = TNAassessment.objects.filter(sequence_id=context['sequence_id'])
-        assessment_areas = [assessment.assessment_area for assessment in assessments]
-        nos_id = assessments.first().nos_id
+        assessment_areas = [(assessment.assessment_area, assessment.nos_id) for assessment in assessments]
         agent = tna_assessment_agent
-        current_assessment_areas = '\n-'.join(assessment_areas)
+        current_assessment_areas = '\n-'.join([f"Assessment Area: {area} (NOS ID: {nos_id})" for area, nos_id in assessment_areas])
         
         # Format the message with proper error handling
         agent.start_message = (
@@ -49,13 +48,13 @@ class transfer_to_tna_assessment_step(StrictTool):
             "NOS Assessment Areas for current 4D Sequence to be presented:"
             f"\n-{current_assessment_areas}\n\n"
             "Present the NOS Assessment Areas for current 4D Sequence in the below shared table form.\n\n"
-            + (f"Presenting NOS Areas from **NOS ID**: {nos_id}\n" if nos_id else "\n")
+            "Presenting NOS Areas:"
             + "\n"
-            "|  **Assessments For Training Needs Analysis**  |\n"
-            "|-----------------------------------------------|\n"
-            "|            [Assessment Area 1]                |\n"
-            "|            [Assessment Area 2]                |\n"
-            "|            [Assessment Area 3]                |\n"
+            "|  **Assessments For Training Needs Analysis**  |   **NOS ID**  |\n"
+            "|-----------------------------------------------|---------------|\n"
+            "|            [Assessment Area 1]                |   [NOS ID 1]  |\n"
+            "|            [Assessment Area 2]                |   [NOS ID 2]  |\n"
+            "|            [Assessment Area 3]                |   [NOS ID 3]  |\n"
             "Then start the TNA assessment on Current NOS Area."
         )
 
@@ -63,7 +62,6 @@ class transfer_to_tna_assessment_step(StrictTool):
         
         # Update context with proper integer values
         context['tna_assessment'] = {
-            'nos_id': nos_id,
             'current_nos_areas': len(assessments),
             'total_nos_areas': all_assessments,
             'assessments': [TNAassessmentSerializer(assessment).data for assessment in assessments]

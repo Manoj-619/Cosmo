@@ -115,7 +115,6 @@ def _create_full_context(email, sequence_id, profile):
     current_assessments_structured = [TNAassessmentSerializer(assessment).data for assessment in current_tna_assessments]
     
     tna_assessment_data = {
-        'nos_id': current_tna_assessments.first().nos_id,
         'total_nos_areas': all_tna_assessments.count(),
         'current_nos_areas': len(current_assessments_structured),
         'assessments': current_assessments_structured
@@ -175,20 +174,20 @@ def _process_agent_response(stage_name, message_history, context, max_turns=10):
         agent.instructions = get_tna_assessment_instructions(context, level="")
         all_assessments = context['tna_assessment']['total_nos_areas']
         number_of_assessments_for_current_4D_sequence = context['tna_assessment']['current_nos_areas']
-        assessment_areas = [assessment.assessment_area for assessment in all_tna_assessments_for_current_4D_sequence]
-        areas_list = '\n-'.join(assessment_areas)
-        nos_id = all_tna_assessments_for_current_4D_sequence.first().nos_id
+        assessment_areas_with_nos_ids = [f"Assessment Area: {assessment.assessment_area} (NOS ID: {assessment.nos_id})" for assessment in all_tna_assessments_for_current_4D_sequence]
+        areas_list = '\n-'.join(assessment_areas_with_nos_ids)
         agent.start_message = f"""Total NOS Areas: {all_assessments}
         Number of NOS Areas to complete in current 4D Sequence: {number_of_assessments_for_current_4D_sequence}
         NOS Assessment Areas for current 4D Sequence to be presented:
         -{areas_list}
 
-        Presenting NOS Areas from **NOS ID**: {nos_id}
+        Presenting NOS Areas:
 
-        |       **Assessments For Training Needs Analysis**      |
-        |--------------------------------------------------------|
-        |              [Assessment Area 1]                       |
-        |              [Assessment Area 2]                       |
+        |       **Assessments For Training Needs Analysis**      |   **NOS ID**  |
+        |--------------------------------------------------------|---------------|
+        |              [Assessment Area 1]                       |    [NOS ID]   |
+        |              [Assessment Area 2]                       |    [NOS ID]   |
+        
         """
     return run_step(
         agent=agent,

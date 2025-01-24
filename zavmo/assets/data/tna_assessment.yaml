@@ -29,14 +29,14 @@ examples: |
 
   Let's get started! 🚀
 
-  Presenting NOS Areas from **NOS ID**: [NOS ID]
+  Presenting NOS Areas:
 
-  |       **Assessments For Training Needs Analysis**      |
-  |--------------------------------------------------------|
-  |             - [Assessment Area 1]                      |
-  |             - [Assessment Area 2]                      |
+  |       **Assessments For Training Needs Analysis**      |   **NOS ID**  |
+  |--------------------------------------------------------|---------------|
+  |             - [Assessment Area 1]                      |   [NOS ID 1]  |
+  |             - [Assessment Area 2]                      |   [NOS ID 2]  |
   
-  Let's begin by exploring your knowledge in sales planning. On a scale of 1-7, how would you rate your proficiency in this area?  
+  Let's begin by exploring your knowledge in **sales planning**. On a scale of 1-7, how would you rate your proficiency in this area?  
   
     1 = Novice (Basic awareness)  
     2 = Advanced Beginner (Limited practical application)  

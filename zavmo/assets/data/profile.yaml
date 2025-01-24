@@ -12,7 +12,7 @@ instructions: >
       - update the user's profile with the collected data using the `update_profile_data` tool.
       - get the NOS document using the `GetNOSDocument` tool.
   6. Next, Simultaneously:
-      - Get the count of competencies, and based on the count list competencies (all the numbered items, i.e with prefix 1,2,..n or K1,K2,..Kn present in NOS document) with corresponding Bloom's Taxonomy criteria at different levels for each competency using the `GetRequiredSkillsFromNOS` tool.
+      - Get the count of competencies, and based on the count list competencies using the `GetRequiredSkillsFromNOS` tool.
       - After listing the competencies from NOS document, using the tool `transfer_to_discover_stage` transition to the next stage: Discover.
   
 examples: >

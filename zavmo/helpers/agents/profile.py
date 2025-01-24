@@ -23,19 +23,20 @@ import json
 class GetSkillFromNOS(StrictTool):
     """Get a competency from the NOS document. Competency can be knowledge or performance based."""
 
-    assessment_area:str = Field(description="A competency from the NOS document that represents a specific skill, knowledge or behavior required to meet National Occupational Standards")
+    assessment_area:str = Field(description="A competency from the NOS document that represents a specific skill, knowledge or behavior required to meet National Occupational Standards and which is not present in the learner's responsibilities, main purpose, and work experience in current role.")
+    nos_id: str = Field(description="The NOS ID to which the competency belongs.")
     def execute(self, context: Dict):
         return self.model_dump_json() 
 
 class GetRequiredSkillsFromNOS(PermissiveTool):
-    """Use this tool to collect all competencies from the NOS document, first get the count of competencies and then generate based on the count a list of competencies outlined in the NOS (National Occupational Standards) document."""
-    count_of_competencies: int = Field(description="Analyze and extract the number of distinct items or elements present (with prefix 1,2,..n or K1,K2,..Kn) in a National Occupational Standards (NOS) document.")
-    nos: List[GetSkillFromNOS] = Field(description=f"Based on the count of competencies, list competencies (basically all the numbered items, i.e items with prefix 1,2,..n or K1,K2,..Kn) present in the NOS document needs to be extracted by removing any index numbers in the beginning", 
+    """Use this tool to collect all competencies from the NOS data provided. First get the count of competencies relevant to the NOS query and then generate based on the count a list of competencies."""
+    count_of_competencies: int = Field(description="Get the number of distinct items or elements to be extracted from the National Occupational Standards (NOS) data, relevant to the NOS query provided. Minimum 10 is a must.")
+    nos: List[GetSkillFromNOS] = Field(description=f"Based on the count of competencies (minimum 10 is a must), list competencies present in the NOS data relevant to the NOS query provided along with the NOS ID to which the competency belongs.", 
                                        min_items=10, max_items=50)
     
     def execute(self, context: Dict):
-        if not context.get('tna_assessment', {}).get('nos_id'):
-            raise ValueError("NOS documents not found in context, use GetNOS tool first.")
+        if not context.get('nos_docs'):
+            raise ValueError("NOS data not found in context, use GetNOS tool first.")
         
         user_profile = UserProfile.objects.get(user__email=context['email'])
         
@@ -64,13 +65,13 @@ class GetRequiredSkillsFromNOS(PermissiveTool):
             start_idx = seq_index * n
             end_idx = min(start_idx + n, len(self.nos))
             
-            for skill in self.nos[start_idx:end_idx]:
+            for item in self.nos[start_idx:end_idx]:
                 total_assessments += 1
                 assessment = TNAassessment(
                     user=user_profile.user,
-                    assessment_area=skill.assessment_area,
+                    assessment_area=item.assessment_area,
                     sequence=sequence,
-                    nos_id=context['tna_assessment']['nos_id'],
+                    nos_id=item.nos_id,
                     status='In Progress' if total_assessments == 1 else 'To Assess'
                 )
                 assessments_to_create.append(assessment)
@@ -93,12 +94,12 @@ class GetRequiredSkillsFromNOS(PermissiveTool):
 class GetNOSDocument(StrictTool):
     def execute(self, context: Dict):
         profile = UserProfile.objects.get(user__email=context['email'])
-        query = f"Current Role: {profile.current_role} \nCurrent Industry: {profile.current_industry} \nWork experience in current role: {profile.work_experience_in_current_role} \nMain purpose: {profile.main_purpose} \nResponsibilities: {profile.responsibilities} \nManager's responsibilities: {profile.manager_responsibilities}"
-        nos_doc, nos_id = fetch_nos_text(query)
-        
-        context['tna_assessment']['nos_id']   = nos_id
-        context['nos_doc'] = nos_doc
-        return Result(value=f"This is the NOS (National Occupational Standards) document with competencies outlined: \n\n{nos_doc}\n\n Now get the count of competencies using the `GetCountOfCompetencies` tool and then get the required skills using the `GetRequiredSkillsFromNOS` tool based on the count and NOS document shared here. Do not let the learner know about the NOS document.", context=context)
+        # query = f"{profile.current_role}, {profile.current_industry}, \n\n{profile.work_experience_in_current_role} \n\n{profile.main_purpose} \n\n{profile.responsibilities} \n\n{profile.manager_responsibilities}"
+        query = f"Role: {profile.current_role}, Department/Industry: {profile.department} / {profile.current_industry}"
+        nos_docs, nos_ids = fetch_nos_text(query)
+        nos_ids = "\nNOS ID: ".join(nos_ids)
+        context['nos_docs'] = nos_docs
+        return Result(value=f"""The NOS IDs shortlisted based on relevance to the learner's profile and query are: \nNOS ID: {nos_ids}\nProviding the NOS data with competencies outlined under Performance and Knowledge sections for the respective NOS IDs: \n{nos_docs}\n\nNext step is to identify competencies relevant to the learner's profile and query. Take a count of competencies and then list competencies using the `GetRequiredSkillsFromNOS` tool.\n\nThe NOS query is: **{query}**""", context=context)
 
 ### For handoff
 
@@ -112,7 +113,7 @@ class transfer_to_discover_stage(StrictTool):
         if not is_complete:
             raise ValueError(error)
         if context['sequence_id'] == "":
-            raise ValueError("Get Required skills from NOS first.")
+            raise ValueError("Get Required skills from NOS first using the `GetRequiredSkillsFromNOS` tool, with minimum 10 competencies listed.")
         summary = profile.get_summary()
         agent = discover_agent
         agent.start_message += f"Here is the learner's profile: {summary}"
