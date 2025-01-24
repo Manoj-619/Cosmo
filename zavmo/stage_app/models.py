@@ -133,7 +133,7 @@ class TNAassessment(models.Model):
         ],
         default='To Assess'
     )
-
+    finalized_blooms_taxonomy_level = models.CharField(max_length=20, blank=True, null=True, verbose_name="Finalized Bloom's Taxonomy Level")
     def __str__(self):
         return f"User {self.user.email} - Sequence {self.sequence.id} - TNA Assessment - Assessment Area: {self.assessment_area}"
     

@@ -33,7 +33,7 @@ logger = get_logger(__name__)
 #     exercises: List[str] = Field( description="List of exercises for the learner to practice")
 
 class Module(BaseModel):
-    title: str = Field(description="The title of the module. It can be an Assessment Area or a learner's interest area")
+    title: str = Field(description="The title of the module. It can be an Assessment Area (high priority) or a learner's interest area")
     learning_outcomes: List[str] = Field(description="List upto 5 learning outcomes.")
     lessons: List[str] = Field(description="List of lessons in this module based on the learning outcomes")
     duration: int = Field(description="The total duration of the module in hours")
@@ -41,10 +41,10 @@ class Module(BaseModel):
 class Curriculum(StrictTool):
     """Generate a detailed curriculum for the learner based on the NOS Assessment Areas and OFQUAL standards shared."""
     title: str = Field(description="The title of the curriculum")
-    subject: str = Field(description="The main subject area of the curriculum based on the NOS Assessment Areas.")
+    subject: str = Field(description="The main subject area of the curriculum.")
     level: str = Field(description="The difficulty level of the curriculum (e.g., beginner, intermediate, advanced)")
     prerequisites: List[str] = Field(description="Any prerequisites needed to undertake this curriculum")
-    modules: List[Module] = Field(description="List upto 7 modules majorly designed on NOS Assessment Areas shared.")
+    modules: List[Module] = Field(description="List upto 7 modules majorly designed on priority data shared.")
 
     def execute(self, context: Dict):
         email       = context['email']
@@ -84,16 +84,37 @@ class update_discussion_data(StrictTool):
         discuss_stage.save()
         
         assessment_areas = TNAassessment.objects.filter(user__email=email, sequence_id=sequence_id)
-        nos_areas_with_ofqual_standards = "\n\n".join([f"**NOS Assessment Area**: {i.assessment_area}\n\n**OFQUAL Standards identified based on learner's knowledge gaps for the NOS Assessment Area**: \n{i.knowledge_gaps}" for i in assessment_areas])
+        all_assessments_details = ""
+        for assessment_item in assessment_areas:
+            level_based_marks_scheme = [item for item in assessment_item.criterias if item['bloom_taxonomy_level'] == assessment_item.finalized_blooms_taxonomy_level][0]
+            criteria     = level_based_marks_scheme['criteria']
+            expectations = level_based_marks_scheme['expectations']
+            task         = level_based_marks_scheme['task']
+            benchmarking_response = level_based_marks_scheme['benchmarking_responses']
+            benchmarking_responses = "\n\n".join([f"**{grade.upper().replace('_', '')}:** {description}" for grade, description in benchmarking_response])
+            
+            criteria_text = "\n".join(criteria)
+            expectations_text = "\n".join(expectations)
+            
+            ofqual_based_expectations = (
+                f"- **Criteria:** {criteria_text}\n"
+                f"- **Task:** {task}\n"
+                f"- **Expectations:** {expectations_text}\n"
+                f"- **Benchmarking Responses from OFQUAL:** \n\n{benchmarking_responses}\n"
+            )
+            
+            report_of_assessment_area = f"**Learner's Report for the Assessment Area**: {assessment_item.evidence_of_assessment}"
+            all_assessments_details += f"OFQUAL Expectations for {assessment_item.assessment_area}: \n\n{ofqual_based_expectations}\n\n{report_of_assessment_area}\n\n"
         
+       
         value = f"""Discussion data updated successfully for {email}
         
 **Timeline**: {self.timeline}
 **Learning Style**: {self.learning_style}
 
-**Data for Curriculum Generation**:
+**Prioritize using this data for Curriculum Generation**:
 
-{nos_areas_with_ofqual_standards}"""
+{all_assessments_details}"""
         
         logger.info(f"Discussion data updated successfully for {email}:\n\n{value}")
 

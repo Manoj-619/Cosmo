@@ -64,7 +64,9 @@ class ValidateOnCurrentLevel(StrictTool):
     
     def execute(self, context: Dict):
         all_levels = ["Remember", "Understand", "Apply", "Analyze", "Evaluate", "Create"]
-
+        tna_assessment = TNAassessment.objects.get(user__email=context['email'], sequence_id=context['sequence_id'], assessment_area=self.assessment_area)
+        tna_assessment.finalized_blooms_taxonomy_level = self.current_bloom_taxonomy_level
+        tna_assessment.save()
         if self.result == "FAIL":
             if self.current_bloom_taxonomy_level == "Remember":
                 return Result(value=f"Based on validation, it is advised to save the details of the assessment area and then move to next NOS assessment area.", context=context)
