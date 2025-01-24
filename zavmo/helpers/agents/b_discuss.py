@@ -104,7 +104,7 @@ class update_discussion_data(StrictTool):
             )
             
             report_of_assessment_area = f"**Learner's Report for the Assessment Area**: {assessment_item.evidence_of_assessment}"
-            all_assessments_details += f"OFQUAL Expectations for {assessment_item.assessment_area}: \n\n{ofqual_based_expectations}\n\n{report_of_assessment_area}\n\n"
+            all_assessments_details += f"\nOFQUAL Expectations for **{assessment_item.assessment_area}**: \n\n{ofqual_based_expectations}\n\n{report_of_assessment_area}\n\n"
         
        
         value = f"""Discussion data updated successfully for {email}
