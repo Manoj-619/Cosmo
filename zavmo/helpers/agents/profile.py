@@ -20,97 +20,86 @@ import logging
 import json
 
 
-### For handoff
-class BloomTaxonomyLevels(StrictTool):
-    """Use this tool to generate Bloom's Taxonomy levels for a given competency.
-
-    - Remember: The user must be able to recall relevant facts, definitions, or procedures related to this [competency]?
-    - Understand: The user must be able to explain or interpret the concepts associated with this [competency]?
-    - Apply: The user must be able to effectively utilize the [competency] in real-world scenarios or simulated tasks?
-    - Analyze: The user must be able to deconstruct complex situations to identify components related to this [competency]?
-    - Evaluate: The user must be able to assess situations and justify decisions involving this [competency]?
-    - Create: The user must be able to design or innovate new approaches, presentations, or solutions based on this [competency]?    
-    """
-    level: Literal["Remember", "Understand", "Apply", "Analyze", "Evaluate", "Create"] = Field(description="The level of Bloom's Taxonomy")
-    criteria: str = Field(description="Generate very challenging criteria for assessing the [competency] on the level of Bloom's Taxonomy")
-
-    def execute(self, context: Dict):
-        return self.model_dump_json()
-
 class GetSkillFromNOS(StrictTool):
-    """Get a competency from the NOS document and generate its corresponding Bloom's Taxonomy criteria. Competency can be knowledge or performance based."""
+    """Get a competency from the NOS document. Competency can be knowledge or performance based."""
 
-    assessment_area:str = Field(description="Name of the competency")
-    blooms_taxonomy_criteria: List[BloomTaxonomyLevels] = Field(description="Criterias on Bloom's Taxonomy levels for the [competency]")
-    # type: Literal["knowledge", "performance"] = Field(description="The type of the competency")
-
+    assessment_area:str = Field(description="A competency from the NOS document that represents a specific skill, knowledge or behavior required to meet National Occupational Standards and which is not present in the learner's responsibilities, main purpose, and work experience in current role.")
+    nos_id: str = Field(description="The NOS ID to which the competency belongs.")
     def execute(self, context: Dict):
         return self.model_dump_json() 
 
-# class GetCountOfCompetencies(StrictTool):
-#     """This tool is designed to analyze and extract the number of distinct items or elements present (with prefix 1,2,..etc or K1,K2,..etc) in a National Occupational Standards (NOS) document."""
-#     count: int = Field(description="Analyze and extract the number of distinct items or elements present (with prefix 1,2,..etc or K1,K2,..etc) in a National Occupational Standards (NOS) document.")
-
-#     def execute(self, context: Dict):
-#         return Result(value=f"List atmost {self.count} competencies from the NOS document. Total count of competencies to be listed is {self.count}.", context=context)
-
 class GetRequiredSkillsFromNOS(PermissiveTool):
-    """Use this tool to get the Required Skills from the NOS document, first get the count of competencies and then generate based on the count a list of competencies outlined in the NOS (National Occupational Standards) document."""
-    count_of_competencies: int = Field(description="Analyze and extract the number of distinct items or elements present (with prefix 1,2,..n or K1,K2,..Kn) in a National Occupational Standards (NOS) document.")
-    nos: List[GetSkillFromNOS] = Field(description=f"Based on the count of competencies, list competencies (basically all the numbered items, i.e items with prefix 1,2,..n or K1,K2,..Kn) present in the NOS document along with corresponding Bloom's Taxonomy criteria at every level (Remember, Understand, Apply, Analyze, Evaluate, Create) for each competency", 
-                                       min_items = 10, max_items=40)
+    """Use this tool to collect all competencies from the NOS data provided. First get the count of competencies relevant to the NOS query and then generate based on the count a list of competencies."""
+    count_of_competencies: int = Field(description="Get the number of distinct items or elements to be extracted from the National Occupational Standards (NOS) data, relevant to the NOS query provided. Minimum 10 is a must.")
+    nos: List[GetSkillFromNOS] = Field(description=f"Based on the count of competencies (minimum 10 is a must), list competencies present in the NOS data relevant to the NOS query provided along with the NOS ID to which the competency belongs.", 
+                                       min_items=10, max_items=50)
     
     def execute(self, context: Dict):
-        if not context.get('tna_assessment', {}).get('nos_id'):
-            raise ValueError("NOS documents not found in context, use GetNOS tool first.")
+        if not context.get('nos_docs'):
+            raise ValueError("NOS data not found in context, use GetNOS tool first.")
         
         user_profile = UserProfile.objects.get(user__email=context['email'])
-
+        
         ## Number of assessments per sequence
-        n=5 
+        n = 5
+        sequences_to_create = []
+        assessments_to_create = []
         total_assessments = 0
-        # Create sequences for every n number of assessments
+
+        # Create sequence objects
         for i in range(0, len(self.nos), n):
-            # First create the sequence
-            sequence = FourDSequence.objects.create(
+            sequence = FourDSequence(
                 user=user_profile.user,
                 current_stage=FourDSequence.Stage.DISCOVER
             )
-            
-            # Create assessments for the sequence
-            for skill in self.nos[i:i+n]:
-                total_assessments += 1
-                TNAassessment.objects.create(
-                    user=user_profile.user,
-                    assessment_area=skill.assessment_area,
-                    blooms_taxonomy_criteria=[bt.model_dump() for bt in skill.blooms_taxonomy_criteria],
-                    sequence=sequence,
-                    nos_id=context['tna_assessment']['nos_id'],
-                    status='In Progress' if total_assessments==1 else 'To Assess'
-                )
+            sequences_to_create.append(sequence)
 
-        # Convert QuerySet to list before storing in context
+        # Save sequences one by one to trigger signals
+        created_sequences = []
+        for sequence in sequences_to_create:
+            sequence.save()  # This will trigger the post_save signal
+            created_sequences.append(sequence)
+        
+        # Prepare assessment objects
+        for seq_index, sequence in enumerate(created_sequences):
+            start_idx = seq_index * n
+            end_idx = min(start_idx + n, len(self.nos))
+            
+            for item in self.nos[start_idx:end_idx]:
+                total_assessments += 1
+                assessment = TNAassessment(
+                    user=user_profile.user,
+                    assessment_area=item.assessment_area,
+                    sequence=sequence,
+                    nos_id=item.nos_id,
+                    status='In Progress' if total_assessments == 1 else 'To Assess'
+                )
+                assessments_to_create.append(assessment)
+
+        # Bulk create assessments
+        TNAassessment.objects.bulk_create(assessments_to_create)
+
+        # Get all sequence IDs
         all_sequences = list(FourDSequence.objects.filter(
             user=user_profile.user
         ).order_by('created_at').values_list('id', flat=True))
-
-        # Update context with first sequence info
+        
+        # Update context
         context.update({'sequence_id': all_sequences[0]})
-        context['sequences_to_complete']             = all_sequences
+        context['sequences_to_complete'] = all_sequences
         context['tna_assessment']['total_nos_areas'] = total_assessments
         
         return Result(value=f"FourDSequences created, transfer to discovery stage", context=context)
 
 class GetNOSDocument(StrictTool):
-    current_role: str = Field(description="The learner's current role.")
-
     def execute(self, context: Dict):
-        nos_doc, nos_id = fetch_nos_text( 
-                current_role=self.current_role)
-        
-        context['tna_assessment']['nos_id']   = nos_id
-        context['nos_doc'] = nos_doc
-        return Result(value=f"This is the NOS (National Occupational Standards) document with competencies outlined: \n\n{nos_doc}\n\n Now get the count of competencies using the `GetCountOfCompetencies` tool and then get the required skills using the `GetRequiredSkillsFromNOS` tool based on the count and NOS document shared here. Do not let the learner know about the NOS document.", context=context)
+        profile = UserProfile.objects.get(user__email=context['email'])
+        # query = f"{profile.current_role}, {profile.current_industry}, \n\n{profile.work_experience_in_current_role} \n\n{profile.main_purpose} \n\n{profile.responsibilities} \n\n{profile.manager_responsibilities}"
+        query = f"Role: {profile.current_role}, Department/Industry: {profile.department} / {profile.current_industry}"
+        nos_docs, nos_ids = fetch_nos_text(query)
+        nos_ids = "\nNOS ID: ".join(nos_ids)
+        context['nos_docs'] = nos_docs
+        return Result(value=f"""The NOS IDs shortlisted based on relevance to the learner's profile and query are: \nNOS ID: {nos_ids}\nProviding the NOS data with competencies outlined under Performance and Knowledge sections for the respective NOS IDs: \n{nos_docs}\n\nNext step is to identify competencies relevant to the learner's profile and query. Take a count of competencies and then list competencies using the `GetRequiredSkillsFromNOS` tool.\n\nThe NOS query is: **{query}**""", context=context)
 
 ### For handoff
 
@@ -124,7 +113,7 @@ class transfer_to_discover_stage(StrictTool):
         if not is_complete:
             raise ValueError(error)
         if context['sequence_id'] == "":
-            raise ValueError("Get Required skills from NOS first.")
+            raise ValueError("Get Required skills from NOS first using the `GetRequiredSkillsFromNOS` tool, with minimum 10 competencies listed.")
         summary = profile.get_summary()
         agent = discover_agent
         agent.start_message += f"Here is the learner's profile: {summary}"
@@ -144,7 +133,11 @@ class update_profile_data(StrictTool):
     department: str       = Field(description="The department the learner works in.")
     manager: str      = Field(description="The name of the person the learner reports to.")
     job_duration: int = Field(description="The number of years the learner has worked in their current job.")
-   
+    work_experience_in_current_role: str = Field(description="A detailed description of the learner's work experience in their current role.")
+    main_purpose:  str = Field(description="The main purpose of the learner's current role.")
+    responsibilities: str = Field(description="The responsibilities of the learner's current role.")
+    manager_responsibilities: str = Field(description="The responsibilities of the learner's manager.")
+
     def execute(self, context: Dict):
         # Get email and sequence_id from context
         email       = context.get('email')
@@ -164,6 +157,10 @@ class update_profile_data(StrictTool):
         profile.manager = self.manager
         profile.department = self.department
         profile.job_duration = self.job_duration
+        profile.work_experience_in_current_role = self.work_experience_in_current_role
+        profile.main_purpose = self.main_purpose
+        profile.responsibilities = self.responsibilities
+        profile.manager_responsibilities = self.manager_responsibilities
         profile.save()
         
         context['profile'] = self.model_dump()
@@ -177,7 +174,6 @@ profile_agent = Agent(
     functions=[
         update_profile_data,
         GetNOSDocument,
-        # GetCountOfCompetencies,
         GetRequiredSkillsFromNOS,
         transfer_to_discover_stage
     ],

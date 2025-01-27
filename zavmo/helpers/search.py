@@ -5,6 +5,7 @@ import json
 from typing import List, Dict
 from pinecone import Pinecone
 from openai import OpenAI
+import ast
 
 # Initialize Pinecone client
 pinecone_client = Pinecone(api_key=os.getenv('PINECONE_API_KEY'))
@@ -22,39 +23,24 @@ def get_embedding(text: str, model: str = "text-embedding-3-small") -> List[floa
     return embedding
 
 
-def fetch_nos_text(current_role: str) -> List[str]:
+def fetch_nos_text(query: str) -> List[str]:
     """
     Fetch NOS text from Pinecone based on current role.
     
     """
-    query_vector = get_embedding(f"Occupation relevant to {current_role}")  
+    query_vector = get_embedding(query)  
 
     # Query the Pinecone index
     ## Get NOS ID
-    index = pinecone_client.Index('test-nos')  
-    nos_searched_from_relavant_occupations = index.query(
+    index = pinecone_client.Index('nos-202501')  ## previous index was 'test-nos'
+    nos_docs = index.query(
             vector=query_vector,
-            top_k=1,
-            include_metadata=True,
-            filter={"type":"Developed by"},
-
+            top_k=5,
+            include_metadata=True
         )
-    nos_id = nos_searched_from_relavant_occupations['matches'][0]['metadata']['nos_id']
-
-
-    ## Get NOS sections
-    nos_sections_from_nos_id = index.query(
-            vector=query_vector,
-            top_k=2,
-            include_metadata=True,
-            filter={"nos_id": nos_id,  
-                    "$or": [
-            {"type": "Performance criteria"},
-            {"type": "Knowledge and understanding"}]
-            })
-
-    matching_nos_doc = "\n".join([match['metadata']['text'] for match in nos_sections_from_nos_id['matches']])
-    return matching_nos_doc, nos_id
+    nos_ids = [match['metadata']['nos_id'] for match in nos_docs['matches']]
+    relevant_nos_docs_combined = "\n".join([match['metadata']['text'] for match in nos_docs['matches']])
+    return relevant_nos_docs_combined, nos_ids
 
 def decompress_text(compressed_str):
     """Decompress text from base64 string back to original format."""
@@ -77,7 +63,7 @@ def fetch_ofqual_text(query: str) -> List[str]:
     query_vector = get_embedding(query)
 
     # Query the Pinecone index having unitwise data ingested
-    index = pinecone_client.Index('sales-ofqual') ## TODO: Change to ofqual index
+    index = pinecone_client.Index('centrica-ofqual') ## TODO: Change to ofqual index
     
     # Search for relevant qualifications without filters
     results = index.query(
@@ -87,6 +73,6 @@ def fetch_ofqual_text(query: str) -> List[str]:
     )
 
     text = decompress_text(results['matches'][0]['metadata']['text'])
-    markscheme = decompress_text(results['matches'][0]['metadata']['markscheme'])
+    markscheme = ast.literal_eval(decompress_text(results['matches'][0]['metadata']['markscheme']))
     
     return text, markscheme

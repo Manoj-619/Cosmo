@@ -11,7 +11,7 @@ from .models import (
 )
 
 class TNAassessmentAdmin(admin.ModelAdmin):
-    list_display = ('user', 'sequence', 'assessment_area')
+    list_display = ('user', 'sequence', 'assessment_area', 'nos_id')
     list_filter = ('user',)  # Order matters here - user filter will appear first
     search_fields = ('user__email', 'assessment_area', 'sequence__id')
     
