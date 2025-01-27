@@ -32,7 +32,7 @@ class transfer_to_tna_assessment_step(StrictTool):
         discover_stage = DiscoverStage.objects.get(user__email=context['email'], sequence=context['sequence_id'])
         discover_is_complete, error = discover_stage.check_complete()
         if not discover_is_complete:
-            raise ValueError(error)
+            raise ValueError(f"Use the `update_discover_data` tool to update the discovery data if details are already shared, before proceeding to TNA Assessment step or ask the learner to share the details about the required item.\n\n{error}")
         
         all_assessments = context['tna_assessment']['total_nos_areas']
         assessments = TNAassessment.objects.filter(sequence_id=context['sequence_id'])

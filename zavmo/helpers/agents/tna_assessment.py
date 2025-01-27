@@ -75,14 +75,14 @@ class ValidateOnCurrentLevel(StrictTool):
                 tna_assessment_agent.instructions = get_tna_assessment_instructions(context, next_lower_level)
                 return Result(value=f"Inform learner that based on validation, it is advised to move to next lower level.", context=context)
         
-        if self.result == "PASS":
+        if self.result == "PASS" or self.result == "MERIT":
             tna_assessment_agent.instructions = get_tna_assessment_instructions(context, "")
-            return Result(value=f"""Inform learner that based on evaluating the learner's response against the OFQUAL's benchmarking responses, Pass grade is achieved which is great. 
+            return Result(value=f"""Inform learner that based on evaluating the learner's response against the OFQUAL's benchmarking responses, {self.result} is achieved. 
                                 It is advised to save the details of the assessment area and move to next NOS assessment area.""", context=context)
         
-        if self.result == "MERIT" or self.result == "DISTINCTION":
+        if self.result == "DISTINCTION":
             if self.current_bloom_taxonomy_level == "Create":
-                return Result(value=f"""Inform learner that based on evaluating the learner's response against the OFQUAL's benchmarking responses, {self.result} is achieved. 
+                return Result(value=f"""Inform learner that based on evaluating the learner's response against the OFQUAL's benchmarking responses, Distinction is achieved. 
                               The learner has reached the highest level. It is advised to save the details of the assessment area and move to next NOS assessment area.""", context=context)
             else:
                 next_higher_level = all_levels[all_levels.index(self.current_bloom_taxonomy_level) + 1]
