@@ -7,7 +7,9 @@ from .models import (
     DiscoverStage, 
     DiscussStage, 
     DeliverStage, 
-    DemonstrateStage
+    DemonstrateStage,
+    NOS,
+    JobDescription
 )
 
 class TNAassessmentAdmin(admin.ModelAdmin):
@@ -42,4 +44,6 @@ admin.site.register(DiscoverStage)
 admin.site.register(DiscussStage)
 admin.site.register(DeliverStage)
 admin.site.register(DemonstrateStage)
+admin.site.register(NOS)
+admin.site.register(JobDescription)
 
