@@ -21,6 +21,7 @@ from stage_app.models import FourDSequence, DemonstrateStage, TNAassessment
 from stage_app.serializers import TNAassessmentSerializer
 from django.contrib.auth.models import User
 from helpers.utils import get_logger
+from stage_app.tasks import xAPI_assessment_celery_task, xAPI_feedback_celery_task
 
 logger = get_logger(__name__)
 
@@ -48,6 +49,7 @@ class evaluate_answer(StrictTool):
     def execute(self, context: Dict):        
         logger.info(f"Evaluating learner's answer to question: {self.question}")        
         email = context['email']
+        name = context['profile']['first_name'] + " " + context['profile']['last_name']
         sequence_id = context['sequence_id']
                 
         evaluation         = self.model_dump()
@@ -56,7 +58,9 @@ class evaluate_answer(StrictTool):
         # Update evaluations in the DemonstrateStage object and save
         demonstrate_object.evaluations.append(evaluation)
         demonstrate_object.save()
+
         #TODO: xAPI call to update the demonstrate data (evaluations)
+        xAPI_assessment_celery_task.apply_async(args=[json.loads(self.model_dump_json()),email,name])
         
         return Result(value=str(evaluation), context=context)
 
@@ -70,6 +74,7 @@ class update_self_assessment_and_feedback(StrictTool):
         logger.info(f"Updating demonstration data for {context['email']}.")
         
         email = context['email']
+        name = context['profile']['first_name'] + " " + context['profile']['last_name']
         sequence_id = context['sequence_id']
         
         # Update the DemonstrateStage object
@@ -86,6 +91,7 @@ class update_self_assessment_and_feedback(StrictTool):
         demonstrate_stage.feedback_summary    = self.feedback_summary
         demonstrate_stage.save()
         
+        xAPI_feedback_celery_task.apply_async(args=[self.feedback_summary,email,name])
         #TODO: xAPI call to update the demonstrate data (understanding_level, feedback_summary)
         return Result(value="Demonstration data updated successfully", context=context)
     

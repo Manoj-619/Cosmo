@@ -18,6 +18,8 @@ from helpers._types import (
 from helpers.utils import get_logger
 from stage_app.models import DiscussStage, UserProfile, TNAassessment, DiscoverStage
 from helpers.agents.common import get_agent_instructions
+import json
+from stage_app.tasks import xAPI_discuss_celery_task
 from helpers.agents.c_deliver import deliver_agent
 
 logger = get_logger(__name__)
@@ -61,6 +63,8 @@ class Curriculum(StrictTool):
         logger.info(f"timeline: {discuss_stage.timeline}")
         discuss_stage.save()
         
+        logger.info(f"Full Discussion Data: {self.model_dump()}")
+        xAPI_discuss_celery_task.apply_async(args=[json.loads(self.model_dump_json()),discuss_stage.learning_style,discuss_stage.timeline,email,name])
         #TODO: xAPI call to update the discuss data (curriculum)
 
         context['discuss']['curriculum'] = self.model_dump()

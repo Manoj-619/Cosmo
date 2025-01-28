@@ -37,19 +37,19 @@ def chat_view(request):
 
     message_history = _get_message_history(user.email, sequence_id, request.data.get('message'))
 
-    # Get the latest user message from the message history
-    if message_history and message_history[-1].get("role") == "user":
-        latest_user_message = message_history[-1].get("content")
-        if len(message_history) > 1 and message_history[-2].get("role")=="assistant":
-            latest_stage=message_history[-2].get("sender")
-            # TODO: GET THE LATEST ZAVMO MESSAGE
-        else:
-            latest_stage=None
-    else:
-        latest_user_message = None  # No new user message yet
+    # # Get the latest user message from the message history
+    # if message_history and message_history[-1].get("role") == "user":
+    #     latest_user_message = message_history[-1].get("content")
+    #     if len(message_history) > 1 and message_history[-2].get("role")=="assistant":
+    #         latest_stage=message_history[-2].get("sender")
+    #         # TODO: GET THE LATEST ZAVMO MESSAGE
+    #     else:
+    #         latest_stage=None
+    # else:
+    #     latest_user_message = None  # No new user message yet
 
-    if latest_user_message:
-        xAPI_chat_celery_task.apply_async(args=[latest_user_message, latest_stage,context['email']])
+    # if latest_user_message:
+    #     xAPI_chat_celery_task.apply_async(args=[latest_user_message, latest_stage,context['email']])
 
     response = _process_agent_response(stage_name, message_history, context)
 

@@ -18,8 +18,9 @@ from helpers._types import (
 from helpers.utils import get_logger
 from helpers.agents.common import get_agent_instructions
 from helpers.agents.d_demonstrate import demonstrate_agent
+from stage_app.tasks import xAPI_lesson_celery_task, xAPI_curriculum_completion_celery_task
 from stage_app.models import DeliverStage, DiscussStage, UserProfile
-
+import json
 
 load_dotenv()
 
@@ -33,6 +34,8 @@ class transfer_to_demonstrate_stage(StrictTool):
     def execute(self, context: Dict):
         # Get email and sequence id from context
         email       = context['email']
+        name        = context['profile']['first_name'] + " " + context['profile']['last_name']
+        curriculum_title  = context["discuss"]['curriculum']['title']
         sequence_id = context['sequence_id']
         
         if not email or not sequence_id:
@@ -45,8 +48,12 @@ class transfer_to_demonstrate_stage(StrictTool):
         
         deliver_stage             = DeliverStage.objects.get(user__email=email, sequence_id=sequence_id)
         deliver_stage.is_complete = self.is_complete
-        deliver_stage.save()        
-        
+        deliver_stage.save()   
+
+        if deliver_stage.is_complete:
+            xAPI_curriculum_completion_celery_task.apply_async(curriculum_title,email,name)
+
+        #TODO: xAPI call to update the deliver data (is_complete)
         agent = demonstrate_agent
         
         # Create the start message for the Demonstration agent
@@ -82,6 +89,7 @@ class Lesson(StrictTool):
     def execute(self, context: Dict):
         # Get email and sequence id from context
         email       = context['email']
+        name        = context['profile']['first_name'] + " " + context['profile']['last_name']
         sequence_id = context['sequence_id']
             
         
@@ -95,6 +103,8 @@ class Lesson(StrictTool):
         deliver_stage.lesson_number = lesson_number
         deliver_stage.lessons.append(new_lesson)
         deliver_stage.save()
+
+        xAPI_lesson_celery_task.apply_async(args=[json.loads(self.model_dump_json()),email,name])
 
         #TODO: xAPI call to update the deliver data (lessons)  
 
