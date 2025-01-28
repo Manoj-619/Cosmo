@@ -12,8 +12,6 @@ class Org(models.Model):
 
 class NOS(models.Model):
     nos_id = models.CharField(max_length=50, primary_key=True)
-    performance_criteria = models.TextField()
-    knowledge_criteria = models.TextField()
     text = models.TextField()
     industry = models.CharField(max_length=255)
     ofqual = models.ForeignKey(

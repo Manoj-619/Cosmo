@@ -23,8 +23,6 @@ class Command(BaseCommand):
                 if row['nos_id'] not in existing_nos:
                     nos_to_create.append(NOS(
                         nos_id=row['nos_id'],
-                        performance_criteria=row['performance_criteria'],
-                        knowledge_criteria=row['knowledge_criteria'],
                         text=row['text'],
                         industry=row['industry']
                     ))

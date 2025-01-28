@@ -92,34 +92,28 @@ class GetRequiredSkillsFromNOS(PermissiveTool):
         return Result(value=f"FourDSequences created, transfer to discovery stage", context=context)
 
 class JDBasedRole(Enum):
-    FINANCIAL_CRIME_DUE_DILIGENCE_ANALYST = "Financial Crime Due Diligence Analyst"
-    FINANCIAL_CRIME_DUE_DILIGENCE_MANAGER = "Financial Crime Due Diligence Manager"
-    PEOPLE_PARTNER= "People Partner"
-    CUSTOMER_SERVICE_MANAGER = "Customer Service Manager"
-    PEOPLE_LEADER_CUSTOMER_FULFILLMENT = "People Leader - Customer Fulfilment"
+    FINANCIAL_CRIME_DUE_DILIGENCE_ANALYST_LEVEL_7 = "Financial Crime Due Diligence Analyst - Level 7"
+    FINANCIAL_CRIME_DUE_DILIGENCE_MANAGER_LEVEL_6 = "Financial Crime Due Diligence Manager - Level 6"
+    PEOPLE_PARTNER_LEVEL_5 = "People Partner - Level 5"
+    PEOPLE_PARTNER_LEVEL_6 = "People Partner - Level 6"
+    CUSTOMER_SERVICE_MANAGER_LEVEL_6 = "Customer Service Manager - Level 6"
+    PEOPLE_LEADER_CUSTOMER_FULFILLMENT_LEVEL_7 = "People Leader - Customer Fulfilment - Level 6"
     POD_SOLVER = "Pod Solver"
-    ETHICS_COMPLIANCE_GOVERNANCE_CONSULTANT = "Ethics & Compliance Governance Consultant"
-    SENIOR_ASSURANCE_ASSESSOR = "Senior Assurance Assessor - Ethics & Compliance"
-    ENERGY_COMPLIANCE_CONSULTANT = "Energy Compliance Consultant"
+    ETHICS_COMPLIANCE_GOVERNANCE_CONSULTANT_LEVEL_7 = "Ethics & Compliance Governance Consultant - Level 7"
+    SENIOR_ASSURANCE_ASSESSOR_LEVEL_6 = "Senior Assurance Assessor - Ethics & Compliance - Level 6"
+    ENERGY_COMPLIANCE_CONSULTANT_LEVEL_6 = "Energy Compliance Consultant - Level 6"
     GROUP_HEAD_OF_ETHICS = "Group Head of Ethics"
-    FRAUD_INVESTIGATOR = "Fraud Investigator"
-    ETHICS_COMPLIANCE_ASSURANCE_MANAGER = "Ethics & Compliance Assurance Manager"
-    ETHICS_COMPLIANCE_HEAD_OF_ASSURANCE = "Ethics & Compliance - Head of Assurance"
 
 class GetNOSDocument(StrictTool):
     def execute(self, context: Dict):
         profile = UserProfile.objects.get(user__email=context['email'])
-        # query = f"{profile.current_role}, {profile.current_industry}, \n\n{profile.work_experience_in_current_role} \n\n{profile.main_purpose} \n\n{profile.responsibilities} \n\n{profile.manager_responsibilities}"
-        # query = f"Role: {profile.current_role}, Department/Industry: {profile.department} / {profile.current_industry}"
-        # nos_docs, nos_ids = fetch_nos_text(query)
-        # nos_ids = "\nNOS ID: ".join(nos_ids)
-        if profile.get_nos():
-            nos_docs = profile.get_nos()
-            nos_ids = [nos.nos_id for nos in nos_docs]
-            nos_docs = "\n\n".join([f"NOS ID: {nos.nos_id}\nPerformance Criteria: {nos.performance_criteria}\nKnowledge Criteria: {nos.knowledge_criteria}" for nos in nos_docs])
+        if profile.nos.exists():  # Check if any NOS documents exist
+            nos_docs = profile.nos.all()  # Get the queryset of related NOS documents
+            nos_docs = "\n\n".join([f"Data for NOS ID: **{nos.nos_id}**\n\n{nos.text}\n\n" for nos in nos_docs])
+        else:
+            nos_docs = "No NOS documents found"
         context['nos_docs'] = nos_docs
-        # return Result(value=f"""The NOS IDs shortlisted based on relevance to the learner's profile and query are: \nNOS ID: {nos_ids}\nProviding the NOS data with competencies outlined under Performance and Knowledge sections for the respective NOS IDs: \n{nos_docs}\n\nNext step is to identify competencies relevant to the learner's profile and query. Take a count of competencies and then list competencies using the `GetRequiredSkillsFromNOS` tool.\n\nThe NOS query is: **{query}**""", context=context)
-        return Result(value=f"""Providing the NOS data from the NOS IDs: {nos_ids}.\n\nGenerate a list of competencies from the data shared:\n\n{nos_docs}""", context=context)
+        return Result(value=f"""Generate a list of competencies from the NOS data:\n\n{nos_docs}""", context=context)
 
 ### For handoff
 
@@ -173,7 +167,7 @@ class update_profile_data(StrictTool):
         profile.first_name = self.first_name
         profile.last_name = self.last_name
         # Store enum value instead of enum object
-        profile.current_role = self.current_role.value.replace("_", " ").lower().title()
+        profile.current_role = self.current_role.value.replace("_Level_", " - Level ").replace("_", " ").lower().title()
         profile.current_industry = self.current_industry
         profile.years_of_experience = self.years_of_experience
         profile.manager = self.manager
@@ -187,7 +181,7 @@ class update_profile_data(StrictTool):
         context['profile'] = profile_data
 
         JD_details = profile.job_description.summary
-        return Result(value=f"""The JD details which matched with the user's current role is:\n\n{JD_details}. Briefly describe the JD and ask if it aligns with the user's current role.""", context=context)
+        return Result(value=f"""The JD details which matched with the user's current role is:\n\n{JD_details}. Briefly describe the JD and ask if it aligns with the learner's current role.""", context=context)
             
 profile_agent = Agent(
     name="Profile",
