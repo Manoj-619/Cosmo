@@ -10,6 +10,66 @@ class Org(models.Model):
         return self.org_name
 
 
+class NOS(models.Model):
+    nos_id = models.CharField(max_length=50, primary_key=True)
+    performance_criteria = models.TextField()
+    knowledge_criteria = models.TextField()
+    text = models.TextField()
+    industry = models.CharField(max_length=255)
+    ofqual = models.ForeignKey(
+        'OFQUAL',
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='nos_standards'
+    )
+
+    def __str__(self):
+        return f"{self.nos_id} - {self.industry}"
+
+    class Meta:
+        verbose_name = "NOS"
+        verbose_name_plural = "NOS"
+
+class JobDescription(models.Model):
+    job_role = models.CharField(max_length=255)  # No longer unique
+    description = models.TextField()
+    responsibilities = models.TextField()
+    nos = models.ManyToManyField('NOS', related_name='job_descriptions')
+    
+    class Meta:
+        # Add a unique constraint on job_role + description to prevent exact duplicates
+        constraints = [
+            models.UniqueConstraint(
+                fields=['job_role', 'description'], 
+                name='unique_job_description'
+            )
+        ]
+    
+    def __str__(self):
+        return f"{self.job_role}"
+
+
+    @property
+    def summary(self):
+        return f"{self.job_role}\n\n-{self.description}\n\n-{self.responsibilities}"
+
+    class Meta:
+        verbose_name = "Job Description"
+        verbose_name_plural = "Job Descriptions"
+
+class OFQUAL(models.Model):
+    ofqual_id = models.CharField(max_length=50, primary_key=True)
+    title = models.CharField(max_length=255)
+    text = models.TextField()
+
+    def __str__(self):
+        return f"{self.ofqual_id} - {self.title}"
+
+    class Meta:
+        verbose_name = "OFQUAL"
+        verbose_name_plural = "OFQUAL"
+
+
 class UserProfile(models.Model):
     """Profile stage model.
     # NOTE: USED ONLY ONCE PER USER, DURING ONBOARDING
@@ -34,11 +94,30 @@ class UserProfile(models.Model):
     job_duration    = models.PositiveIntegerField(null=True, blank=True, verbose_name="Job Duration")
     manager         = models.CharField(max_length=100, blank=True, null=True, verbose_name="Manager")
     department      = models.CharField(max_length=100, blank=True, null=True, verbose_name="Department")
-    main_purpose    = models.TextField(blank=True, null=True, verbose_name="Main Purpose")
-    responsibilities = models.TextField(blank=True, null=True, verbose_name="Responsibilities")
-    manager_responsibilities = models.TextField(blank=True, null=True, verbose_name="Manager's Responsibilities")
-    work_experience_in_current_role = models.TextField(blank=True, null=True, verbose_name="Work Experience in Current Role")
+    job_description = models.ForeignKey(JobDescription, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Job Description")
 
+    def save(self, *args, **kwargs):
+        """Override save to automatically link to JobDescription when current_role is set"""
+        if self.current_role and not self.job_description:
+            try:
+                self.job_description = JobDescription.objects.get(job_role__iexact=self.current_role)
+            except JobDescription.DoesNotExist:
+                pass  # If no matching job description found, continue without linking
+        super().save(*args, **kwargs)
+
+    def get_nos(self):
+        """Get the NOS associated with the user's job description"""
+        if self.job_description and self.job_description.nos.count() > 0:
+            return [nos for nos in self.job_description.nos]
+        return None
+
+    def get_ofqual(self):
+        """Get the OFQUAL standard associated with the user's NOS"""
+        nos = self.get_nos()
+        if nos and nos.ofqual:
+            return nos.ofqual
+        return None
+    
     def __str__(self):
         """Get a dump of the Django model as a string."""
         return f"{self.user.email} - Profile"
@@ -67,10 +146,6 @@ class UserProfile(models.Model):
             'job_duration': 'Job duration is required',
             'manager': 'Manager is required',
             'department': 'Department is required',
-            'main_purpose': 'Main purpose is required',
-            'responsibilities': 'Responsibilities are required',
-            'manager_responsibilities': 'Manager\'s responsibilities are required',
-            'work_experience_in_current_role': 'Work experience in current role is required',
         }
 
         for field, message in required_fields.items():

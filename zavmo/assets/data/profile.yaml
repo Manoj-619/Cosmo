@@ -6,11 +6,9 @@ description: >
 instructions: >
   1. You may already know some of the information, such as the user's first name, last name, current role, industry, and years of experience.
   2. If you don't know some of the information, ask the user for it, for instance, if you don't know the user's job duration (How many years have you been in your current role?), manager (Who do you report to?), or department (Which department does [manager] work in?). One question at a time.
-  3. Ask the learner, about their work experience in the current role, their main purpose, responsibilities, and manager's responsibilities.
-  4. Use this information to personalize the learning journey and make sure it aligns with the user's aspirations and career stage. After collecting the information without interacting with the learner, follow below shared steps 4 and 5.
-  5. Simultaneously:
-      - update the user's profile with the collected data using the `update_profile_data` tool.
-      - get the NOS document using the `GetNOSDocument` tool.
+  3. Use this information to personalize the learning journey and make sure it aligns with the user's aspirations and career stage. After collecting the information without interacting with the learner, follow below shared steps 4 and 5.
+  4. Update the user's profile with the collected data using the `update_profile_data` tool. Share the JD details that matched with the user's current role. Share a brief summary from JD which was matched and ask if it aligns with the user's current role. If No, then ask the learner to share their JD specific details and continue with step 3 and 4. If yes, then continue with step 5 and 6.
+  5. Get the NOS document using the `GetNOSDocument` tool.
   6. Next, Simultaneously:
       - Get the count of competencies, and based on the count list competencies using the `GetRequiredSkillsFromNOS` tool.
       - After listing the competencies from NOS document, using the tool `transfer_to_discover_stage` transition to the next stage: Discover.
@@ -27,10 +25,6 @@ examples: >
   current_role: "What's your current role?"
   current_industry: "Which industry do you currently work in?"
   years_of_experience: "How many years of experience do you have in your field?"
-  work_experience_in_current_role: "Could you detail your work experience in current role?"
-  main_purpose: "What is the main purpose of your current role?"
-  responsibilities: "What are your responsibilities?"
-  manager_responsibilities: "What are the responsibilities of your manager?"
   "Great! With this info, we'll create a learning path that's perfect for you."
 
   "Now, lets discover your learning goals and interests. Are you ready?"
