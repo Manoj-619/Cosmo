@@ -82,14 +82,14 @@ def _determine_stage(user, context, sequence_id):
                 context.update(_create_full_context(user.email, context['sequence_id'], profile))
                 logger.info(f"Incomplete assessments found. Running tna_assessment agent.")
                 return 'tna_assessment'
+            
+        context.update(_create_full_context(user.email, context['sequence_id'], profile))
+        return sequence.stage_display
+    
     else:
         context.update(_create_empty_context(user.email, context['sequence_id'], profile))
         logger.info(f"No sequence ID found. Running profile agent.")
         return 'profile'
-    
-    context.update(_create_full_context(user.email, context['sequence_id'], profile))
-
-    return sequence.stage_display
 
 def _create_empty_context(email, sequence_id, profile):
     """Create context for incomplete profile.""" 

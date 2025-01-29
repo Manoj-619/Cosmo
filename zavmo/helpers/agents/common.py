@@ -93,7 +93,7 @@ def get_tna_assessment_instructions(context: Dict, level: str):
         else:
             prompt_context['nos_area_with_criteria'] = f"Assessment Area: **{competency_to_assess[0]['assessment_area']}**"
     else:
-        prompt_context['nos_area_with_criteria'] = "No NOS Areas left to assess."
+        prompt_context['nos_area_with_criteria'] = "No NOS Areas left to assess. Transfer to Discussion stage."
 
     system_content  = get_prompt('tna_assessment.md', 
                                     context=prompt_context,
