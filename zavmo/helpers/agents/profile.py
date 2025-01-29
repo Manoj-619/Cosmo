@@ -42,7 +42,7 @@ class GetRequiredSkills(PermissiveTool):
         user_profile = UserProfile.objects.get(user__email=context['email'])
         
         ## Number of assessments per sequence
-        n = 2
+        n = 5
         sequences_to_create = []
         assessments_to_create = []
         total_assessments = 0
