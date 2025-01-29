@@ -12,16 +12,8 @@ class Org(models.Model):
 
 class NOS(models.Model):
     nos_id = models.CharField(max_length=50, primary_key=True)
-    performance_criteria = models.TextField()
-    knowledge_criteria = models.TextField()
     text = models.TextField()
     industry = models.CharField(max_length=255)
-    ofqual = models.ForeignKey(
-        'OFQUAL',
-        on_delete=models.SET_NULL,
-        null=True,
-        related_name='nos_standards'
-    )
 
     def __str__(self):
         return f"{self.nos_id} - {self.industry}"
@@ -35,20 +27,11 @@ class JobDescription(models.Model):
     description = models.TextField()
     responsibilities = models.TextField()
     nos = models.ManyToManyField('NOS', related_name='job_descriptions')
-    
-    class Meta:
-        # Add a unique constraint on job_role + description to prevent exact duplicates
-        constraints = [
-            models.UniqueConstraint(
-                fields=['job_role', 'description'], 
-                name='unique_job_description'
-            )
-        ]
+    ofqual = models.ManyToManyField('OFQUAL', related_name='job_descriptions')
     
     def __str__(self):
         return f"{self.job_role}"
-
-
+    
     @property
     def summary(self):
         return f"{self.job_role}\n\n-{self.description}\n\n-{self.responsibilities}"
@@ -59,12 +42,14 @@ class JobDescription(models.Model):
 
 class OFQUAL(models.Model):
     ofqual_id = models.CharField(max_length=50, primary_key=True)
-    title = models.CharField(max_length=255)
+    level = models.CharField(max_length=255)
     text = models.TextField()
+    markscheme = models.JSONField(default=list, blank=True, null=True)
+
 
     def __str__(self):
-        return f"{self.ofqual_id} - {self.title}"
-
+        return f"{self.ofqual_id} - {self.level}"
+    
     class Meta:
         verbose_name = "OFQUAL"
         verbose_name_plural = "OFQUAL"
@@ -107,16 +92,16 @@ class UserProfile(models.Model):
 
     def get_nos(self):
         """Get the NOS associated with the user's job description"""
-        if self.job_description and self.job_description.nos.count() > 0:
-            return [nos for nos in self.job_description.nos]
-        return None
+        if self.job_description:
+            # Return all NOS objects related to the job description
+            return self.job_description.nos.all()
+        return NOS.objects.none()  # Return empty queryset if no job description
 
     def get_ofqual(self):
-        """Get the OFQUAL standard associated with the user's NOS"""
-        nos = self.get_nos()
-        if nos and nos.ofqual:
-            return nos.ofqual
-        return None
+        """Get the OFQUAL standard associated with the user's job description"""
+        if self.job_description:
+            return self.job_description.ofqual.all()
+        return OFQUAL.objects.none()
     
     def __str__(self):
         """Get a dump of the Django model as a string."""

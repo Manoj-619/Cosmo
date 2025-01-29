@@ -9,6 +9,7 @@ from .models import (
     DeliverStage, 
     DemonstrateStage,
     NOS,
+    OFQUAL,
     JobDescription
 )
 
@@ -45,5 +46,6 @@ admin.site.register(DiscussStage)
 admin.site.register(DeliverStage)
 admin.site.register(DemonstrateStage)
 admin.site.register(NOS)
+admin.site.register(OFQUAL)
 admin.site.register(JobDescription)
 
