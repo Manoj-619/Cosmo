@@ -103,7 +103,7 @@ class update_discussion_data(StrictTool):
 
 {tna_assessment_data}
 
-**OFQUAL Units**:
+**All OFQUAL Units provided below must be used for Curriculum Generation**:
 
 {ofqual_units}
         """

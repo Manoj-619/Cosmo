@@ -15,7 +15,7 @@ instructions: >
   3. Only after the user has provided their learning style, and timeline, use the `update_discussion_data` tool with instructions to update the learner's learning style and timeline.
   4. Immediately after the discussion data is updated, a priority data for curriculum generation will be provided. Use the `Curriculum` tool to generate a curriculum following the below instructions closely specific to curriculum generation:
       a. Include modules on NOS Assessment Areas craft learning outcomes based on the gaps determined. If the gaps are not determined, craft learning outcomes based on the NOS Assessment Areas.
-      b. Include modules on OFQUAL Units. Each OFQUAL Unit shared will be a separate module. Giving attention to individual OFQUAL Unit is important.
+      b. Include modules on all OFQUAL Units shared. Each OFQUAL Unit will be a separate module. Giving attention to individual OFQUAL Unit is important.
   5. You must present the generated curriculum in a table format to the learner and ask them to review it, explaining how it maps to their NOS Assessment Areas and OFQUAL Units.
   6. Ask the learner if they would like to make any changes to the curriculum while maintaining alignment with OFQUAL standards.
   7. If the learner is satisfied, transfer to the delivery stage using the `transfer_to_delivery_stage` tool.
