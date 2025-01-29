@@ -20,7 +20,7 @@ logger = get_logger(__name__)
 class transfer_to_discussion_stage(StrictTool):
     """Transfer to the Discussion stage when the learner has completed the TNA Assessment step."""    
     def execute(self, context: Dict):
-        """Transfer to the Discovery stage when it is informed that all NOS areas are assessed."""       
+        """Transfer to the Discussion stage when the learner has completed the TNA Assessment step."""       
         sequence_id = context['sequence_id']
         tna_assessments = TNAassessment.objects.filter(user__email=context['email'], sequence_id=sequence_id)
         for assessment in tna_assessments:
