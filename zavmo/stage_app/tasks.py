@@ -138,7 +138,7 @@ def xAPI_discuss_celery_task(discuss_data,learning_style,interest_areas,timeline
             "timestamp": datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ'),
             "learningStyle": learning_style,
             "timeline": timeline,
-            "interestAreas": interest_areas
+            "interest_areas": interest_areas
         },
         "actor": {
             "name": name,
