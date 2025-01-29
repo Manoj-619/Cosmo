@@ -100,7 +100,6 @@ class update_discover_data(StrictTool):
         discover_stage.save() 
 
         xAPI_discover_celery_task.apply_async(args=[json.loads(self.model_dump_json()),email,name])
-        #TODO: xAPI call to update the discover data (learning_goals, learning_goal_rationale, knowledge_level, application_area)
 
         context['discover'] = self.model_dump() # JSON dump of pydantic model
         logger.info(f"Updated Discover stage Data for {email}. The following data was updated:\n\n{str(self)}")

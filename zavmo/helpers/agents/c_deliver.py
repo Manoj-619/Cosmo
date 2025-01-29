@@ -53,7 +53,6 @@ class transfer_to_demonstrate_stage(StrictTool):
         if deliver_stage.is_complete:
             xAPI_curriculum_completion_celery_task.apply_async(curriculum_title,email,name)
 
-        #TODO: xAPI call to update the deliver data (is_complete)
         agent = demonstrate_agent
         
         # Create the start message for the Demonstration agent
@@ -105,8 +104,6 @@ class Lesson(StrictTool):
         deliver_stage.save()
 
         xAPI_lesson_celery_task.apply_async(args=[json.loads(self.model_dump_json()),email,name])
-
-        #TODO: xAPI call to update the deliver data (lessons)  
 
         context['deliver']['lesson_number'] = lesson_number
         context['deliver']['lesson_data']=self.model_dump_json()

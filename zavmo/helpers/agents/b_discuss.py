@@ -64,8 +64,8 @@ class Curriculum(StrictTool):
         discuss_stage.save()
         
         logger.info(f"Full Discussion Data: {self.model_dump()}")
-        xAPI_discuss_celery_task.apply_async(args=[json.loads(self.model_dump_json()),discuss_stage.learning_style,discuss_stage.timeline,email,name])
-        #TODO: xAPI call to update the discuss data (curriculum)
+        xAPI_discuss_celery_task.apply_async(args=[json.loads(self.model_dump_json()),discuss_stage.learning_style,discuss_stage.interest_areas,discuss_stage.timeline,email,name])
+
 
         context['discuss']['curriculum'] = self.model_dump()
         
@@ -94,8 +94,6 @@ class update_discussion_data(StrictTool):
         logger.info(f"Curriculum: {discuss_stage.curriculum}.")
         discuss_stage.save()
         
-        #TODO: xAPI call to update the discuss data (interest_areas, learning_style, timeline)
-
         assessment_areas = TNAassessment.objects.filter(user__email=email, sequence_id=sequence_id)
         data_for_curriculum_generation = ""
         for assessment_item in assessment_areas:

@@ -42,14 +42,15 @@ def chat_view(request):
         latest_user_message = message_history[-1].get("content")
         if len(message_history) > 1 and message_history[-2].get("role")=="assistant":
             latest_stage=message_history[-2].get("sender")
-            # TODO: GET THE LATEST ZAVMO MESSAGE
+            latest_zavmo_message=message_history[-2].get("content")
         else:
             latest_stage=None
+            latest_zavmo_message=None
     else:
         latest_user_message = None  # No new user message yet
 
     if latest_user_message:
-        xAPI_chat_celery_task.apply_async(args=[latest_user_message, latest_stage,context['email']])
+        xAPI_chat_celery_task.apply_async(args=[latest_user_message, latest_stage,context['email'],latest_zavmo_message])
 
     response = _process_agent_response(stage_name, message_history, context)
 

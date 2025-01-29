@@ -9,7 +9,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 @shared_task(name="xAPI_chat_celery_task")
-def xAPI_chat_celery_task(latest_user_message, latest_stage,email):
+def xAPI_chat_celery_task(latest_user_message, latest_stage,email,latest_zavmo_message):
 
     url = 'https://learninglocker.zavmo.ai/v1/statements/chat'
     headers = {
@@ -18,8 +18,10 @@ def xAPI_chat_celery_task(latest_user_message, latest_stage,email):
     data = {
         "chatData": {
             "timestamp": datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ'),
-            "chat": latest_user_message,
+            "zavmoChat": latest_zavmo_message,
+            "userChat": latest_user_message,
             "stage": latest_stage
+
         },
         "actor": {
             "name": email,
@@ -99,7 +101,7 @@ def xAPI_discover_celery_task(discover_data,email,name):
     return response.json()
 
 @shared_task(name="xAPI_discuss_celery_task")
-def xAPI_discuss_celery_task(discuss_data,learning_style,timeline,email,name):
+def xAPI_discuss_celery_task(discuss_data,learning_style,interest_areas,timeline,email,name):
     # API endpoints
     curriculum_url = "https://learninglocker.zavmo.ai/v1/statements/curriculumRegistration"
     discuss_url = "https://learninglocker.zavmo.ai/v1/statements/discuss"
@@ -135,12 +137,14 @@ def xAPI_discuss_celery_task(discuss_data,learning_style,timeline,email,name):
         "discuss":  {
             "timestamp": datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ'),
             "learningStyle": learning_style,
-            "timeline": timeline
+            "timeline": timeline,
+            "interestAreas": interest_areas
         },
         "actor": {
             "name": name,
             "mbox": email
         }
+
     }
 
     try:
@@ -209,12 +213,12 @@ def xAPI_assessment_celery_task(assessment_data,email,name):
         'Content-Type': 'application/json'
     }
     data = {
-        "learner": {
+        "actor": {
             "name": name,
             "email": email
         },
         "assessment": {
-            "evaluations": assessment_data
+            "evaluations": [assessment_data]
         }
     }
     response = requests.post(url, headers=headers, json=data)
