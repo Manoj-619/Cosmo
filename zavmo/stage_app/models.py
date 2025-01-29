@@ -42,10 +42,9 @@ class JobDescription(models.Model):
 
 class OFQUAL(models.Model):
     ofqual_id = models.CharField(max_length=50, primary_key=True)
-    level = models.CharField(max_length=255)
+    level = models.PositiveIntegerField(default=1)
     text = models.TextField()
     markscheme = models.JSONField(default=list, blank=True, null=True)
-
 
     def __str__(self):
         return f"{self.ofqual_id} - {self.level}"
