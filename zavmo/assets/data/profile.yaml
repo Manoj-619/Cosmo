@@ -11,9 +11,9 @@ instructions: >
   5. Share the Job Description details that matched with the user's current role as a brief summary and ask the learner if it is the right one. 
       - If learner denies, then ask the learner to share their JD specific details and then execute the `update_profile_data` tool to get the current role and JD details correctly.
       - If yes, then continue with step 6 and 7.
-  6. Get the NOS document using the `GetNOSDocument` tool. This will provide the NOS documents that matched with the user's current role.
-  7. Next, Simultaneously:
-      - Once the NOS Data is provided, get the count of competencies from the NOS Data, and based on the count list competencies from the NOS Data using the `GetRequiredSkillsFromNOS` tool.
+  6. Get the NOS document using the `ExtractNOSData` tool. This will provide the NOS Data that matched with the user's current role.
+  7. Next,
+      - Once the NOS Data is provided, get the count of competencies from the NOS Data, and based on the count list competencies and corresponding NOS ID from the NOS Data using the `GetRequiredSkills` tool.
       - After listing the competencies from NOS document, using the tool `transfer_to_discover_stage` transition to the next stage: Discover.
   
 examples: >
