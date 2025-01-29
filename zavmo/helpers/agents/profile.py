@@ -11,7 +11,7 @@ from helpers._types import (
     PermissiveTool,
     Result
 )
-from stage_app.models import UserProfile, TNAassessment, FourDSequence
+from stage_app.models import UserProfile, TNAassessment, FourDSequence, JobDescription
 from stage_app.serializers import TNAassessmentSerializer
 from helpers.agents.a_discover import discover_agent
 from helpers.agents.common import get_agent_instructions
@@ -173,6 +173,16 @@ class update_profile_data(StrictTool):
         profile.manager = self.manager
         profile.department = self.department
         profile.job_duration = self.job_duration
+        
+        # Update JD if role has changed
+        if profile.job_description:
+            if profile.job_description.job_role != current_role:
+                try:
+                    new_jd = JobDescription.objects.get(job_role=current_role)
+                    profile.job_description = new_jd
+                except JobDescription.DoesNotExist:
+                    logging.warning(f"No JD found for role: {current_role}")
+        
         profile.save()
         
         # Convert enum to string value before storing in context
