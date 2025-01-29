@@ -159,14 +159,15 @@ class update_profile_data(StrictTool):
         # Get the UserProfile object
         profile = UserProfile.objects.get(user__email=email)
         if not profile:
-            raise ValueError("UserProfile not found")        
+            raise ValueError("UserProfile not found")    
         
+        logging.info(f"Current role: {self.current_role}")    
+        current_role = self.current_role.lower().title().replace("_Level_", " - Level ").replace("_", " ")
+
         # Update the UserProfile object
         profile.first_name = self.first_name
         profile.last_name = self.last_name
-        # Store enum value instead of enum object
-        logging.info(f"Current role: {self.current_role}")
-        profile.current_role = self.current_role.value.replace("_Level_", " - Level ").replace("_", " ").lower().title()
+        profile.current_role = current_role
         profile.current_industry = self.current_industry
         profile.years_of_experience = self.years_of_experience
         profile.manager = self.manager
@@ -176,7 +177,7 @@ class update_profile_data(StrictTool):
         
         # Convert enum to string value before storing in context
         profile_data = self.model_dump()
-        profile_data['current_role'] = self.current_role.value
+        profile_data['current_role'] = current_role
         context['profile'] = profile_data
 
         JD_details = profile.job_description.summary
