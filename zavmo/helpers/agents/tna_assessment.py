@@ -145,5 +145,5 @@ tna_assessment_agent = Agent(
                ValidateOnCurrentLevel,
                transfer_to_discussion_stage],
     tool_choice="auto",
-    parallel_tool_calls=True
+    parallel_tool_calls=False
 )
