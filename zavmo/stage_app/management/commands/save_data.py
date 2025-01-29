@@ -53,13 +53,13 @@ class Command(BaseCommand):
 
             # Now iterate and add NOS relationships
             for jd, row in zip(created_jds, jd_df.itertuples()):
-                nos_ids = row.nos_ids.split(',')
-                nos_ids = [id.strip() for id in nos_ids]
+                nos_ids = str(row.nos_ids) if pd.notna(row.nos_ids) else ''
+                nos_ids = [id.strip() for id in nos_ids.split(',')] if nos_ids else []
                 jd.nos.add(*NOS.objects.filter(nos_id__in=nos_ids))
 
             for jd, row in zip(created_jds, jd_df.itertuples()):
-                ofqual_ids = row.ofqual_ids.split(',')
-                ofqual_ids = [id.strip() for id in ofqual_ids]
+                ofqual_ids = str(row.ofqual_ids) if pd.notna(row.ofqual_ids) else ''
+                ofqual_ids = [id.strip() for id in ofqual_ids.split(',')] if ofqual_ids else []
                 jd.ofqual.add(*OFQUAL.objects.filter(ofqual_id__in=ofqual_ids))
 
             self.stdout.write(self.style.SUCCESS(f'Successfully saved {len(jd_df)} Job Description records'))
