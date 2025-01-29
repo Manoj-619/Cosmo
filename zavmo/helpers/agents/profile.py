@@ -24,12 +24,13 @@ import json
 class GetSkillFromNOS(StrictTool):
     """Get a competency from the NOS document. Competency can be knowledge or performance based."""
 
+    nos_id: str = Field(description="The NOS ID associated with knowledge and performace items provided from which the competency was taken. It will be a string of alphanumeric characters.")
     assessment_area:str = Field(description="""A competency from the NOS Data picked from either "Performance Criteria" or "Knowledge and Understanding" sections that represents a specific skill, knowledge or behavior required to meet National Occupational Standards and which is relevant to the learner's profile.""")
-    nos_id: str = Field(description="The NOS ID associated with knowledge and performace items provided from which the competency was taken. It will be given with a clear prefix as **NOS ID:** and will be an alphanumeric value.")
+
     def execute(self, context: Dict):
         return self.model_dump_json() 
 
-class GetRequiredSkillsFromNOS(PermissiveTool):
+class GetRequiredSkills(PermissiveTool):
     """Use this tool to collect all competencies from the NOS Data provided. First get the count of competencies relevant to the learner's profile and then generate based on the count a list of competencies from the NOS Data."""
     count_of_competencies: int = Field(description="Get the number of distinct items or elements to be extracted from the National Occupational Standards (NOS) Data, relevant to the learner's profile.")
     nos: List[GetSkillFromNOS] = Field(description=f"Based on the count of competencies, list competencies from the NOS Data relevant to the learner's profile along with the corresponding NOS ID from which each competency was taken.", 
@@ -42,7 +43,7 @@ class GetRequiredSkillsFromNOS(PermissiveTool):
         user_profile = UserProfile.objects.get(user__email=context['email'])
         
         ## Number of assessments per sequence
-        n = 5
+        n = 3
         sequences_to_create = []
         assessments_to_create = []
         total_assessments = 0
@@ -105,7 +106,7 @@ class JDBasedRole(Enum):
     ENERGY_COMPLIANCE_CONSULTANT_LEVEL_6 = "Energy Compliance Consultant - Level 6"
     GROUP_HEAD_OF_ETHICS = "Group Head of Ethics"
 
-class GetNOSDocument(StrictTool):
+class ExtractNOSData(StrictTool):
     def execute(self, context: Dict):
         profile  = UserProfile.objects.get(user__email=context['email'])
         all_nos  = profile.get_nos()
@@ -159,14 +160,15 @@ class update_profile_data(StrictTool):
         # Get the UserProfile object
         profile = UserProfile.objects.get(user__email=email)
         if not profile:
-            raise ValueError("UserProfile not found")        
+            raise ValueError("UserProfile not found")    
         
+        logging.info(f"Current role: {self.current_role}")    
+        current_role = self.current_role.value.lower().title().replace("_Level_", " - Level ").replace("_", " ")
+
         # Update the UserProfile object
         profile.first_name = self.first_name
         profile.last_name = self.last_name
-        # Store enum value instead of enum object
-        logging.info(f"Current role: {self.current_role}")
-        profile.current_role = self.current_role.value.replace("_Level_", " - Level ").replace("_", " ").lower().title()
+        profile.current_role = current_role
         profile.current_industry = self.current_industry
         profile.years_of_experience = self.years_of_experience
         profile.manager = self.manager
@@ -178,7 +180,7 @@ class update_profile_data(StrictTool):
         
         # Convert enum to string value before storing in context
         profile_data = self.model_dump()
-        profile_data['current_role'] = self.current_role.value
+        profile_data['current_role'] = current_role
         context['profile'] = profile_data
 
         JD_details = profile.job_description.summary
@@ -191,10 +193,10 @@ profile_agent = Agent(
     instructions=get_agent_instructions('profile'),
     functions=[
         update_profile_data,
-        GetNOSDocument,
-        GetRequiredSkillsFromNOS,
+        ExtractNOSData,
+        GetRequiredSkills,
         transfer_to_discover_stage
     ],
     tool_choice="auto",
-    parallel_tool_calls=True
+    parallel_tool_calls=False
 )

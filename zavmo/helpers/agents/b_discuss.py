@@ -35,8 +35,8 @@ logger = get_logger(__name__)
 #     exercises: List[str] = Field( description="List of exercises for the learner to practice")
 
 class Module(BaseModel):
-    title: str = Field(description="The title of the module. It can be an Assessment Area (high priority) or a learner's interest area")
-    learning_outcomes: List[str] = Field(description="List upto 5 learning outcomes from the OFQUAL unit shared for the NOS Assessment Area.")
+    title: str = Field(description="The title of the module. It can be an NOS Assessment Area or OFQUAL Unit")
+    learning_outcomes: List[str] = Field(description="List upto 5 learning outcomes.")
     lessons: List[str] = Field(description="List of lessons in this module based on the learning outcomes.")
     duration: int = Field(description="The total duration of the module in hours")
 
@@ -46,7 +46,7 @@ class Curriculum(StrictTool):
     subject: str = Field(description="The main subject area of the curriculum.")
     level: str = Field(description="The difficulty level of the curriculum (e.g., beginner, intermediate, advanced)")
     prerequisites: List[str] = Field(description="Any prerequisites needed to undertake this curriculum")
-    modules: List[Module] = Field(description="List upto 7 modules majorly designed on priority data shared.")
+    modules: List[Module] = Field(description="List upto 10 or more modules majorly designed on NOS Assessment Areas and OFQUAL Units data shared. Include 1-2 modules on learner's interest areas as well.")
 
     def execute(self, context: Dict):
         email       = context['email']
@@ -95,10 +95,13 @@ class update_discussion_data(StrictTool):
         discuss_stage.save()
         
         assessment_areas = TNAassessment.objects.filter(user__email=email, sequence_id=sequence_id)
-        data_for_curriculum_generation = ""
+        tna_assessment_data = ""
         for assessment_item in assessment_areas:
-            data_for_curriculum_generation += f"**NOS Assessment Area:** {assessment_item.assessment_area}\n**Learner's Report:** {assessment_item.evidence_of_assessment}\n**Gaps Determined:** {assessment_item.knowledge_gaps}\n\n**OFQUAL Unit for generating a module in curriculum for NOS Assessment Area:**\n{assessment_item.raw_ofqual_text}\n\n"
-         
+            tna_assessment_data += f"**NOS Assessment Area:** {assessment_item.assessment_area}\n**Learner's Report:** {assessment_item.evidence_of_assessment}\n**Gaps Determined:** {assessment_item.knowledge_gaps}\n\n"
+
+        profile  = UserProfile.objects.get(user__email=context['email'])
+        ofquals_associated_with_JD  = profile.get_ofqual()
+        ofqual_units = "\n\n".join([f"**OFQUAL Unit {ofqual.ofqual_id}:**\n{ofqual.text}" for ofqual in ofquals_associated_with_JD])
        
         value = f"""Discussion data updated successfully for {email}
         
@@ -107,7 +110,14 @@ class update_discussion_data(StrictTool):
 
 **Prioritize using this data for Curriculum Generation**:
 
-{data_for_curriculum_generation}"""
+**TNA Assessment Data**:
+
+{tna_assessment_data}
+
+**All OFQUAL Units provided below must be used for Curriculum Generation**:
+
+{ofqual_units}
+        """
         
         logger.info(f"Discussion data updated successfully for {email}:\n\n{value}")
 

@@ -35,6 +35,7 @@ class Command(BaseCommand):
             for _, row in ofqual_df.iterrows():
                 ofqual_objects.append(OFQUAL(
                     ofqual_id=row['ofqual_id'],
+                    level=row['level'],
                     text=row['text'],
                     markscheme=row['markscheme']
                 ))
