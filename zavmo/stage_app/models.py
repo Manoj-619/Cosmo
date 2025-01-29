@@ -34,7 +34,7 @@ class JobDescription(models.Model):
     
     @property
     def summary(self):
-        return f"{self.job_role}\n\n-{self.description}\n\n-{self.responsibilities}"
+        return f"**Role:** {self.job_role}\n\n**Purpose:** {self.description}\n\n**Responsibilities:**\n{self.responsibilities}"
 
     class Meta:
         verbose_name = "Job Description"

@@ -88,9 +88,9 @@ class update_discussion_data(StrictTool):
         for assessment_item in assessment_areas:
             tna_assessment_data += f"**NOS Assessment Area:** {assessment_item.assessment_area}\n**Learner's Report:** {assessment_item.evidence_of_assessment}\n**Gaps Determined:** {assessment_item.knowledge_gaps}\n\n"
 
-        learner_profile = UserProfile.objects.get(email=email, sequence_id=sequence_id)
-        ofquals_associated_with_JD = learner_profile.job_description.get_ofqual()
-        ofqual_units = "\n\n".join([f"**OFQUAL Unit {ofqual.ofqual_id}:** {ofqual.text}" for ofqual in ofquals_associated_with_JD])
+        profile  = UserProfile.objects.get(user__email=context['email'])
+        ofquals_associated_with_JD  = profile.get_ofqual()
+        ofqual_units = "\n\n".join([f"**OFQUAL Unit {ofqual.ofqual_id}:**\n{ofqual.text}" for ofqual in ofquals_associated_with_JD])
        
         value = f"""Discussion data updated successfully for {email}
         

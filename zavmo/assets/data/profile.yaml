@@ -9,7 +9,7 @@ instructions: >
   3. Use this information to personalize the learning journey and make sure it aligns with the user's aspirations and career stage. After collecting the information without interacting with the learner, follow below shared steps 4 and 5.
   4. Update the user's profile with the collected data using the `update_profile_data` tool. 
   5. Share the Job Description details that matched with the user's current role as a brief summary and ask the learner if it is the right one. 
-      - If learner denies, then ask the learner to share their JD specific details and then execute the `update_profile_data` tool to get the current role and JD details correctly.
+      - If learner denies, then ask the learner to share their JD specific details and then execute the `update_profile_data` tool to get the current role and JD details correctly. Then reshare the JD details and ask the learner if it is the right one.
       - If yes, then continue with step 6 and 7.
   6. Get the NOS document using the `ExtractNOSData` tool. This will provide the NOS Data that matched with the user's current role.
   7. Next,
