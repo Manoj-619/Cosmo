@@ -20,6 +20,10 @@ docker logs -f zavmo-api-app-1
 docker system prune -a --volumes
 ```
 
+## For loading static data from excel to django models
+```
+python manage.py save_data assets/static_data/JDs_NOS_OFQUAL.xlsx
+```
 
 ### For dev
 

@@ -34,12 +34,12 @@ logger = get_logger(__name__)
 
 class Module(BaseModel):
     title: str = Field(description="The title of the module. It can be an Assessment Area (high priority) or a learner's interest area")
-    learning_outcomes: List[str] = Field(description="List upto 5 learning outcomes.")
-    lessons: List[str] = Field(description="List of lessons in this module based on the learning outcomes")
+    learning_outcomes: List[str] = Field(description="List upto 5 learning outcomes from the OFQUAL unit shared for the NOS Assessment Area.")
+    lessons: List[str] = Field(description="List of lessons in this module based on the learning outcomes.")
     duration: int = Field(description="The total duration of the module in hours")
 
 class Curriculum(StrictTool):
-    """Generate a detailed curriculum for the learner based on the NOS Assessment Areas and OFQUAL standards shared."""
+    """Generate a detailed curriculum for the learner based on the NOS Assessment Areas and corresponding OFQUAL Units shared."""
     title: str = Field(description="The title of the curriculum")
     subject: str = Field(description="The main subject area of the curriculum.")
     level: str = Field(description="The difficulty level of the curriculum (e.g., beginner, intermediate, advanced)")
@@ -84,28 +84,10 @@ class update_discussion_data(StrictTool):
         discuss_stage.save()
         
         assessment_areas = TNAassessment.objects.filter(user__email=email, sequence_id=sequence_id)
-        all_assessments_details = ""
+        data_for_curriculum_generation = ""
         for assessment_item in assessment_areas:
-            level_based_marks_scheme = [item for item in assessment_item.criterias if item['bloom_taxonomy_level'] == assessment_item.finalized_blooms_taxonomy_level][0]
-            criteria     = level_based_marks_scheme['criteria']
-            expectations = level_based_marks_scheme['expectations']
-            task         = level_based_marks_scheme['task']
-            benchmarking_response = level_based_marks_scheme['benchmarking_responses']
-            benchmarking_responses = "\n\n".join([f"**{grade.upper().replace('_', '')}:** {description}" for grade, description in benchmarking_response])
-            
-            criteria_text = "\n".join(criteria)
-            expectations_text = "\n".join(expectations)
-            
-            ofqual_based_expectations = (
-                f"- **Criteria:** {criteria_text}\n"
-                f"- **Task:** {task}\n"
-                f"- **Expectations:** {expectations_text}\n"
-                f"- **Benchmarking Responses from OFQUAL:** \n\n{benchmarking_responses}\n"
-            )
-            
-            report_of_assessment_area = f"**Learner's Report for the Assessment Area**: {assessment_item.evidence_of_assessment}"
-            all_assessments_details += f"\nOFQUAL Expectations for **{assessment_item.assessment_area}**: \n\n{ofqual_based_expectations}\n\n{report_of_assessment_area}\n\n"
-        
+            data_for_curriculum_generation += f"**NOS Assessment Area:** {assessment_item.assessment_area}\n**Learner's Report:** {assessment_item.evidence_of_assessment}\n**Gaps Determined:** {assessment_item.knowledge_gaps}\n\n**OFQUAL Unit for generating a module in curriculum for NOS Assessment Area:**\n{assessment_item.raw_ofqual_text}\n\n"
+         
        
         value = f"""Discussion data updated successfully for {email}
         
@@ -114,7 +96,7 @@ class update_discussion_data(StrictTool):
 
 **Prioritize using this data for Curriculum Generation**:
 
-{all_assessments_details}"""
+{data_for_curriculum_generation}"""
         
         logger.info(f"Discussion data updated successfully for {email}:\n\n{value}")
 

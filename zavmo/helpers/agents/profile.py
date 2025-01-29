@@ -23,15 +23,15 @@ import json
 class GetSkillFromNOS(StrictTool):
     """Get a competency from the NOS document. Competency can be knowledge or performance based."""
 
-    assessment_area:str = Field(description="A competency from the NOS document that represents a specific skill, knowledge or behavior required to meet National Occupational Standards and which is not present in the learner's responsibilities, main purpose, and work experience in current role.")
-    nos_id: str = Field(description="The NOS ID to which the competency belongs.")
+    assessment_area:str = Field(description="""A competency from the NOS Data picked from either "Performance Criteria" or "Knowledge and Understanding" sections that represents a specific skill, knowledge or behavior required to meet National Occupational Standards and which is relevant to the learner's profile.""")
+    nos_id: str = Field(description="The NOS ID associated with knowledge and performace items provided from which the competency was taken. It will be given with a clear prefix as **NOS ID:** and will be an alphanumeric value.")
     def execute(self, context: Dict):
         return self.model_dump_json() 
 
 class GetRequiredSkillsFromNOS(PermissiveTool):
-    """Use this tool to collect all competencies from the NOS data provided. First get the count of competencies relevant to the learner's profile and then generate based on the count a list of competencies."""
-    count_of_competencies: int = Field(description="Get the number of distinct items or elements to be extracted from the National Occupational Standards (NOS) data, relevant to the learner's profile. Minimum 10 is a must.")
-    nos: List[GetSkillFromNOS] = Field(description=f"Based on the count of competencies (minimum 10 is a must), list competencies present in the NOS data relevant to the learner's profile along with the NOS ID to which the competency belongs.", 
+    """Use this tool to collect all competencies from the NOS Data provided. First get the count of competencies relevant to the learner's profile and then generate based on the count a list of competencies from the NOS Data."""
+    count_of_competencies: int = Field(description="Get the number of distinct items or elements to be extracted from the National Occupational Standards (NOS) Data, relevant to the learner's profile.")
+    nos: List[GetSkillFromNOS] = Field(description=f"Based on the count of competencies, list competencies from the NOS Data relevant to the learner's profile along with the corresponding NOS ID from which each competency was taken.", 
                                        min_items=10, max_items=50)
     
     def execute(self, context: Dict):
@@ -106,14 +106,11 @@ class JDBasedRole(Enum):
 
 class GetNOSDocument(StrictTool):
     def execute(self, context: Dict):
-        profile = UserProfile.objects.get(user__email=context['email'])
-        if profile.nos.exists():  # Check if any NOS documents exist
-            nos_docs = profile.nos.all()  # Get the queryset of related NOS documents
-            nos_docs = "\n\n".join([f"Data for NOS ID: **{nos.nos_id}**\n\n{nos.text}\n\n" for nos in nos_docs])
-        else:
-            nos_docs = "No NOS documents found"
+        profile  = UserProfile.objects.get(user__email=context['email'])
+        all_nos  = profile.get_nos()
+        nos_docs = "\n\n".join([f"-----------------------------------\n{nos.text}\n" for nos in all_nos])
         context['nos_docs'] = nos_docs
-        return Result(value=f"""Generate a list of competencies from the NOS data:\n\n{nos_docs}""", context=context)
+        return Result(value=f"""Providing NOS Data. Generate a list of competencies from the NOS data:\n\n{nos_docs}""", context=context)
 
 ### For handoff
 
@@ -167,6 +164,7 @@ class update_profile_data(StrictTool):
         profile.first_name = self.first_name
         profile.last_name = self.last_name
         # Store enum value instead of enum object
+        logging.info(f"Current role: {self.current_role}")
         profile.current_role = self.current_role.value.replace("_Level_", " - Level ").replace("_", " ").lower().title()
         profile.current_industry = self.current_industry
         profile.years_of_experience = self.years_of_experience
@@ -181,7 +179,7 @@ class update_profile_data(StrictTool):
         context['profile'] = profile_data
 
         JD_details = profile.job_description.summary
-        return Result(value=f"""The JD details which matched with the user's current role is:\n\n{JD_details}. Briefly describe the JD and ask if it aligns with the learner's current role.""", context=context)
+        return Result(value=f"""The JD details which matched with the user's current role is:\n\n{JD_details}. Your must briefly describe the JD and ask if it aligns with the learner's current role.""", context=context)
             
 profile_agent = Agent(
     name="Profile",
