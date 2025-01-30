@@ -120,12 +120,10 @@ class mark_completed(StrictTool):
                 'current_assessment':1,
                 'assessments':json.dumps([TNAassessmentSerializer(assessment).data for assessment in assessments_for_current_sequence])
             }
-            agent = "Discovery"
-            agent.start_message = "Greet the learner, Welcome back! We're beginning the Discover stage once again. Now that you've completed the previous sequence, we're revisiting Discover to reassess your evolving interests over time. In this new sequence, we'll also be exploring new NOS areas."
-            value = f"4D Sequence {sequence_id} marked as completed. Lets continue with the next sequence having new NOS competencies."
+            value = f"4D Sequence {sequence_id} marked as completed. "
         else:
             value = f"4D Sequence {sequence_id} marked as completed. Lets start a new 4D learning journey."
-        return Result(value=value, context=context, agent=agent)
+        return Result(value=value, context=context )
 
 demonstrate_agent = Agent(
     name="Demonstration",
