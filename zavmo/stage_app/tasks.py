@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 @shared_task(name="xAPI_chat_celery_task")
 def xAPI_chat_celery_task(latest_user_message, latest_stage,email,latest_zavmo_message):
 
-    url = 'https://learninglocker.zavmo.ai/v1/statements/chat'
+    url = 'https://lrs.centrica.zavmo.ai//v1/statements/chat'
     headers = {
         'Content-Type': 'application/json'
     }
@@ -35,7 +35,7 @@ def xAPI_chat_celery_task(latest_user_message, latest_stage,email,latest_zavmo_m
 
 @shared_task(name="xAPI_stage_celery_task")
 def xAPI_stage_celery_task(stage_data,email,name):
-    url = 'https://learninglocker.zavmo.ai/v1/statements/stage'
+    url = 'https://lrs.centrica.zavmo.ai/v1/statements/stage'
     headers = {
         'Content-Type': 'application/json'
     }
@@ -52,7 +52,7 @@ def xAPI_stage_celery_task(stage_data,email,name):
 
 @shared_task(name="xAPI_profile_celery_task")
 def xAPI_profile_celery_task(profile_data,email):
-    url = 'https://learninglocker.zavmo.ai/v1/statements/profile'
+    url = 'https://lrs.centrica.zavmo.ai/v1/statements/profile'
     headers = {
         'Content-Type': 'application/json'
     }
@@ -80,7 +80,7 @@ def xAPI_profile_celery_task(profile_data,email):
 
 @shared_task(name="xAPI_discover_celery_task")
 def xAPI_discover_celery_task(discover_data,email,name):
-    url = 'https://learninglocker.zavmo.ai/v1/statements/learningGoals'
+    url = 'https://lrs.centrica.zavmo.ai/v1/statements/learningGoals'
     headers = {
         'Content-Type': 'application/json'
     }
@@ -103,8 +103,8 @@ def xAPI_discover_celery_task(discover_data,email,name):
 @shared_task(name="xAPI_discuss_celery_task")
 def xAPI_discuss_celery_task(discuss_data,learning_style,interest_areas,timeline,email,name):
     # API endpoints
-    curriculum_url = "https://learninglocker.zavmo.ai/v1/statements/curriculumRegistration"
-    discuss_url = "https://learninglocker.zavmo.ai/v1/statements/discuss"
+    curriculum_url = "https://lrs.centrica.zavmo.ai/v1/statements/curriculumRegistration"
+    discuss_url = "https://lrs.centrica.zavmo.ai/v1/statements/discuss"
 
     # Headers for both requests
     headers = {
@@ -161,7 +161,7 @@ def xAPI_discuss_celery_task(discuss_data,learning_style,interest_areas,timeline
 
 @shared_task(name="xAPI_lesson_celery_task")
 def xAPI_lesson_celery_task(lesson_data,email,name):
-    url = 'https://learninglocker.zavmo.ai/v1/statements/lessonStart'
+    url = 'https://lrs.centrica.zavmo.ai/v1/statements/lessonStart'
     headers = {
         'Content-Type': 'application/json'
     }
@@ -184,7 +184,7 @@ def xAPI_lesson_celery_task(lesson_data,email,name):
 
 @shared_task(name="xAPI_curriculum_completion_celery_task")
 def xAPI_curriculum_completion_celery_task(curriculum_title,email,name):
-    url = 'https://learninglocker.zavmo.ai/v1/statements/curriculumCompletion'
+    url = 'https://lrs.centrica.zavmo.ai/v1/statements/curriculumCompletion'
     headers = {
         'Content-Type': 'application/json'
     }
@@ -208,7 +208,7 @@ def xAPI_curriculum_completion_celery_task(curriculum_title,email,name):
 
 @shared_task(name="xAPI_assessment_celery_task")
 def xAPI_assessment_celery_task(assessment_data,email,name):
-    url = 'https://learninglocker.zavmo.ai/v1/statements/assessment'
+    url = 'https://lrs.centrica.zavmo.ai/v1/statements/assessment'
     headers = {
         'Content-Type': 'application/json'
     }
@@ -227,7 +227,7 @@ def xAPI_assessment_celery_task(assessment_data,email,name):
 
 @shared_task(name="xAPI_feedback_celery_task")
 def xAPI_feedback_celery_task(feedback_data,email,name):
-    url = 'https://learninglocker.zavmo.ai/v1/statements/feedback'
+    url = 'https://lrs.centrica.zavmo.ai/v1/statements/feedback'
     headers = {
         'Content-Type': 'application/json'
     }

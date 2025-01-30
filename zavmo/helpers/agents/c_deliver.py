@@ -51,7 +51,7 @@ class transfer_to_demonstrate_stage(StrictTool):
         deliver_stage.save()   
 
         if deliver_stage.is_complete:
-            xAPI_curriculum_completion_celery_task.apply_async(curriculum_title,email,name)
+            xAPI_curriculum_completion_celery_task.apply_async(args=[curriculum_title,email,name])
 
         agent = demonstrate_agent
         
