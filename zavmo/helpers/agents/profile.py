@@ -103,8 +103,11 @@ class JDBasedRole(Enum):
     ETHICS_COMPLIANCE_GOVERNANCE_CONSULTANT_LEVEL_7 = "Ethics & Compliance Governance Consultant - Level 7"
     SENIOR_ASSURANCE_ASSESSOR_LEVEL_6 = "Senior Assurance Assessor - Ethics & Compliance - Level 6"
     ENERGY_COMPLIANCE_CONSULTANT_LEVEL_6 = "Energy Compliance Consultant - Level 6"
-    GROUP_HEAD_OF_ETHICS = "Group Head of Ethics"
+    FRAUD_INVESTIGATOR_LEVEL_7 = "Fraud Investigator - Level 7"
+    ETHICS_COMPLIANCE_ASSURANCE_MANAGER_LEVEL_6 = "Ethics & Compliance Assurance Manager - Level 6"
+    ETHICS_COMPLIANCE_HEAD_OF_ASSURANCE_LEVEL_5 = "Ethics & Compliance - Head of Assurance - Level 5"
 
+    
 class ExtractNOSData(StrictTool):
     def execute(self, context: Dict):
         profile  = UserProfile.objects.get(user__email=context['email'])
