@@ -28,7 +28,7 @@ WORKDIR /zavmo
 RUN python3 manage.py makemigrations --noinput
 RUN python3 manage.py migrate
 RUN python3 manage.py createsuperuser --noinput || true
-# RUN python3 manage.py save_data assets/static_data/JDs_NOS_OFQUAL.xlsx
+RUN python3 manage.py save_data assets/static_data/JDs_NOS_OFQUAL.xlsx
 
 
 # Start supervisor

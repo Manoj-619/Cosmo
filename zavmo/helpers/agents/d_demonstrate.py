@@ -48,6 +48,7 @@ class evaluate_answer(StrictTool):
     def execute(self, context: Dict):        
         logger.info(f"Evaluating learner's answer to question: {self.question}")        
         email = context['email']
+        name = context['profile']['first_name'] + " " + context['profile']['last_name']
         sequence_id = context['sequence_id']
                 
         evaluation         = self.model_dump()
@@ -69,6 +70,7 @@ class update_self_assessment_and_feedback(StrictTool):
         logger.info(f"Updating demonstration data for {context['email']}.")
         
         email = context['email']
+        name = context['profile']['first_name'] + " " + context['profile']['last_name']
         sequence_id = context['sequence_id']
         
         # Update the DemonstrateStage object
@@ -114,12 +116,10 @@ class mark_completed(StrictTool):
                 'current_assessment':1,
                 'assessments':json.dumps([TNAassessmentSerializer(assessment).data for assessment in assessments_for_current_sequence])
             }
-            agent = "Discovery"
-            agent.start_message = "Greet the learner, Welcome back! We're beginning the Discover stage once again. Now that you've completed the previous sequence, we're revisiting Discover to reassess your evolving interests over time. In this new sequence, we'll also be exploring new NOS areas."
-            value = f"4D Sequence {sequence_id} marked as completed. Lets continue with the next sequence having new NOS competencies."
+            value = f"4D Sequence {sequence_id} marked as completed."
         else:
             value = f"4D Sequence {sequence_id} marked as completed. Lets start a new 4D learning journey."
-        return Result(value=value, context=context, agent=agent)
+        return Result(value=value, context=context )
 
 demonstrate_agent = Agent(
     name="Demonstration",
