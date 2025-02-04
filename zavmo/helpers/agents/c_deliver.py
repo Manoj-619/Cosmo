@@ -18,7 +18,7 @@ from helpers._types import (
 from helpers.utils import get_logger
 from helpers.agents.common import get_agent_instructions
 from helpers.agents.d_demonstrate import demonstrate_agent
-from stage_app.tasks import xAPI_lesson_celery_task, xAPI_curriculum_completion_celery_task
+from stage_app.tasks import xAPI_lesson_celery_task, xAPI_curriculum_completion_celery_task,xAPI_stage_celery_task
 from stage_app.models import DeliverStage, DiscussStage, UserProfile
 import json
 
@@ -54,7 +54,7 @@ class transfer_to_demonstrate_stage(StrictTool):
             xAPI_curriculum_completion_celery_task.apply_async(args=[curriculum_title,email,name])
 
         agent = demonstrate_agent
-        
+        xAPI_stage_celery_task.apply_async(args=[agent.id, email, name])
         # Create the start message for the Demonstration agent
         agent.start_message = f"""
         

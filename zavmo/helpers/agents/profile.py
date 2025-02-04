@@ -16,7 +16,7 @@ from stage_app.serializers import TNAassessmentSerializer
 from helpers.agents.a_discover import discover_agent
 from helpers.agents.common import get_agent_instructions
 from helpers.search import fetch_nos_text
-from stage_app.tasks import xAPI_profile_celery_task
+from stage_app.tasks import xAPI_profile_celery_task,xAPI_stage_celery_task
 import logging
 import json
 
@@ -125,6 +125,8 @@ class transfer_to_discover_stage(StrictTool):
     def execute(self, context: Dict):
         """Transfer to the Discovery stage when the learner has completed the Profile stage."""        
         profile = UserProfile.objects.get(user__email=context['email'])
+        email     = context['email']
+        name      = context['profile']['first_name'] + " " + context['profile']['last_name']
         is_complete, error = profile.check_complete()
         if not is_complete:
             raise ValueError(error)
@@ -132,6 +134,7 @@ class transfer_to_discover_stage(StrictTool):
             raise ValueError("Get Required skills from NOS first using the `GetRequiredSkillsFromNOS` tool, with minimum 10 competencies listed.")
         summary = profile.get_summary()
         agent = discover_agent
+        xAPI_stage_celery_task.apply_async(args=[agent.id, email, name])
         agent.start_message += f"Here is the learner's profile: {summary}"
         
         return Result(agent=agent, context=context)

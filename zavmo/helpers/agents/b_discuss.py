@@ -19,7 +19,7 @@ from helpers.utils import get_logger
 from stage_app.models import DiscussStage, UserProfile, TNAassessment, DiscoverStage
 from helpers.agents.common import get_agent_instructions
 import json
-from stage_app.tasks import xAPI_discuss_celery_task
+from stage_app.tasks import xAPI_discuss_celery_task,xAPI_stage_celery_task
 from helpers.agents.c_deliver import deliver_agent
 
 logger = get_logger(__name__)
@@ -139,6 +139,7 @@ class transfer_to_delivery_stage(StrictTool):
         logger.info(f"Transferred to the Delivery stage for {context['email']}.")
         # Get discussion data from DB
         email       = context['email']
+        name        = context['profile']['first_name'] + " " + context['profile']['last_name']
         sequence_id = context['sequence_id']
         
         discuss_stage  = DiscussStage.objects.get(user__email=email, sequence_id=sequence_id)
@@ -149,6 +150,7 @@ class transfer_to_delivery_stage(StrictTool):
         discuss_data   = discuss_stage.get_summary()    
         # Get the DeliverStage object
         agent = deliver_agent
+        xAPI_stage_celery_task.apply_async(args=[agent.id, email, name])
         # Create the start message for the Delivery agent
         agent.start_message = f"""        
 **Discussion Data:**

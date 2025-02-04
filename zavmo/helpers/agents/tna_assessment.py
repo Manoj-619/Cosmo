@@ -12,6 +12,7 @@ from stage_app.serializers import TNAassessmentSerializer
 import json
 from helpers.agents.b_discuss import discuss_agent
 from helpers.search import fetch_ofqual_text
+from stage_app.tasks import xAPI_tna_assessment_celery_task,xAPI_stage_celery_task
 
 logger = get_logger(__name__)
 
@@ -20,18 +21,23 @@ logger = get_logger(__name__)
 class transfer_to_discussion_stage(StrictTool):
     """Transfer to the Discussion stage when the learner has completed the TNA Assessment step."""    
     def execute(self, context: Dict):
-        """Transfer to the Discussion stage when the learner has completed the TNA Assessment step."""       
+        """Transfer to the Discussion stage when the learner has completed the TNA Assessment step."""  
+        email = context['email']
+        name = context['profile']['first_name'] + " " + context['profile']['last_name']
         sequence_id = context['sequence_id']
         tna_assessments = TNAassessment.objects.filter(user__email=context['email'], sequence_id=sequence_id)
         for assessment in tna_assessments:
+
             if not assessment.evidence_of_assessment:
                 raise ValueError(f"Save the details of the assessment area: {assessment.assessment_area} before transitioning to Discussion stage. If Assessment is not taken on this area, start the assessment process on this area, before saving the details.")
         
         agent = discuss_agent
+        xAPI_stage_celery_task.apply_async(args=[agent.id, email, name])
         agent.start_message = f"""
         Greet the learner and introduce to Discussion stage.
         """
         return Result(value="Transferred to Discussion stage.", agent=agent, context=context)
+
 
 class MapNOSAssessmentAreaToOFQUAL(StrictTool):
     """Use this tool immediately after the learner has shared a self assessed level on the scale of 1-7 to map the NOS assessment area to OFQUAL."""
@@ -104,6 +110,8 @@ class SaveAssessmentArea(StrictTool):
         """
         Save the details of an assessment area.
         """
+        email = context['email']
+        name = context['profile']['first_name'] + " " + context['profile']['last_name']
         logger.info(f"evidence_of_assessment: {self.evidence_of_assessment}")
         # Update the assessments data in context with proper status handling
         updated_assessments = []
@@ -130,9 +138,11 @@ class SaveAssessmentArea(StrictTool):
             
             updated_assessments.append(TNAassessmentSerializer(tna_assessment).data)
         
+        xAPI_tna_assessment_celery_task.apply_async(args=[updated_assessments,email,name])
         tna_assessment_agent.instructions = get_tna_assessment_instructions(context, level="")
         context['tna_assessment']['assessments'] = updated_assessments
         
+
         return Result(value=f"""Saved details for the Assessment area: {self.assessment_area}.""", context=context)
 
 tna_assessment_agent = Agent(

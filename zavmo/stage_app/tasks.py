@@ -3,7 +3,6 @@ import requests
 import json
 import logging
 from datetime import datetime,timezone
-from .api_config import API_CONFIG
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -44,11 +43,15 @@ def xAPI_stage_celery_task(stage_data,email,name):
             "name": name,
             "email": email
         },
-        "stage": stage_data
+        "stage":{
+            "timestamp": datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ'),
+            "stage": stage_data
+        }
     }
     response = requests.post(url, headers=headers, json=data)
     logger.info(response.text)
     return response.json()
+
 
 @shared_task(name="xAPI_profile_celery_task")
 def xAPI_profile_celery_task(profile_data,email):
@@ -206,8 +209,8 @@ def xAPI_curriculum_completion_celery_task(curriculum_title,email,name):
     logger.info(response.text)
     return response.json()
 
-@shared_task(name="xAPI_assessment_celery_task")
-def xAPI_assessment_celery_task(assessment_data,email,name):
+@shared_task(name="xAPI_evaluation_celery_task")
+def xAPI_evaluation_celery_task(evaluation_data,email,name):
     url = 'https://lrs.centrica.zavmo.ai/v1/statements/assessment'
     headers = {
         'Content-Type': 'application/json'
@@ -218,7 +221,7 @@ def xAPI_assessment_celery_task(assessment_data,email,name):
             "email": email
         },
         "assessment": {
-            "evaluations": [assessment_data]
+            "evaluations": [evaluation_data],
         }
     }
     response = requests.post(url, headers=headers, json=data)
@@ -226,7 +229,7 @@ def xAPI_assessment_celery_task(assessment_data,email,name):
     return response.json()
 
 @shared_task(name="xAPI_feedback_celery_task")
-def xAPI_feedback_celery_task(feedback_data,email,name):
+def xAPI_feedback_celery_task(feedback_data,understanding_level,email,name):
     url = 'https://lrs.centrica.zavmo.ai/v1/statements/feedback'
     headers = {
         'Content-Type': 'application/json'
@@ -237,10 +240,91 @@ def xAPI_feedback_celery_task(feedback_data,email,name):
             "email": email
         },
         "feedback": {
-            "text": feedback_data
+            "text": feedback_data,
+            "understanding_level": understanding_level
         }
     }
     response = requests.post(url, headers=headers, json=data)
     logger.info(response.text)
     return response.json()
     
+
+
+@shared_task(name="xAPI_tna_assessment_celery_task")
+def xAPI_tna_assessment_celery_task(updated_assessments,email,name):
+
+    # API Endpoints 
+    COMPLETED_API_URL = "https://lrs.centrica.zavmo.ai/v1/statements/tna"
+    IN_PROGRESS_API_URL = "https://lrs.centrica.zavmo.ai/v1/statements/tna-start"
+
+
+    completed_assessment = None
+    in_progress_assessment = None
+
+    # Find the last "Completed" assessment
+    for assessment in reversed(updated_assessments):
+        if assessment.get("status") == "Completed" and "evidence_of_assessment" in assessment:
+            completed_assessment = assessment
+            break  # Stop after finding the last completed assessment
+
+    # Find the first "In progress" assessment
+    for assessment in updated_assessments:
+        if assessment.get("status") == "In Progress":
+            in_progress_assessment = assessment
+            break  # Stop after finding the first in-progress assessment
+
+    # Headers for the API requests
+    headers = {
+        "Content-Type": "application/json"
+    }
+
+    results = {}
+
+    # Send request for "Completed" assessment
+    if completed_assessment:
+        completed_payload = {
+            "tna": {
+                "assessment_area": completed_assessment.get("assessment_area", "N/A"),
+                "status": completed_assessment.get("status", "N/A"),
+                "evidence_type": completed_assessment.get("evidence_of_assessment", "N/A"),
+                "user_assessed_knowledge_level": completed_assessment.get("user_assessed_knowledge_level", "N/A"),
+                "zavmo_assessed_knowledge_level": completed_assessment.get("zavmo_assessed_knowledge_level", "N/A"),
+                "nos_id": completed_assessment.get("nos_id", "N/A"),
+                "knowledge_gaps": completed_assessment.get("gaps",["N/A"]),
+            },
+            "actor": {  
+                "name": name,
+                "email": email
+            }
+        }
+        try:
+            response = requests.post(COMPLETED_API_URL, json=completed_payload, headers=headers)
+
+            response.raise_for_status()
+            results["completed_status"] = response.json()
+        except requests.RequestException as e:
+            results["completed_error"] = f"Completed API failed: {str(e)}"
+
+    # Send request for "In Progress" assessment
+    if in_progress_assessment:
+        in_progress_payload = {
+            "tna": {
+                "assessment_area": in_progress_assessment.get("assessment_area", "N/A"),
+                "status": in_progress_assessment.get("status", "N/A"),
+                "nos_id": in_progress_assessment.get("nos_id", "N/A"),
+            },
+
+            "actor": {
+                "name": name,
+                "email": email
+            }
+        }
+
+        try:
+            response = requests.post(IN_PROGRESS_API_URL, json=in_progress_payload, headers=headers)
+            response.raise_for_status()
+            results["in_progress_status"] = response.json()
+        except requests.RequestException as e:
+            results["in_progress_error"] = f"In Progress API failed: {str(e)}"
+
+    return results

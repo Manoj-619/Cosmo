@@ -19,7 +19,7 @@ from stage_app.serializers import TNAassessmentSerializer
 from helpers.agents.tna_assessment import tna_assessment_agent
 from helpers.agents.common import get_tna_assessment_instructions, get_agent_instructions
 from helpers.utils import get_logger
-from stage_app.tasks import xAPI_discover_celery_task
+from stage_app.tasks import xAPI_discover_celery_task,xAPI_stage_celery_task
 import json
 
 logger = get_logger(__name__)
@@ -30,15 +30,20 @@ class transfer_to_tna_assessment_step(StrictTool):
     
     def execute(self, context: Dict):
         """After the learner has completed the Discover stage, transfer to the TNA Assessment step"""
+        email = context['email']
+        name = context['profile']['first_name'] + " " + context['profile']['last_name']
         discover_stage = DiscoverStage.objects.get(user__email=context['email'], sequence=context['sequence_id'])
         discover_is_complete, error = discover_stage.check_complete()
         if not discover_is_complete:
+
             raise ValueError(f"Use the `update_discover_data` tool to update the discovery data if details are already shared, before proceeding to TNA Assessment step or ask the learner to share the details about the required item.\n\n{error}")
         
         all_assessments = context['tna_assessment']['total_nos_areas']
         assessments = TNAassessment.objects.filter(sequence_id=context['sequence_id'])
         assessment_areas = [(assessment.assessment_area, assessment.nos_id) for assessment in assessments]
         agent = tna_assessment_agent
+        xAPI_stage_celery_task.apply_async(args=[agent.id, email, name])
+
         current_assessment_areas = '\n-'.join([f"Assessment Area: {area} (NOS ID: {nos_id})" for area, nos_id in assessment_areas])
         
         # Format the message with proper error handling

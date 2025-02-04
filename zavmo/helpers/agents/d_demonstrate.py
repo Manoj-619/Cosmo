@@ -21,7 +21,7 @@ from stage_app.models import FourDSequence, DemonstrateStage, TNAassessment
 from stage_app.serializers import TNAassessmentSerializer
 from django.contrib.auth.models import User
 from helpers.utils import get_logger
-from stage_app.tasks import xAPI_assessment_celery_task, xAPI_feedback_celery_task
+from stage_app.tasks import xAPI_evaluation_celery_task, xAPI_feedback_celery_task
 
 logger = get_logger(__name__)
 
@@ -59,8 +59,9 @@ class evaluate_answer(StrictTool):
         demonstrate_object.evaluations.append(evaluation)
         demonstrate_object.save()
 
-        xAPI_assessment_celery_task.apply_async(args=[json.loads(self.model_dump_json()),email,name])
+        xAPI_evaluation_celery_task.apply_async(args=[json.loads(self.model_dump_json()),email,name])
         
+
         return Result(value=str(evaluation), context=context)
 
 
@@ -90,7 +91,7 @@ class update_self_assessment_and_feedback(StrictTool):
         demonstrate_stage.feedback_summary    = self.feedback_summary
         demonstrate_stage.save()
         
-        xAPI_feedback_celery_task.apply_async(args=[self.feedback_summary,email,name])
+        xAPI_feedback_celery_task.apply_async(args=[self.feedback_summary,self.understanding_level,email,name])
         return Result(value="Demonstration data updated successfully", context=context)
     
 
