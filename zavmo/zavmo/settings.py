@@ -101,7 +101,6 @@ WSGI_APPLICATION = 'zavmo.wsgi.application'
 #     }
 # }
 
-
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
@@ -115,6 +114,7 @@ DATABASES = {
     },    
 }
 }
+
 ### Redis settings
 
 CACHES = {

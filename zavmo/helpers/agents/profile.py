@@ -13,8 +13,8 @@ from helpers._types import (
 )
 from stage_app.models import UserProfile, TNAassessment, FourDSequence, JobDescription
 from stage_app.serializers import TNAassessmentSerializer
-from helpers.agents.a_discover import discover_agent
-from helpers.agents.common import get_agent_instructions
+from helpers.agents.a_discover import discover_agent, tna_assessment_agent
+from helpers.agents.common import get_agent_instructions, get_tna_assessment_instructions
 from helpers.search import fetch_nos_text
 from stage_app.tasks import xAPI_profile_celery_task,xAPI_stage_celery_task
 import logging
@@ -119,11 +119,11 @@ class ExtractNOSData(StrictTool):
 
 ### For handoff
 
-class transfer_to_discover_stage(StrictTool):
-    """Transfer to the Discovery stage when the learner has completed the Profile stage."""
+class transfer_to_tna_assessment_step(StrictTool):
+    """After the learner has completed the Discover stage, transfer to the TNA Assessment step."""
     
     def execute(self, context: Dict):
-        """Transfer to the Discovery stage when the learner has completed the Profile stage."""        
+        """After the learner has completed the Discover stage, transfer to the TNA Assessment step"""
         profile = UserProfile.objects.get(user__email=context['email'])
         email     = context['email']
         name      = context['profile']['first_name'] + " " + context['profile']['last_name']
@@ -133,11 +133,62 @@ class transfer_to_discover_stage(StrictTool):
         if context['sequence_id'] == "":
             raise ValueError("Get Required skills from NOS first using the `GetRequiredSkillsFromNOS` tool, with minimum 10 competencies listed.")
         summary = profile.get_summary()
-        agent = discover_agent
+        all_assessments = context['tna_assessment']['total_nos_areas']
+        assessments = TNAassessment.objects.filter(sequence_id=context['sequence_id'])
+        assessment_areas = [(assessment.assessment_area, assessment.nos_id) for assessment in assessments]
+        agent = tna_assessment_agent
         xAPI_stage_celery_task.apply_async(args=[agent.id, email, name])
-        agent.start_message += f"Here is the learner's profile: {summary}"
+        current_assessment_areas = '\n-'.join([f"Assessment Area: {area} (NOS ID: {nos_id})" for area, nos_id in assessment_areas])
         
-        return Result(agent=agent, context=context)
+        # Format the message with proper error handling
+        agent.start_message = (
+            f"Profile Summary: {summary}\n"
+            "Greet and introduce the TNA Assessment step, based on instructions and example shared on Introduction.\n"
+            f"Total NOS Areas: {all_assessments}\n"
+            f"Current Number Of Assessment Areas: {len(assessment_areas)}\n"
+            "NOS Assessment Areas for current 4D Sequence to be presented:"
+            f"\n-{current_assessment_areas}\n\n"
+            "Present the NOS Assessment Areas for current 4D Sequence in the below shared table form.\n\n"
+            "Presenting NOS Areas:"
+            + "\n"
+            "|  **Assessments For Training Needs Analysis**  |   **NOS ID**  |\n"
+            "|-----------------------------------------------|---------------|\n"
+            "|            [Assessment Area 1]                |   [NOS ID 1]  |\n"
+            "|            [Assessment Area 2]                |   [NOS ID 2]  |\n"
+            "|            [Assessment Area 3]                |   [NOS ID 3]  |\n"
+            "Then start the TNA assessment on Current NOS Area."
+        )
+
+        agent.instructions = get_tna_assessment_instructions(context, level="")
+        
+        # Update context with proper integer values
+        context['tna_assessment'] = {
+            'current_nos_areas': len(assessments),
+            'total_nos_areas': all_assessments,
+            'assessments': [TNAassessmentSerializer(assessment).data for assessment in assessments]
+        }
+        
+        return Result(value="Transferred to TNA Assessment step.",
+            agent=agent, 
+            context=context)
+
+
+# class transfer_to_discover_stage(StrictTool):
+#     """Transfer to the Discovery stage when the learner has completed the Profile stage."""
+    
+#     def execute(self, context: Dict):
+#         """Transfer to the Discovery stage when the learner has completed the Profile stage."""        
+#         profile = UserProfile.objects.get(user__email=context['email'])
+#         is_complete, error = profile.check_complete()
+#         if not is_complete:
+#             raise ValueError(error)
+#         if context['sequence_id'] == "":
+#             raise ValueError("Get Required skills from NOS first using the `GetRequiredSkillsFromNOS` tool, with minimum 10 competencies listed.")
+#         summary = profile.get_summary()
+#         agent = discover_agent
+#         agent.start_message += f"Here is the learner's profile: {summary}"
+        
+#         return Result(agent=agent, context=context)
 
 ### For updating the data
 
@@ -211,7 +262,8 @@ profile_agent = Agent(
         update_profile_data,
         ExtractNOSData,
         GetRequiredSkills,
-        transfer_to_discover_stage
+        transfer_to_tna_assessment_step
+        # transfer_to_discover_stage
     ],
     tool_choice="auto",
     parallel_tool_calls=False

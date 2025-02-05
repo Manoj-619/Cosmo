@@ -95,12 +95,12 @@ def sync_user(request):
             stage_name = 'profile'
 
         else:
-            discover_stage = DiscoverStage.objects.get(user=user, sequence=sequence)
-            discover_is_complete, error = discover_stage.check_complete()
-            if not discover_is_complete:
-                stage_name = 'discover'
+            # discover_stage = DiscoverStage.objects.get(user=user, sequence=sequence)
+            # discover_is_complete, error = discover_stage.check_complete()
+            # if not discover_is_complete:
+            #     stage_name = 'discover'
                     
-            else:
+            # else:
                 tna_assessments = TNAassessment.objects.filter(user=user, sequence=sequence)
                 for assessment in tna_assessments:
                     if not assessment.evidence_of_assessment:
