@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 from openai import OpenAI
 from openai.types.chat import ChatCompletionMessage
 from openai.types.chat.chat_completion_message_tool_call import ChatCompletionMessageToolCall
-from helpers.chat import filter_history
+from helpers.chat import filter_history, get_operational_service, get_openai_client
 from pydantic import BaseModel
 import logging
 from helpers._types import (
@@ -19,7 +19,7 @@ from helpers._types import (
     AgentFunction,
     function_to_json,
 )
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Literal
 from collections import defaultdict
 from helpers.utils import get_utc_timestamp
 
@@ -29,14 +29,14 @@ logging.getLogger("httpx").setLevel(logging.WARNING)
 logging.basicConfig(level=logging.INFO,
                     format="%(asctime)s - %(levelname)s - %(message)s")
 
-openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+openai_client = None
 
 
 def fetch_agent_response(agent: Agent, history: List, context: Dict) -> ChatCompletionMessage:
-    """Fetches the response from an agent."""
-    logging.info('Logging from fetch_agent response')
+    """Fetches the response from an agent with automatic service failover."""
     context = defaultdict(str, context)
     instructions = agent.instructions
+    
     # Start with system message
     system_message = {"role": "system", "content": instructions}
     init_messages  = [system_message]
@@ -44,7 +44,6 @@ def fetch_agent_response(agent: Agent, history: List, context: Dict) -> ChatComp
         init_messages.append({"role": "user", "content": agent.start_message})
 
     messages_history = init_messages + filter_history(history)
-    # Remove context from messages
     messages = [{k: v for k, v in message.items() if k != 'context'} for message in messages_history]
     tools = [function_to_json(f) for f in agent.functions]
 
@@ -57,10 +56,27 @@ def fetch_agent_response(agent: Agent, history: List, context: Dict) -> ChatComp
     if tools:
         create_params["parallel_tool_calls"] = agent.parallel_tool_calls
 
-    # logging.info(f"messages: {messages}")
-    # logging.info(agent.start_message)
-    # logging.info(f"instructions:{instructions}")
-    return openai_client.chat.completions.create(**create_params)
+    # Try the agent's preferred service first
+    try:
+        service = agent.service
+        openai_client = get_openai_client(service=service, timeout=120)
+        return openai_client.chat.completions.create(**create_params)
+    except Exception as e:
+        logging.warning(f"Error with {service} service: {str(e)}")
+        
+        # Check which service is operational
+        try:
+            fallback_service = get_operational_service()
+            if fallback_service != service:
+                logging.info(f"Switching to {fallback_service} service")
+                openai_client = get_openai_client(service=fallback_service, timeout=120)
+                return openai_client.chat.completions.create(**create_params)
+            else:
+                # If original service is still the only operational one, something else is wrong
+                raise RuntimeError(f"Service {service} is operational but request failed: {str(e)}")
+        except Exception as fallback_error:
+            logging.error(f"All services failed. Last error: {str(fallback_error)}")
+            raise RuntimeError("Unable to complete request: All services are unavailable")
 
 
 def execute_tool_calls(
