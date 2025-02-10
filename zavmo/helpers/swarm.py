@@ -22,6 +22,8 @@ from helpers._types import (
 from typing import List, Dict, Any, Literal
 from collections import defaultdict
 from helpers.utils import get_utc_timestamp
+import time
+
 
 load_dotenv()
 
@@ -29,7 +31,7 @@ logging.getLogger("httpx").setLevel(logging.WARNING)
 logging.basicConfig(level=logging.INFO,
                     format="%(asctime)s - %(levelname)s - %(message)s")
 
-openai_client = None
+
 
 
 def fetch_agent_response(agent: Agent, history: List, context: Dict) -> ChatCompletionMessage:
@@ -57,26 +59,14 @@ def fetch_agent_response(agent: Agent, history: List, context: Dict) -> ChatComp
         create_params["parallel_tool_calls"] = agent.parallel_tool_calls
 
     # Try the agent's preferred service first
-    try:
-        service = agent.service
-        openai_client = get_openai_client(service=service, timeout=120)
-        return openai_client.chat.completions.create(**create_params)
-    except Exception as e:
-        logging.warning(f"Error with {service} service: {str(e)}")
-        
-        # Check which service is operational
-        try:
-            fallback_service = get_operational_service()
-            if fallback_service != service:
-                logging.info(f"Switching to {fallback_service} service")
-                openai_client = get_openai_client(service=fallback_service, timeout=120)
-                return openai_client.chat.completions.create(**create_params)
-            else:
-                # If original service is still the only operational one, something else is wrong
-                raise RuntimeError(f"Service {service} is operational but request failed: {str(e)}")
-        except Exception as fallback_error:
-            logging.error(f"All services failed. Last error: {str(fallback_error)}")
-            raise RuntimeError("Unable to complete request: All services are unavailable")
+    start_time = time.time()
+    # service = get_operational_service()
+    service = "azure"
+    end_time = time.time()
+    logging.info(f"Time taken to get operational service: {end_time - start_time} seconds")
+    logging.info(f"Using {service} service")
+    openai_client = get_openai_client(service=service)
+    return openai_client.chat.completions.create(**create_params)
 
 
 def execute_tool_calls(

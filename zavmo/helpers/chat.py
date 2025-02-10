@@ -10,7 +10,7 @@ from typing import Union, List, Any, Callable, Literal
 import functools
 from helpers.utils import batch_list
 import requests
-from functools import lru_cache
+from django.core.cache import cache
 
 
 load_dotenv(override=True)
@@ -344,77 +344,33 @@ def get_batch_openai_embedding(texts: list, model="text-embedding-3-small", **kw
         embeddings += [r.embedding for r in response.data]
     return embeddings
 
-def check_service_status(service: Literal["openai", "azure"] = "openai") -> bool:
-    """
-    Check if OpenAI or Azure OpenAI API service is operational.
-    
-    Args:
-        service (Literal["openai", "azure"]): The service to check status for.
-    
-    Returns:
-        bool: True if API is operational (no outages), False otherwise
-    """
-    if service == "openai":
-        url = "https://status.openai.com/api/v2/summary.json"
-        try:
-            response = requests.get(url)
-            response.raise_for_status()
-            data = response.json()
-            
-            # Find the API component
-            for component in data["components"]:
-                if component["name"].startswith("API"):
-                    # operational means everything is working fine
-                    return component["status"] == "operational"        
-            # If API component not found, assume there's an issue
-            return False
-            
-        except requests.exceptions.RequestException as e:
-            print(f"Error checking OpenAI status: {e}")
-            return False
-            
-    elif service == "azure":
-        # Azure OpenAI status is part of Azure's overall status
-        # We can check the Azure status page for the specific region
-        azure_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
-        if not azure_endpoint:
-            print("Azure OpenAI endpoint not configured")
-            return False
-            
-        # Extract region from endpoint (e.g., https://<resource>.openai.azure.com/)
-        try:
-            region = azure_endpoint.split('.')[1]  # Gets 'openai' from the endpoint
-            url = f"https://status.azure.com/en-us/status"
-            try:
-                response = requests.get(url)
-                response.raise_for_status()
-                return "Azure OpenAI" not in response.text.lower()
-            except requests.exceptions.RequestException as e:
-                print(f"Error checking Azure status: {e}")
-                return False
-        except IndexError:
-            print("Invalid Azure OpenAI endpoint format")
-            return False
-            
-    else:
-        raise NotImplementedError(f"Status check for {service} not implemented")
-
-@lru_cache(maxsize=2)
-def get_cached_service_status(service: Literal["openai", "azure"]) -> bool:
-    """Cached version of check_service_status"""
-    return check_service_status(service)
-
 def get_operational_service() -> Literal["openai", "azure"]:
     """
     Check which service is operational using cached status.
     Returns openai by default if both are operational.
-    """
-    openai_status = get_cached_service_status("openai")
-    azure_status = get_cached_service_status("azure")
     
-    if openai_status:
-        return "openai"
-    elif azure_status:
-        return "azure"
-    else:
-        raise RuntimeError("Both OpenAI and Azure services are experiencing outages")
+    Returns:
+        Literal["openai", "azure"]: The operational service to use
+    
+    Raises:
+        RuntimeError: If both services are experiencing outages
+    """
+
+    url = "https://status.openai.com/api/v2/summary.json"
+    try:
+
+        response = requests.get(url)
+        response.raise_for_status()
+        data = response.json()
+        
+        # Find the API component
+
+        for component in data["components"]:
+            if component["name"].startswith("API"):
+                openai_status = component["status"] == "operational"
+                if openai_status:
+                    return "openai" 
+        
+    except requests.exceptions.RequestException as e:
+        logger.warning(f"Error checking OpenAI status: {e}")
+    return "azure"
