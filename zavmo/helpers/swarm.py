@@ -60,8 +60,8 @@ def fetch_agent_response(agent: Agent, history: List, context: Dict) -> ChatComp
 
     # Try the agent's preferred service first
     start_time = time.time()
-    # service = get_operational_service()
-    service = "azure"
+    service = get_operational_service()
+    # service = "azure"
     end_time = time.time()
     logging.info(f"Time taken to get operational service: {end_time - start_time} seconds")
     logging.info(f"Using {service} service")
