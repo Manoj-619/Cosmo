@@ -63,7 +63,6 @@ def chat_view(request):
             "profile": context.get('profile', {}),
             "discover": context.get('discover', {}),
             "tna_assessment": context.get('tna_assessment', {}),
-            "assessments": context.get('assessments', {}),
             "discuss": context.get('discuss', {}),
             "deliver": context.get('deliver', {}),
             "demonstrate": context.get('demonstrate', {})

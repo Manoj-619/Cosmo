@@ -24,10 +24,6 @@ from helpers.utils import get_logger
 
 logger = get_logger(__name__)
 
-def get_tna_assessment_agent():
-
-    from helpers.agents.tna_assessment import tna_assessment_agent
-    return tna_assessment_agent
 
 class question(StrictTool):
     """Use this tool to generate a single set of question, answer, and explanation for an assessment."""
@@ -97,98 +93,31 @@ class update_self_assessment_and_feedback(StrictTool):
 class mark_completed(StrictTool):
     """Mark the Demonstration stage as complete and transition to the next sequence."""    
     def execute(self, context: Dict):
-        email = context['email']        
+        email = context['email']      
         if not email:
             raise ValueError("Email is required to mark the Demonstration stage as complete.")        
         
         current_sequence_id = context['sequence_id']
-        
+        user = User.objects.get(email=email)
         try:
-            # Get current sequence and user
-            current_sequence = FourDSequence.objects.select_related('user').get(id=current_sequence_id)
-            user = current_sequence.user
-            
-            # Mark current sequence as completed
-            if current_sequence.current_stage != FourDSequence.Stage.COMPLETED:
-                current_sequence.current_stage = FourDSequence.Stage.COMPLETED
-                current_sequence.save()
-                logger.info(f"Marked sequence {current_sequence_id} as completed")
-            
-            # Find next incomplete sequence
-            next_sequence = FourDSequence.objects.filter(
-                user=user,
-                current_stage__lt=FourDSequence.Stage.COMPLETED
-            ).order_by('created_at').first()
-            
-            if not next_sequence:
-                logger.info(f"No more sequences to process for user {email}")
-                return Result(
-                    value="All sequences completed successfully.",
-                    context=context
-                )
-            
-            # Get assessments for the next sequence
-            assessments = TNAassessment.objects.filter(
-                user=user,
-                sequence=next_sequence
-            ).order_by('created_at')
-            
-            if not assessments.exists():
-                logger.warning(f"No assessments found for sequence {next_sequence.id}")
-                return Result(
-                    value=f"No assessments found for next sequence {next_sequence.id}",
-                    context=context
-                )
-            
-            # Update context with new sequence information
-            context['sequence_id'] = str(next_sequence.id)
-            context['previous_sequence_id'] = str(current_sequence_id)
-            
-            # Update context with assessment information
-            context['tna_assessment'] = {
-                'total_assessments': assessments.count(),
-                'current_assessment': 1,
-                'assessments': json.dumps([
-                    TNAassessmentSerializer(assessment).data 
-                    for assessment in assessments
-                ])
-            }
-            
-            # Set up TNA Assessment Agent
-            agent = get_tna_assessment_agent()
-            assessment_areas = [
-                (assessment.assessment_area, assessment.nos_id) 
-                for assessment in assessments
-            ]
-            
-            # Format assessment areas table
-            areas_table = "\n".join([
-                f"|            {area}                |   {nos_id}  |" 
-                for area, nos_id in assessment_areas
-            ])
-            
-            agent.start_message = (
-                f"Welcome back! Starting new sequence {next_sequence.id} with TNA Assessment.\n\n"
-                f"Total NOS Areas: {len(assessment_areas)}\n"
-                "NOS Assessment Areas:\n"
-                "|  **Assessments For Training Needs Analysis**  |   **NOS ID**  |\n"
-                "|-----------------------------------------------|---------------|\n"
-                f"{areas_table}\n"
-                "\nLet's begin with the first assessment area."
-            )
-            
-            agent.instructions = get_tna_assessment_instructions(context, level="")
-            
-            logger.info(f"Successfully transitioned to sequence {next_sequence.id}")
-            return Result(
-                value=f"Starting new sequence {next_sequence.id} with {len(assessment_areas)} assessment areas",
-                context=context,
-                agent=agent
-            )
-                
+            demonstrate_agent.id = "completed"  ## Important
+
+            try:    
+                sequences = FourDSequence.objects.filter(user=user).order_by('created_at')
+                if sequences.exists():
+                    return Result(
+                            value=f"Completed sequence {current_sequence_id}, starting new sequence to continue with next NOS assessment areas. Greet the learner and inform about the completion of current FourD Sequence and the beginning of the next FourD Sequence with TNA Assessment step.",
+                            context=context
+                        )
+            except Exception as e:
+                logger.error(f"Error in sequence transition: {str(e)}")
+                sequence = FourDSequence.objects.create(user=user)        
+                value = f"4D Sequence {sequence.id} marked as completed. New 4D learning journey created."
+                return Result(value=value, context=context)
+      
         except Exception as e:
             logger.error(f"Error in sequence transition: {str(e)}")
-            raise ValueError(f"Failed to transition to next sequence: {str(e)}")
+            raise ValueError(f"Failed to transition to next FourD Sequence: {str(e)}")
 
 demonstrate_agent = Agent(
     name="Demonstration",
