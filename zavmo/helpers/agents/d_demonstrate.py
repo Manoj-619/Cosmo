@@ -97,27 +97,26 @@ class mark_completed(StrictTool):
         if not email:
             raise ValueError("Email is required to mark the Demonstration stage as complete.")        
         
+        # Retrieve user and create a new 4D Sequence
+        demonstrate_stage = DemonstrateStage.objects.get(user__email=email)
+        is_complete, error = demonstrate_stage.check_complete()
+        if not is_complete:
+            raise ValueError(error)  
+        
         current_sequence_id = context['sequence_id']
         user = User.objects.get(email=email)
-        try:
-            demonstrate_agent.id = "completed"  ## Important
+        demonstrate_agent.id = "completed"  ## Important
 
-            try:    
-                sequences = FourDSequence.objects.filter(user=user).order_by('created_at')
-                if sequences.exists():
-                    return Result(
-                            value=f"Completed sequence {current_sequence_id}, starting new sequence to continue with next NOS assessment areas. Greet the learner and inform about the completion of current FourD Sequence and the beginning of the next FourD Sequence with TNA Assessment step.",
-                            context=context
-                        )
-            except Exception as e:
-                logger.error(f"Error in sequence transition: {str(e)}")
-                sequence = FourDSequence.objects.create(user=user)        
-                value = f"4D Sequence {sequence.id} marked as completed. New 4D learning journey created."
-                return Result(value=value, context=context)
-      
-        except Exception as e:
-            logger.error(f"Error in sequence transition: {str(e)}")
-            raise ValueError(f"Failed to transition to next FourD Sequence: {str(e)}")
+        sequences = FourDSequence.objects.filter(user=user).order_by('created_at')
+        if sequences.exists():
+            return Result(
+                    value=f"Completed sequence {current_sequence_id}, starting new sequence to continue with next NOS assessment areas. Greet the learner and inform about the completion of current FourD Sequence and the beginning of the next FourD Sequence with TNA Assessment step.",
+                    context=context)
+        else:
+            logger.info("No existing 4D sequences found for the user. Creating a new 4D learning journey.")
+            sequence = FourDSequence.objects.create(user=user)        
+            value = f"4D Sequence {sequence.id} marked as completed. New 4D learning journey created."
+            return Result(value=value, context=context)
 
 demonstrate_agent = Agent(
     name="Demonstration",
