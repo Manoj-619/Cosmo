@@ -5,10 +5,12 @@ from rest_framework.decorators import api_view, authentication_classes, permissi
 from rest_framework.response import Response as DRFResponse
 from rest_framework import status
 from stage_app.views.utils import _get_user_and_sequence, _initialize_context, _determine_stage, _get_message_history, _process_agent_response, _update_context_and_cache
-from ..tasks import xAPI_chat_celery_task
+from ..tasks import xAPI_chat_celery_task, xAPI_stage_celery_task
 
 
 logger = get_logger(__name__)
+
+has_called_profile_stage_xapi = False
 
 
 @api_view(['POST', 'OPTIONS'])
@@ -36,6 +38,12 @@ def chat_view(request):
         })
 
     message_history = _get_message_history(user.email, sequence_id, request.data.get('message'))
+
+    global has_called_profile_stage_xapi
+    email = context['email']
+    if stage_name == "profile" and not has_called_profile_stage_xapi:
+        xAPI_stage_celery_task.apply_async(args=[stage_name, email, email])
+        has_called_profile_stage_xapi = True
 
     # Get the latest user message from the message history
     if message_history and message_history[-1].get("role") == "user":
