@@ -9,7 +9,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Define base URL from environment variable
-BASE_API_URL = os.getenv('XAPI_BASE_URL')
+BASE_API_URL = os.getenv('ZAVMO_XAPI_BASE_URL')
 
 @shared_task(name="xAPI_chat_celery_task")
 def xAPI_chat_celery_task(latest_user_message, latest_stage,email,latest_zavmo_message):
