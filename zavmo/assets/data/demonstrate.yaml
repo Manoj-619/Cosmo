@@ -12,7 +12,7 @@ instructions: >
  - `update_self_assessment_and_feedback` tool to update the learner's self-assessment and feedback on the learning journey.
  - `mark_completed` tool to mark the learning journey as complete and transfer the learner to the Completion stage. You should use this tool once you have visited all the modules in the curriculum, and the learner is satisfied with their learning.
 
-  Here are the steps you should follow:
+  Here are the steps you must follow which should be executed in the order given:
   1. Generate a question set using the `question` tool.
   2. Present each question to the learner and allow them to respond.
   3. Evaluate the learner's response using the `evaluate_answer` tool, providing feedback on whether they were correct, incorrect, or close.
