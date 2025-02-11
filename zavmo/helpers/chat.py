@@ -3,12 +3,15 @@ import logging
 import tiktoken
 import openai
 import anthropic
-from openai import OpenAI
+from openai import OpenAI, AzureOpenAI
 from dotenv import load_dotenv
 from pydantic import BaseModel
-from typing import Union, List, Any, Callable
+from typing import Union, List, Any, Callable, Literal
 import functools
 from helpers.utils import batch_list
+import requests
+from django.core.cache import cache
+
 
 load_dotenv(override=True)
 
@@ -270,8 +273,34 @@ def validate_message_history(message_history):
 
 
 
-def get_openai_client():
-    openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+def get_openai_client(service: Literal["openai", "azure"] = "openai", **kwargs):
+    """
+    Get an OpenAI or Azure OpenAI client.
+    
+    Args:
+        service (Literal["openai", "azure"]): The service to use. Defaults to "openai".
+        **kwargs: Additional arguments to pass to the client constructor.
+    
+    Returns:
+        OpenAI or AzureOpenAI: The appropriate client instance.
+    
+    Raises:
+        NotImplementedError: If the service is not supported.
+    """
+    if service == "openai":
+        openai_client = OpenAI(
+            api_key=os.getenv("OPENAI_API_KEY"),
+            **kwargs
+        )
+    elif service == "azure":
+        openai_client = AzureOpenAI(
+            api_key=os.getenv("AZURE_OPENAI_API_KEY"),
+            azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
+            api_version=os.getenv("AZURE_OPENAI_API_VERSION"),
+            **kwargs
+        )
+    else:
+        raise NotImplementedError(f"OpenAI client for {service} not implemented")
     return openai_client
 
 
@@ -314,3 +343,34 @@ def get_batch_openai_embedding(texts: list, model="text-embedding-3-small", **kw
         )
         embeddings += [r.embedding for r in response.data]
     return embeddings
+
+def get_operational_service() -> Literal["openai", "azure"]:
+    """
+    Check which service is operational using cached status.
+    Returns openai by default if both are operational.
+    
+    Returns:
+        Literal["openai", "azure"]: The operational service to use
+    
+    Raises:
+        RuntimeError: If both services are experiencing outages
+    """
+
+    url = "https://status.openai.com/api/v2/summary.json"
+    try:
+
+        response = requests.get(url)
+        response.raise_for_status()
+        data = response.json()
+        
+        # Find the API component
+
+        for component in data["components"]:
+            if component["name"].startswith("API"):
+                openai_status = component["status"] == "operational"
+                if openai_status:
+                    return "openai" 
+        
+    except requests.exceptions.RequestException as e:
+        logger.warning(f"Error checking OpenAI status: {e}")
+    return "azure"

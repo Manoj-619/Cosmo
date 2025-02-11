@@ -131,8 +131,10 @@ class transfer_to_tna_assessment_step(StrictTool):
         if not is_complete:
             raise ValueError(error)
         if context['sequence_id'] == "":
-            raise ValueError("Get Required skills from NOS first using the `GetRequiredSkillsFromNOS` tool, with minimum 10 competencies listed.")
+            raise ValueError("Get Required skills from NOS first using the `GetRequiredSkills` tool, with minimum 10 competencies listed.")
+        
         summary = profile.get_summary()
+
         all_assessments = context['tna_assessment']['total_nos_areas']
         assessments = TNAassessment.objects.filter(sequence_id=context['sequence_id'])
         assessment_areas = [(assessment.assessment_area, assessment.nos_id) for assessment in assessments]
@@ -142,7 +144,7 @@ class transfer_to_tna_assessment_step(StrictTool):
         
         # Format the message with proper error handling
         agent.start_message = (
-            f"Profile Summary: {summary}\n"
+            f"Here is the learner's profile: {summary}\n\n"
             "Greet and introduce the TNA Assessment step, based on instructions and example shared on Introduction.\n"
             f"Total NOS Areas: {all_assessments}\n"
             f"Current Number Of Assessment Areas: {len(assessment_areas)}\n"

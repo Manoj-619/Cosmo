@@ -16,14 +16,15 @@ from helpers._types import (
     Result,
 )
 import json
-from helpers.agents.common import get_agent_instructions
-from stage_app.models import FourDSequence, DemonstrateStage, TNAassessment
+from helpers.agents.common import get_agent_instructions, get_tna_assessment_instructions
+from stage_app.models import FourDSequence, DemonstrateStage, TNAassessment, DiscoverStage
 from stage_app.serializers import TNAassessmentSerializer
 from django.contrib.auth.models import User
 from helpers.utils import get_logger
 from stage_app.tasks import xAPI_evaluation_celery_task, xAPI_feedback_celery_task
 
 logger = get_logger(__name__)
+
 
 class question(StrictTool):
     """Use this tool to generate a single set of question, answer, and explanation for an assessment."""
@@ -94,37 +95,33 @@ class update_self_assessment_and_feedback(StrictTool):
         xAPI_feedback_celery_task.apply_async(args=[self.feedback_summary,self.understanding_level,email,name])
         return Result(value="Demonstration data updated successfully", context=context)
     
-
 class mark_completed(StrictTool):
-    """Mark the Demonstration stage as complete so that a new 4D learning journey can be created."""    
+    """Mark the Demonstration stage as complete and transition to the next sequence."""    
     def execute(self, context: Dict):
-        email = context['email']        
+        email = context['email']      
         if not email:
             raise ValueError("Email is required to mark the Demonstration stage as complete.")        
-        # Retrieve user and create a new 4D Sequence
-        sequence_id = context['sequence_id']
-        demonstrate_stage = DemonstrateStage.objects.get(user__email=email, sequence_id=sequence_id)
         
+        # Retrieve user and create a new 4D Sequence
+        demonstrate_stage = DemonstrateStage.objects.get(user__email=email, sequence_id=context['sequence_id'])
         is_complete, error = demonstrate_stage.check_complete()
         if not is_complete:
-            raise ValueError(error)        
-        user     = User.objects.get(email=email)
-        all_sequences    = FourDSequence.objects.filter(user=user).order_by('created_at')
-        sequences_to_complete = [s.id for s in all_sequences if s.current_stage != FourDSequence.Stage.COMPLETED]   
-        next_sequence = sequences_to_complete[0] if len(sequences_to_complete) > 0 else None
-        if next_sequence:
-            assessments_for_current_sequence = TNAassessment.objects.filter(user=user, sequence=next_sequence)
-            context['sequence_id'] = next_sequence
-            context['sequences_to_complete'] = sequences_to_complete
-            context['tna_assessment'] = {
-                'total_assessments': assessments_for_current_sequence.count(),
-                'current_assessment':1,
-                'assessments':json.dumps([TNAassessmentSerializer(assessment).data for assessment in assessments_for_current_sequence])
-            }
-            value = f"4D Sequence {sequence_id} marked as completed. "
+            raise ValueError(error)  
+        
+        current_sequence_id = context['sequence_id']
+        user = User.objects.get(email=email)
+        demonstrate_agent.id = "completed"  ## Important
+
+        sequences = FourDSequence.objects.filter(user=user).order_by('created_at')
+        if sequences.exists():
+            return Result(
+                    value=f"Completed sequence {current_sequence_id}, starting new sequence to continue with next NOS assessment areas. Greet the learner and inform about the completion of current FourD Sequence and the beginning of the next FourD Sequence with TNA Assessment step.",
+                    context=context)
         else:
-            value = f"4D Sequence {sequence_id} marked as completed. Lets start a new 4D learning journey."
-        return Result(value=value, context=context )
+            logger.info("No existing 4D sequences found for the user. Creating a new 4D learning journey.")
+            sequence = FourDSequence.objects.create(user=user)        
+            value = f"4D Sequence {sequence.id} marked as completed. New 4D learning journey created."
+            return Result(value=value, context=context)
 
 demonstrate_agent = Agent(
     name="Demonstration",

@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 from openai import OpenAI
 from openai.types.chat import ChatCompletionMessage
 from openai.types.chat.chat_completion_message_tool_call import ChatCompletionMessageToolCall
-from helpers.chat import filter_history
+from helpers.chat import filter_history, get_operational_service, get_openai_client
 from pydantic import BaseModel
 import logging
 from helpers._types import (
@@ -19,9 +19,11 @@ from helpers._types import (
     AgentFunction,
     function_to_json,
 )
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Literal
 from collections import defaultdict
 from helpers.utils import get_utc_timestamp
+import time
+
 
 load_dotenv()
 
@@ -29,14 +31,14 @@ logging.getLogger("httpx").setLevel(logging.WARNING)
 logging.basicConfig(level=logging.INFO,
                     format="%(asctime)s - %(levelname)s - %(message)s")
 
-openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
 
 
 def fetch_agent_response(agent: Agent, history: List, context: Dict) -> ChatCompletionMessage:
-    """Fetches the response from an agent."""
-    logging.info('Logging from fetch_agent response')
+    """Fetches the response from an agent with automatic service failover."""
     context = defaultdict(str, context)
     instructions = agent.instructions
+    
     # Start with system message
     system_message = {"role": "system", "content": instructions}
     init_messages  = [system_message]
@@ -44,7 +46,6 @@ def fetch_agent_response(agent: Agent, history: List, context: Dict) -> ChatComp
         init_messages.append({"role": "user", "content": agent.start_message})
 
     messages_history = init_messages + filter_history(history)
-    # Remove context from messages
     messages = [{k: v for k, v in message.items() if k != 'context'} for message in messages_history]
     tools = [function_to_json(f) for f in agent.functions]
 
@@ -57,9 +58,9 @@ def fetch_agent_response(agent: Agent, history: List, context: Dict) -> ChatComp
     if tools:
         create_params["parallel_tool_calls"] = agent.parallel_tool_calls
 
-    # logging.info(f"messages: {messages}")
-    # logging.info(agent.start_message)
-    # logging.info(f"instructions:{instructions}")
+    service = get_operational_service()
+    logging.info(f"Generating agent response using {service} service")
+    openai_client = get_openai_client(service=service)
     return openai_client.chat.completions.create(**create_params)
 
 
