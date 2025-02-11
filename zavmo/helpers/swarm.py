@@ -58,13 +58,8 @@ def fetch_agent_response(agent: Agent, history: List, context: Dict) -> ChatComp
     if tools:
         create_params["parallel_tool_calls"] = agent.parallel_tool_calls
 
-    # Try the agent's preferred service first
-    start_time = time.time()
     service = get_operational_service()
-    # service = "azure"
-    end_time = time.time()
-    logging.info(f"Time taken to get operational service: {end_time - start_time} seconds")
-    logging.info(f"Using {service} service")
+    logging.info(f"Generating agent response using {service} service")
     openai_client = get_openai_client(service=service)
     return openai_client.chat.completions.create(**create_params)
 

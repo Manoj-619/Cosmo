@@ -169,8 +169,9 @@ def _process_agent_response(stage_name, message_history, context, max_turns=10):
 
         ## Get Summary of previous stages    
         if stage_model == TNAassessment:
-            all_tna_assessments_for_current_4D_sequence = TNAassessment.objects.filter(user__email=email, sequence_id=sequence_id)
-            summary = "".join([s.get_summary() for s in all_tna_assessments_for_current_4D_sequence])
+            tna_assessments_for_current_4D_sequence = TNAassessment.objects.filter(user__email=email, sequence_id=sequence_id)
+            assessment_areas_info = tna_assessments_for_current_4D_sequence.get_assessment_areas_info()
+            summary = assessment_areas_info + "\n\n" + tna_assessments_for_current_4D_sequence.get_summary()
         else:
             summary = stage_model.get_summary()
         agent.start_message = f"""
@@ -179,28 +180,8 @@ def _process_agent_response(stage_name, message_history, context, max_turns=10):
         {summary}        
         """
     if stage_name == 'tna_assessment':
-        profile = UserProfile.objects.get(user__email=email)
         agent.instructions = get_tna_assessment_instructions(context, level="")
-        all_assessments = context['tna_assessment']['total_nos_areas']
-        number_of_assessments_for_current_4D_sequence = context['tna_assessment']['current_nos_areas']
-        assessment_areas_with_nos_ids = [f"Assessment Area: {assessment.assessment_area} (NOS ID: {assessment.nos_id})" for assessment in all_tna_assessments_for_current_4D_sequence]
-        areas_list = '\n-'.join(assessment_areas_with_nos_ids)
-        agent.start_message = f"""
-        Here is the learner's profile: {profile.get_summary()}
-        
-        Total NOS Areas: {all_assessments}
-        Number of NOS Areas to complete in current 4D Sequence: {number_of_assessments_for_current_4D_sequence}
-        NOS Assessment Areas for current 4D Sequence to be presented:
-        -{areas_list}
 
-        Presenting NOS Areas:
-
-        |       **Assessments For Training Needs Analysis**      |   **NOS ID**  |
-        |--------------------------------------------------------|---------------|
-        |              [Assessment Area 1]                       |    [NOS ID]   |
-        |              [Assessment Area 2]                       |    [NOS ID]   |
-        
-        """
     return run_step(
         agent=agent,
         messages=message_history,
