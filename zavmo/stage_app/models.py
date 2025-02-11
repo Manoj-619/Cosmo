@@ -300,8 +300,6 @@ class DiscussStage(models.Model):
         return f"User {self.user.email} - Sequence {self.sequence.id} - Discuss Stage"
     
     def check_complete(self):
-        if not self.interest_areas:
-            return False, "Interest areas are required"
         if not self.learning_style:
             return False, "Learning style is required"
         if not self.timeline:
