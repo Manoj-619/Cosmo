@@ -242,7 +242,9 @@ class update_profile_data(StrictTool):
                     profile.job_description = new_jd
                 except JobDescription.DoesNotExist:
                     logging.warning(f"No JD found for role: {current_role}")
-        
+        else:
+            profile.job_description = JobDescription.objects.get(job_role=current_role)
+            
         profile.save()
 
         xAPI_profile_celery_task.apply_async(args=[json.loads(self.model_dump_json()),email])
