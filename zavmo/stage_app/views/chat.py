@@ -10,8 +10,6 @@ from ..tasks import xAPI_chat_celery_task, xAPI_stage_celery_task
 
 logger = get_logger(__name__)
 
-has_called_profile_stage_xapi = False
-
 
 @api_view(['POST', 'OPTIONS'])
 @authentication_classes([CustomJWTAuthentication])
@@ -39,11 +37,10 @@ def chat_view(request):
 
     message_history = _get_message_history(user.email, sequence_id, request.data.get('message'))
 
-    global has_called_profile_stage_xapi
     email = context['email']
-    if stage_name == "profile" and not has_called_profile_stage_xapi:
+    if stage_name == "profile" and not context.get('has_called_profile_stage_xapi', False):
         xAPI_stage_celery_task.apply_async(args=[stage_name, email, email])
-        has_called_profile_stage_xapi = True
+        context['has_called_profile_stage_xapi'] = True
 
     # Get the latest user message from the message history
     if message_history and message_history[-1].get("role") == "user":
