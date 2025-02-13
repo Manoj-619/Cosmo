@@ -183,7 +183,7 @@ def _process_agent_response(stage_name, message_history, context, max_turns=10):
             )
         else:
             summary = stage_model.get_summary()
-        agent.start_message = f"""
+        agent.start_message += f"""
         **{stage_order[i].capitalize()}:**
         
         {summary}        
