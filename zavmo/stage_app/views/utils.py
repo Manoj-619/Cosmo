@@ -158,6 +158,9 @@ def _process_agent_response(stage_name, message_history, context, max_turns=10):
     email = context['email']
     sequence_id = context['sequence_id']
     
+    logger.info(f"Processing agent response for stage: {stage_name}")
+    logger.info(f"Context data: {json.dumps(context, indent=2)}")
+    
     stage_level = stage_order.index(stage_name) + 1
     for i in range(stage_level):
         if i == 0:
@@ -180,7 +183,7 @@ def _process_agent_response(stage_name, message_history, context, max_turns=10):
             )
         else:
             summary = stage_model.get_summary()
-        agent.start_message += f"""
+        agent.start_message = f"""
         **{stage_order[i].capitalize()}:**
         
         {summary}        
