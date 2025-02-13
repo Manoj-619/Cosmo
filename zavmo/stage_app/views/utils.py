@@ -166,7 +166,7 @@ def _process_agent_response(stage_name, message_history, context, max_turns=10):
     sequence_id = context['sequence_id']
     
     logger.info(f"Processing agent response for stage: {stage_name}")
-    logger.info(f"Context data: {json.dumps(context, indent=2)}")
+    logger.info(f"Context data: {context}")
     
     stage_level = stage_order.index(stage_name) + 1
     for i in range(stage_level):
