@@ -161,7 +161,7 @@ def _process_agent_response(stage_name, message_history, context, max_turns=10):
     logger.info(f"Processing agent response for stage: {stage_name}")
     logger.info(f"Context data: {json.dumps(context, indent=2)}")
     
-    stage_level = stage_order.index(stage_name) + 1
+    stage_level = stage_order.index(stage_name)
     for i in range(stage_level):
         if i == 0:
             stage_model = UserProfile.objects.get(user__email=email)
