@@ -238,7 +238,9 @@ class update_profile_data(StrictTool):
                     profile.job_description = new_jd
                 except JobDescription.DoesNotExist:
                     logging.warning(f"No JD found for role: {current_role}")
-        
+        else:
+            profile.job_description = JobDescription.objects.get(job_role=current_role)
+            
         profile.save()
         
         # Convert enum to string value before storing in context
