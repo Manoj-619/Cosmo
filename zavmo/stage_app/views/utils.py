@@ -11,17 +11,24 @@ from helpers.constants import CONTEXT_SUFFIX, HISTORY_SUFFIX, DEFAULT_CACHE_TIME
 from helpers.swarm import run_step
 from django.db import utils as django_db_utils
 import json
+from copy import deepcopy
 
 stage_order = ['profile', 'discover', 'tna_assessment', 'discuss', 'deliver', 'demonstrate']
 stage_models = [UserProfile, DiscoverStage, TNAassessment, DiscussStage, DeliverStage, DemonstrateStage]
 
-agents = { 'profile': profile.profile_agent,
-           'discover': a_discover.discover_agent,
-           'tna_assessment': tna_assessment.tna_assessment_agent,
-           'discuss': b_discuss.discuss_agent,
-           'deliver': c_deliver.deliver_agent,
-           'demonstrate': d_demonstrate.demonstrate_agent,
-        }
+def get_agent(stage_name):
+    if stage_name == 'profile':
+        return deepcopy(profile.profile_agent)
+    elif stage_name == 'discover':
+        return deepcopy(a_discover.discover_agent)
+    elif stage_name == 'tna_assessment':
+        return deepcopy(tna_assessment.tna_assessment_agent)
+    elif stage_name == 'discuss':
+        return deepcopy(b_discuss.discuss_agent)
+    elif stage_name == 'deliver':
+        return deepcopy(c_deliver.deliver_agent)
+    elif stage_name == 'demonstrate':
+        return deepcopy(d_demonstrate.demonstrate_agent)
 
 
 logger = get_logger(__name__)
@@ -154,9 +161,11 @@ def _get_message_history(email, sequence_id, user_message):
 
 def _process_agent_response(stage_name, message_history, context, max_turns=10):
     """Process agent response with given context and messages."""
-    agent = agents[stage_name]    
+    agent = get_agent(stage_name)    
     email = context['email']
     sequence_id = context['sequence_id']
+    
+    logger.info(f"Processing agent response for stage: {stage_name}")
     
     stage_level = stage_order.index(stage_name) + 1
     for i in range(stage_level):
@@ -185,6 +194,7 @@ def _process_agent_response(stage_name, message_history, context, max_turns=10):
         
         {summary}        
         """
+        logger.info(f"Agent start message from process_agent_response: {agent.start_message}")
     if stage_name == 'tna_assessment':
         agent.instructions = get_tna_assessment_instructions(context, level="")
 

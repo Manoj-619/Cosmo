@@ -47,6 +47,7 @@ def fetch_agent_response(agent: Agent, history: List, context: Dict) -> ChatComp
 
     messages_history = init_messages + filter_history(history)
     messages = [{k: v for k, v in message.items() if k != 'context'} for message in messages_history]
+
     tools = [function_to_json(f) for f in agent.functions]
 
     create_params = {
@@ -61,6 +62,7 @@ def fetch_agent_response(agent: Agent, history: List, context: Dict) -> ChatComp
     service = get_operational_service()
     logging.info(f"Generating agent response using {service} service")
     openai_client = get_openai_client(service=service)
+    logging.info(f"start message: {agent.start_message}")
     return openai_client.chat.completions.create(**create_params)
 
 
