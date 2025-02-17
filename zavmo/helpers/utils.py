@@ -11,6 +11,23 @@ from datetime import datetime, timedelta, UTC
 
 load_dotenv()
 
+def walk_dir(path, keyword=None, extension=None):
+    """
+    Crawls through local directory `path`.
+    Searches for files with `keyword`.
+    Filters for files that end with `Format`
+    Returns list of files with their absolute paths.
+    """
+    list_of_files = []
+    for (dirpath, dirnames, filenames) in os.walk(path):
+        for filename in filenames:
+            if keyword and keyword not in filename:
+                continue
+            if extension and not filename.endswith(extension):
+                continue
+            list_of_files.append(os.path.join(dirpath, filename))
+    list_of_files.sort()
+    return list_of_files
 
 def batch_list(data, batch_size):
     """Generate batches of data with a given batch size."""
