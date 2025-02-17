@@ -346,7 +346,7 @@ def get_batch_openai_embedding(texts: list, model="text-embedding-3-small", **kw
 
 def get_operational_service() -> Literal["openai", "azure"]:
     """
-    Check which service is operational using cached status.
+    Check which service is operational.
     Returns openai by default if both are operational.
     
     Returns:
