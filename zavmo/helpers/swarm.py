@@ -47,7 +47,7 @@ def fetch_agent_response(agent: Agent, history: List, context: Dict) -> ChatComp
 
     messages_history = init_messages + filter_history(history)
     messages = [{k: v for k, v in message.items() if k != 'context'} for message in messages_history]
-    logging.info(f"messages: {messages}")
+
     tools = [function_to_json(f) for f in agent.functions]
 
     create_params = {
