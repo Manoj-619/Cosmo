@@ -201,33 +201,11 @@ class TNAassessment(models.Model):
             return False, f"NOS Assessment Area: {self.assessment_area} is not assessed yet."
         return True, None
 
-    def get_summary(self):
-        all_assessments = TNAassessment.objects.filter(user__email=self.user.email, sequence_id=self.sequence.id)
-        return "\n\n".join([f"""
-        **Assessment Area**: {s.assessment_area}
-        **Status**: {s.status}
-        **Evidence of Assessment**: {s.evidence_of_assessment}
-        """ for s in all_assessments])
-    
-    def get_assessment_areas_info(self):
-        """Get NOS Assessment Areas detailed information"""
-        all_assessments = TNAassessment.objects.filter(user__email=self.user.email, sequence_id=self.sequence.id)
-        number_of_assessments_for_current_4D_sequence = len(all_assessments)
-        assessment_areas_with_nos_ids = [f"Assessment Area: {assessment.assessment_area} (NOS ID: {assessment.nos_id})" for assessment in all_assessments]
-        areas_list = '\n- '.join(assessment_areas_with_nos_ids)
-        
-        return f"""Total NOS Areas: {all_assessments}
-        Number of NOS Areas to complete in current 4D Sequence: {number_of_assessments_for_current_4D_sequence}
-        NOS Assessment Areas for current 4D Sequence to be presented:
-        - {areas_list}
-
-        Presenting NOS Areas:
-
-        |       **Assessments For Training Needs Analysis**      |   **NOS ID**  |
-        |--------------------------------------------------------|---------------|
-        |              [Assessment Area 1]                       |    [NOS ID]   |
-        |              [Assessment Area 2]                       |    [NOS ID]   |
-        
+    def get_summary_of_assessment_area(self):
+        return f"""
+        **Assessment Area**: {self.assessment_area}
+        **Status**: {self.status}
+        **Evidence of Assessment**: {self.evidence_of_assessment}
         """
 
 # Stage 1
