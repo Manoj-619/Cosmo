@@ -141,19 +141,12 @@ class transfer_to_tna_assessment_step(StrictTool):
         # Format the message with proper error handling
         agent.start_message = (
             f"Here is the learner's profile: {summary}\n\n"
-            "Greet and introduce the TNA Assessment step, based on instructions and example shared on Introduction.\n"
+            "Greet and introduce the TNA Assessment step, based on instructions and example shared in Introduction.\n"
             f"Total NOS Areas: {all_assessments}\n"
             f"Current Number Of Assessment Areas: {len(assessment_areas)}\n"
             "NOS Assessment Areas for current 4D Sequence to be presented:"
             f"\n-{current_assessment_areas}\n\n"
-            "Present the NOS Assessment Areas for current 4D Sequence in the below shared table form.\n\n"
-            "Presenting NOS Areas:"
-            + "\n"
-            "|  **Assessments For Training Needs Analysis**  |   **NOS ID**  |\n"
-            "|-----------------------------------------------|---------------|\n"
-            "|            [Assessment Area 1]                |   [NOS ID 1]  |\n"
-            "|            [Assessment Area 2]                |   [NOS ID 2]  |\n"
-            "|            [Assessment Area 3]                |   [NOS ID 3]  |\n"
+            "Present the NOS Assessment Areas for current 4D Sequence in a table form.\n\n"
             "Then start the TNA assessment on Current NOS Area."
         )
 
