@@ -107,6 +107,7 @@ class JDBasedRole(Enum):
     FRAUD_INVESTIGATOR_LEVEL_7 = "Fraud Investigator - Level 7"
     ETHICS_COMPLIANCE_ASSURANCE_MANAGER_LEVEL_6 = "Ethics & Compliance Assurance Manager - Level 6"
     ETHICS_COMPLIANCE_HEAD_OF_ASSURANCE_LEVEL_5 = "Ethics & Compliance - Head of Assurance - Level 5"
+    GROUP_HEAD_OF_ETHICS = "Group Head of Ethics"
 
     
 class ExtractNOSData(StrictTool):
