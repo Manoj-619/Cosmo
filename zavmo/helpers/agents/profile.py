@@ -18,7 +18,6 @@ from helpers.agents.common import get_agent_instructions, get_tna_assessment_ins
 from helpers.search import fetch_nos_text
 from stage_app.tasks import xAPI_profile_celery_task,xAPI_stage_celery_task
 import logging
-import json
 
 
 class GetSkillFromNOS(StrictTool):
@@ -38,7 +37,7 @@ class GetRequiredSkills(PermissiveTool):
     
     def execute(self, context: Dict):
         if not context.get('nos_docs'):
-            raise ValueError("NOS data not found in context, use GetNOS tool first.")
+            raise ValueError("NOS data not found in context, use `ExtractNOSData` tool first.")
         
         user_profile = UserProfile.objects.get(user__email=context['email'])
         
