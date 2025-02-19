@@ -4,7 +4,8 @@ Fields:
 """
 from enum import Enum
 from pydantic import Field
-from typing import Dict, List, Literal, Optional
+from typing import Dict, List, Optional
+import json
 from helpers._types import (
     Agent,
     StrictTool,
