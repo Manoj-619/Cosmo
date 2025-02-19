@@ -91,7 +91,7 @@ class Lesson(StrictTool):
             user__email=email, 
             sequence_id=sequence_id
         )
-        lesson_number = len(deliver_stage.lessons) + 1
+
         deliver_stage.lessons.append(new_lesson)
         deliver_stage.save()
         
