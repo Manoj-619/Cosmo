@@ -109,7 +109,13 @@ class JDBasedRole(Enum):
 
     
 class ExtractNOSData(StrictTool):
+    """Extract NOS data from the user's profile."""
+    
     def execute(self, context: Dict):
+        """Extract NOS data from the user's profile."""
+        if not context.get('profile'):
+            raise ValueError("Profile data not found in context, use `update_profile_data` tool first.")
+        
         profile  = UserProfile.objects.get(user__email=context['email'])
         all_nos  = profile.get_nos()
         nos_docs = "\n\n".join([f"-----------------------------------\n{nos.text}\n" for nos in all_nos])

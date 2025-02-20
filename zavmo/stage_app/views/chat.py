@@ -40,7 +40,7 @@ def chat_view(request):
     if not response.messages:
         return DRFResponse({
             "error": "No response generated from the agent",
-            "stage": response.agent.id,
+            "stage": response.agent.id if response.agent.id != 'completed' else 'demonstrate',
             "sequence_id": sequence_id,
             "stage_data": {
                 "profile": context.get('profile', {}),
@@ -57,7 +57,7 @@ def chat_view(request):
     return DRFResponse({
         "type": "text",
         "message": response.messages[-1]['content'],
-        "stage": response.agent.id,
+        "stage": response.agent.id if response.agent.id != 'completed' else 'demonstrate',
         "sequence_id": sequence_id,
         "stage_data": {
             "profile": context.get('profile', {}),
