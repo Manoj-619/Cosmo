@@ -98,15 +98,13 @@ class Lesson(StrictTool):
             user__email=email, 
             sequence_id=sequence_id
         )
-        lesson_number = len(deliver_stage.lessons) + 1
-        deliver_stage.lesson_number = lesson_number
         deliver_stage.lessons.append(new_lesson)
         deliver_stage.save()
-
+        
+        context['deliver']['lesson_data']=self.model_dump_json()
+        
         xAPI_lesson_celery_task.apply_async(args=[json.loads(self.model_dump_json()),email,name])
 
-        context['deliver']['lesson_number'] = lesson_number
-        context['deliver']['lesson_data']=self.model_dump_json()
         return Result(value=self.model_dump_json(), context=context)
 
 
