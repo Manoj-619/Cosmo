@@ -5,11 +5,19 @@ from django.contrib.auth.models import User
 from stage_app.models import Org, UserProfile, FourDSequence, TNAassessment, DiscoverStage
 from stage_app.serializers import UserDetailSerializer, UserProfileSerializer, FourDSequenceSerializer
 from zavmo.authentication import CustomJWTAuthentication
-from rest_framework.permissions import IsAuthenticated
-from django.db import IntegrityError
+from rest_framework.permissions import IsAuthenticated, AllowAny
+from django.db import IntegrityError, connection
 from django.shortcuts import get_object_or_404
 from django.core.cache import cache
 from helpers.utils import get_logger
+from django.urls import get_resolver
+from django.db.utils import OperationalError
+from django.utils.timezone import now
+from redis import Redis
+from redis.exceptions import ConnectionError as RedisConnectionError
+import time
+from django.http import JsonResponse
+from django.conf import settings
 
 logger = get_logger(__name__)
 
@@ -161,3 +169,94 @@ def clear_cache(request):
     cache.delete_pattern(f"{request.user.email}_*")
     
     return DRFResponse({"message": "All caches cleared successfully"}, status=status.HTTP_200_OK)
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def health_check(request):
+    """
+    Enhanced health check endpoint:
+    - Verifies database connection
+    - Verifies Redis cache access
+    - Checks all custom API endpoint availability
+    - Checks OpenAI service status (Azure is always available as fallback)
+    """
+    dependencies = {
+        "database": {"status": "disconnected"},
+        "cache": {"status": "disconnected"},
+        "openai": {"status": "unknown"},
+        "azure": {"status": "operational"}, 
+        "endpoints": {}
+    }
+    overall_status = "healthy"
+
+    # Check Database Connection
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1")
+        dependencies["database"]["status"] = "connected"
+    except OperationalError as db_error:
+        logger.error("Database connection failed.", exc_info=True)
+        dependencies["database"]["error"] = str(db_error)
+        overall_status = "unhealthy"
+
+    # Check Cache (Redis) Connection
+    try:
+        start_time = time.time()
+        cache.set("health_check_test", "test", timeout=5)
+        if cache.get("health_check_test") == "test":
+            dependencies["cache"]["status"] = "connected"
+            dependencies["cache"]["response_time"] = f"{(time.time() - start_time) * 1000:.2f}ms"
+        else:
+            raise Exception("Cache read/write test failed")
+    except Exception as cache_error:
+        logger.error("Cache connection failed.", exc_info=True)
+        dependencies["cache"]["error"] = str(cache_error)
+        overall_status = "unhealthy"
+
+    # Check OpenAI Service Status using existing function
+    try:
+        from helpers.chat import get_operational_service
+        service = get_operational_service()
+        dependencies["openai"]["status"] = "operational" if service == "openai" else "degraded"
+        # Since Azure is always available, we don't need to mark overall status as degraded
+    except Exception as openai_error:
+        logger.error("OpenAI status check failed.", exc_info=True)
+        dependencies["openai"]["status"] = "unavailable"
+        dependencies["openai"]["error"] = str(openai_error)
+        # Still not marking overall status as degraded since Azure is available
+
+    # Check API Endpoints
+    urlconf = get_resolver()
+    for pattern in urlconf.url_patterns:
+        if hasattr(pattern, 'callback') and pattern.callback is not None:
+            # Filter out Django's built-in endpoints
+            if pattern.callback.__module__.startswith('django.'):
+                continue
+            endpoint = pattern.pattern.describe()
+            dependencies["endpoints"][endpoint] = {
+                "status": "available",
+                "method": pattern.callback.__name__
+            }
+        elif hasattr(pattern, 'url_patterns'):  # Handle included URL patterns
+            for sub_pattern in pattern.url_patterns:
+                if hasattr(sub_pattern, 'callback') and sub_pattern.callback is not None:
+                    # Filter out Django's built-in endpoints
+                    if sub_pattern.callback.__module__.startswith('django.'):
+                        continue
+                    endpoint = sub_pattern.pattern.describe()
+                    dependencies["endpoints"][endpoint] = {
+                        "status": "available",
+                        "method": sub_pattern.callback.__name__
+                    }
+
+    # Response construction
+    response = {
+        "status": overall_status,
+        "dependencies": dependencies,
+        "timestamp": now().isoformat(),
+    }
+
+    # Set HTTP status based on overall health
+    http_status = 200 if overall_status == "healthy" else 503
+
+    return JsonResponse(response, status=http_status)

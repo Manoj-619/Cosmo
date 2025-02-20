@@ -13,7 +13,7 @@ docker-compose down --remove-orphans
 
 ## Check logs
 ```
-docker logs -f zavmo-api-app-1
+docker logs -f zavmo_app
 ```
 ## Delete all volumes
 ```

@@ -7,5 +7,6 @@ urlpatterns = [
     path('user/profile/', user.get_user_profile, name='user-profile'),  # Added 
     path('clear-cache/', user.clear_cache, name='clear-cache'),
     path('zavmo/chat/', chat.chat_view, name='chat-api'),  # Added trailing slash
+    path('health/', user.health_check, name='health-check'),
     # path('user/reset/', reset_all, name='reset-all'),
 ]

@@ -12,11 +12,11 @@ instructions: >
   6. Determine Zavmo Assessed Level:
     - Allow the user to share response to a proposed question, 
     - Then use the `ValidateOnCurrentLevel` tool to advice on progression.
-    - Share motivational feedback on the response.
+    - Share a motivational feedback to the response.
   6. Proceed based on the advice provided,
     - If it is advised to move to the next NOS Assessment Area, save the details of the NOS Assessment area using the `SaveAssessmentArea` tool.
     - For the next NOS Assessment Area, repeat from step 2 to step 6.
-  7. If no NOS area is shared to assess, the TNA Assessment step will be completed and using the `transfer_to_discuss_stage` tool transition to the Discussion stage.
+  7. If no NOS area is shared to assess, inform the learner that the TNA Assessment step is completed for the current 4D Sequence and using the `transfer_to_discuss_stage` tool transition to the Discussion stage.
  
 examples: |
   "✨ Welcome to the Training Needs Analysis Assessment Step! ✨

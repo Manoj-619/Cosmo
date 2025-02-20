@@ -171,22 +171,16 @@ def _process_agent_response(stage_name, message_history, context, max_turns=10):
     for i in range(stage_level):
         if i == 0:
             stage_model = UserProfile.objects.get(user__email=email)
-        elif i == 1:
-            stage_model = stage_models[i].objects.get(user__email=email, sequence_id=sequence_id)
         elif i == 2:
             stage_model = TNAassessment
+        else:
+            stage_model = stage_models[i].objects.get(user__email=email, sequence_id=sequence_id)
 
         ## Get Summary of previous stages    
         if stage_model == TNAassessment:
-            tna_assessments_for_current_4D_sequence = TNAassessment.objects.filter(user__email=email, sequence_id=sequence_id)
-            assessment_areas_info = "\n".join(
-                assessment.get_assessment_areas_info() 
-                for assessment in tna_assessments_for_current_4D_sequence
-            )
-            summary = assessment_areas_info + "\n\n" + "\n".join(
-                assessment.get_summary() 
-                for assessment in tna_assessments_for_current_4D_sequence
-            )
+            current_sequence_tna_assessments = TNAassessment.objects.filter(user__email=email, sequence_id=sequence_id)
+            summary = f"Total NOS Assessment Areas for current 4D Sequence are {current_sequence_tna_assessments.count()}.\n"+"\n\n".join([assessment.get_summary_of_assessment_area() 
+                                                   for assessment in current_sequence_tna_assessments])
         else:
             summary = stage_model.get_summary()
         agent.start_message += f"""

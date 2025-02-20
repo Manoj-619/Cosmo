@@ -4,7 +4,8 @@ Fields:
 """
 from enum import Enum
 from pydantic import Field
-from typing import Dict, List, Literal, Optional
+from typing import Dict, List, Optional
+import json
 from helpers._types import (
     Agent,
     StrictTool,
@@ -18,7 +19,6 @@ from helpers.agents.common import get_agent_instructions, get_tna_assessment_ins
 from helpers.search import fetch_nos_text
 from stage_app.tasks import xAPI_profile_celery_task,xAPI_stage_celery_task
 import logging
-import json
 
 
 class GetSkillFromNOS(StrictTool):
@@ -38,7 +38,7 @@ class GetRequiredSkills(PermissiveTool):
     
     def execute(self, context: Dict):
         if not context.get('nos_docs'):
-            raise ValueError("NOS data not found in context, use GetNOS tool first.")
+            raise ValueError("NOS data not found in context, use `ExtractNOSData` tool first.")
         
         user_profile = UserProfile.objects.get(user__email=context['email'])
         
@@ -107,6 +107,7 @@ class JDBasedRole(Enum):
     FRAUD_INVESTIGATOR_LEVEL_7 = "Fraud Investigator - Level 7"
     ETHICS_COMPLIANCE_ASSURANCE_MANAGER_LEVEL_6 = "Ethics & Compliance Assurance Manager - Level 6"
     ETHICS_COMPLIANCE_HEAD_OF_ASSURANCE_LEVEL_5 = "Ethics & Compliance - Head of Assurance - Level 5"
+    GROUP_HEAD_OF_ETHICS = "Group Head of Ethics"
 
     
 class ExtractNOSData(StrictTool):
@@ -145,19 +146,12 @@ class transfer_to_tna_assessment_step(StrictTool):
         # Format the message with proper error handling
         agent.start_message = (
             f"Here is the learner's profile: {summary}\n\n"
-            "Greet and introduce the TNA Assessment step, based on instructions and example shared on Introduction.\n"
+            "Greet and introduce the TNA Assessment step, based on instructions and example shared in Introduction.\n"
             f"Total NOS Areas: {all_assessments}\n"
             f"Current Number Of Assessment Areas: {len(assessment_areas)}\n"
             "NOS Assessment Areas for current 4D Sequence to be presented:"
             f"\n-{current_assessment_areas}\n\n"
-            "Present the NOS Assessment Areas for current 4D Sequence in the below shared table form.\n\n"
-            "Presenting NOS Areas:"
-            + "\n"
-            "|  **Assessments For Training Needs Analysis**  |   **NOS ID**  |\n"
-            "|-----------------------------------------------|---------------|\n"
-            "|            [Assessment Area 1]                |   [NOS ID 1]  |\n"
-            "|            [Assessment Area 2]                |   [NOS ID 2]  |\n"
-            "|            [Assessment Area 3]                |   [NOS ID 3]  |\n"
+            "Present the NOS Assessment Areas for current 4D Sequence in a table form.\n\n"
             "Then start the TNA assessment on Current NOS Area."
         )
 
@@ -221,8 +215,9 @@ class update_profile_data(StrictTool):
         if not profile:
             raise ValueError("UserProfile not found")    
         
-        logging.info(f"Current role: {self.current_role}")    
+        logging.info(f"Current role (enum): {self.current_role}")    
         current_role = self.current_role.value.lower().title().replace("_Level_", " - Level ").replace("_", " ")
+        logging.info(f"Current role (formatted): {current_role}")
 
         # Update the UserProfile object
         profile.first_name = self.first_name
