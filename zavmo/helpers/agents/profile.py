@@ -111,7 +111,13 @@ class JDBasedRole(Enum):
 
     
 class ExtractNOSData(StrictTool):
+    """Extract NOS data from the user's profile."""
+    
     def execute(self, context: Dict):
+        """Extract NOS data from the user's profile."""
+        if not context.get('profile'):
+            raise ValueError("Profile data not found in context, use `update_profile_data` tool first.")
+        
         profile  = UserProfile.objects.get(user__email=context['email'])
         all_nos  = profile.get_nos()
         nos_docs = "\n\n".join([f"-----------------------------------\n{nos.text}\n" for nos in all_nos])
@@ -216,7 +222,7 @@ class update_profile_data(StrictTool):
             raise ValueError("UserProfile not found")    
         
         logging.info(f"Current role (enum): {self.current_role}")    
-        current_role = self.current_role.value.lower().title().replace("_Level_", " - Level ").replace("_", " ")
+        current_role = self.current_role.value.lower().replace("_level_", " - level ").replace("_", " ").title().strip()
         logging.info(f"Current role (formatted): {current_role}")
 
         # Update the UserProfile object
