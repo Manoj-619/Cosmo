@@ -222,7 +222,7 @@ class update_profile_data(StrictTool):
             raise ValueError("UserProfile not found")    
         
         logging.info(f"Current role (enum): {self.current_role}")    
-        current_role = self.current_role.value.lower().title().replace("_Level_", " - Level ").replace("_", " ")
+        current_role = self.current_role.value.lower().replace("_level_", " - level ").replace("_", " ").title().strip()
         logging.info(f"Current role (formatted): {current_role}")
 
         # Update the UserProfile object
