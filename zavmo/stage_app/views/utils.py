@@ -192,9 +192,7 @@ def _process_agent_response(stage_name, message_history, context, max_turns=10):
 
     if stage_name == 'tna_assessment':
         agent.instructions = get_tna_assessment_instructions(context, level="")
-    else:
-        agent.instructions = get_agent_instructions(stage_name)
-
+    logger.info(f"\n\nAgent instructions from utils.py: {agent.instructions}\n\n")
     return run_step(
         agent=agent,
         messages=message_history,
