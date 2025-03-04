@@ -6,7 +6,7 @@ from stage_app.serializers import (
     UserProfileSerializer, TNAassessmentSerializer
 )
 from helpers.agents import a_discover, b_discuss,c_deliver,d_demonstrate, profile, tna_assessment
-from helpers.agents.common import get_tna_assessment_instructions
+from helpers.agents.common import get_tna_assessment_instructions, get_agent_instructions
 from helpers.constants import CONTEXT_SUFFIX, HISTORY_SUFFIX, DEFAULT_CACHE_TIMEOUT
 from helpers.swarm import run_step
 from django.db import utils as django_db_utils
@@ -189,8 +189,11 @@ def _process_agent_response(stage_name, message_history, context, max_turns=10):
         {summary}        
         """
         logger.info(f"Agent start message from process_agent_response: {agent.start_message}")
+
     if stage_name == 'tna_assessment':
         agent.instructions = get_tna_assessment_instructions(context, level="")
+    else:
+        agent.instructions = get_agent_instructions(stage_name)
 
     return run_step(
         agent=agent,
