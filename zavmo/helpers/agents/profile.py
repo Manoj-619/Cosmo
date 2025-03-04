@@ -106,7 +106,12 @@ class JDBasedRole(Enum):
     ETHICS_COMPLIANCE_ASSURANCE_MANAGER_LEVEL_6 = "Ethics & Compliance Assurance Manager - Level 6"
     ETHICS_COMPLIANCE_HEAD_OF_ASSURANCE_LEVEL_5 = "Ethics & Compliance - Head of Assurance - Level 5"
     GROUP_HEAD_OF_ETHICS = "Group Head of Ethics"
-
+    ARCHITECTURE_OFFICE_MANAGER_LEVEL_6 = "Architecture Office Manager - Level 6"
+    HSE_BUSINESS_PARTNER = "HSE Business Partner"
+    ARCHITECTURE_ANALYST_LEVEL_7 = "Architecture Analyst - Level 7"
+    NET_ZERO_BUSINESS_DEVELOPMENT_MANAGER = "Net Zero Business Development Manager"
+    DATA_INTELLIGENCE_AUTOMATION_ANALYST_LEVEL_7 = "Data Intelligence & Automation Analyst - Level 7"
+    BUSINESS_FINANCE_MANAGER_LEVEL_6 = "Business Finance Manager - Level 6"
     
 class ExtractNOSData(StrictTool):
     """Extract NOS data from the user's profile."""
