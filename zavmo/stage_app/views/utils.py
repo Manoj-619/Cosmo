@@ -153,7 +153,7 @@ def _get_message_history(email, sequence_id, user_message):
     else:
         message_history.append({
             "role": "system",
-            "content": "Send a personalized welcome message to the learner."
+            "content": "Send a personalized welcome message to the learner, based on current stage that the learner is on."
         })
 # NOTE: Filtering history only in swarm.py
 #    message_history = filter_history(message_history, max_tokens)
@@ -191,7 +191,6 @@ def _process_agent_response(stage_name, message_history, context, max_turns=10):
 
     if stage_name == 'tna_assessment':
         agent.instructions = get_tna_assessment_instructions(context, level="")
-    logger.info(f"\n\nAgent instructions from utils.py: {agent.instructions}\n\n")
     return run_step(
         agent=agent,
         messages=message_history,
