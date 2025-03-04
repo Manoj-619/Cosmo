@@ -20,11 +20,14 @@ class Command(BaseCommand):
             nos_to_create = []
             
             for _, row in nos_df.iterrows():
-                nos_to_create.append(NOS(
-                        nos_id=row['nos_id'],
-                        text=row['text'],
-                        industry=row['industry']
-                    ))
+                if not NOS.objects.filter(nos_id=row['nos_id']).exists():
+                    nos_to_create.append(NOS(
+                            nos_id=row['nos_id'],
+                            text=row['text'],
+                            industry=row['industry']
+                        ))
+                else:
+                    self.stdout.write(self.style.WARNING(f'NOS {row["nos_id"]} already exists in the NOS table'))
             
             # Bulk create new NOS objects
             created_nos = NOS.objects.bulk_create(nos_to_create)
@@ -33,23 +36,29 @@ class Command(BaseCommand):
             # Bulk create OFQUAL objects first
             ofqual_objects = []
             for _, row in ofqual_df.iterrows():
-                ofqual_objects.append(OFQUAL(
-                    ofqual_id=row['ofqual_id'],
-                    level=row['level'],
-                    text=row['text'],
-                    markscheme=row['markscheme']
-                ))
+                if not OFQUAL.objects.filter(ofqual_id=row['ofqual_id']).exists():
+                    ofqual_objects.append(OFQUAL(
+                        ofqual_id=row['ofqual_id'],
+                        level=row['level'],
+                        text=row['text'],
+                        markscheme=row['markscheme']
+                    ))
+                else:
+                    self.stdout.write(self.style.WARNING(f'OFQUAL {row["ofqual_id"]} already exists in the OFQUAL table'))
             created_ofqual = OFQUAL.objects.bulk_create(ofqual_objects)
             self.stdout.write(self.style.SUCCESS(f'Successfully saved {len(created_ofqual)} new OFQUAL records'))
 
             # Bulk create JD objects first
             jd_objects = []
             for _, row in jd_df.iterrows():
-                jd_objects.append(JobDescription(
-                    job_role=row['job_role'],
-                    description=row['main_purpose'],
-                    responsibilities=row['responsibilities']
-                ))
+                if not JobDescription.objects.filter(job_role=row['job_role']).exists():
+                    jd_objects.append(JobDescription(
+                        job_role=row['job_role'],
+                        description=row['main_purpose'],
+                        responsibilities=row['responsibilities']
+                    ))
+                else:
+                    self.stdout.write(self.style.WARNING(f'Job Description {row["job_role"]} already exists in the JobDescription table'))
             created_jds = JobDescription.objects.bulk_create(jd_objects)
 
             # Now iterate and add NOS relationships
@@ -63,7 +72,7 @@ class Command(BaseCommand):
                 ofqual_ids = [id.strip() for id in ofqual_ids.split(',')] if ofqual_ids else []
                 jd.ofqual.add(*OFQUAL.objects.filter(ofqual_id__in=ofqual_ids))
 
-            self.stdout.write(self.style.SUCCESS(f'Successfully saved {len(jd_df)} Job Description records'))
+            self.stdout.write(self.style.SUCCESS(f'Successfully saved {len(jd_df)} Job Description, NOS and OFQUAL records'))
 
         except Exception as e:
             self.stdout.write(self.style.ERROR(f'Error saving data: {str(e)}'))
