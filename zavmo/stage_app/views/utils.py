@@ -188,7 +188,6 @@ def _process_agent_response(stage_name, message_history, context, max_turns=10):
         
         {summary}        
         """
-        logger.info(f"Agent start message from process_agent_response: {agent.start_message}")
 
     if stage_name == 'tna_assessment':
         agent.instructions = get_tna_assessment_instructions(context, level="")
