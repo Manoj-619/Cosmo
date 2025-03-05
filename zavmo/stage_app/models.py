@@ -306,7 +306,7 @@ class DeliverStage(models.Model):
     
     # Lessons is a list of dictionaries, each representing a lesson
     lessons     = models.JSONField(default=list, blank=True, null=True, verbose_name="Lessons")
-    lesson_number = models.IntegerField(default=1, verbose_name="Lesson Number")  # Add this field
+    # lesson_number = models.IntegerField(default=1, verbose_name="Lesson Number")  # Add this field
     is_complete = models.BooleanField(default=False, verbose_name="Is Complete")
     
     def __str__(self):
