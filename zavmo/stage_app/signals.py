@@ -13,22 +13,23 @@ def create_stage_models(sender, instance, created, **kwargs):
     """Create the 4D stage models when a new sequence is created."""
     if created:  # Only create stages for new sequences
         try:
-            # Check if stages already exist
-            stages_exist = any([
-                DiscoverStage.objects.filter(sequence=instance).exists(),
-                DiscussStage.objects.filter(sequence=instance).exists(),
-                DeliverStage.objects.filter(sequence=instance).exists(),
-                DemonstrateStage.objects.filter(sequence=instance).exists()
-            ])
-            
-            if not stages_exist:
+            # Check each stage individually and create if missing
+            if not DiscoverStage.objects.filter(sequence=instance).exists():
                 DiscoverStage.objects.create(user=instance.user, sequence=instance)
+                logger.info(f"DiscoverStage created for sequence {instance.id}")
+            
+            if not DiscussStage.objects.filter(sequence=instance).exists():
                 DiscussStage.objects.create(user=instance.user, sequence=instance)
+                logger.info(f"DiscussStage created for sequence {instance.id}")
+            
+            if not DeliverStage.objects.filter(sequence=instance).exists():
                 DeliverStage.objects.create(user=instance.user, sequence=instance)
+                logger.info(f"DeliverStage created for sequence {instance.id}")
+            
+            if not DemonstrateStage.objects.filter(sequence=instance).exists():
                 DemonstrateStage.objects.create(user=instance.user, sequence=instance)
-                logger.info(f"4D sequence {instance.id} stages created for user {instance.user.username}")
-            else:
-                logger.warning(f"Stages already exist for sequence {instance.id}")
+                logger.info(f"DemonstrateStage created for sequence {instance.id}")
+            
         except IntegrityError as e:
             logger.error(f"IntegrityError creating stages for sequence {instance.id}: {str(e)}")
         except Exception as e:
