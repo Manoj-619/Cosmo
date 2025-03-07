@@ -366,7 +366,7 @@ def get_operational_service() -> Literal["openai", "azure"]:
         # Find the API component
 
         for component in data["components"]:
-            if component["name"].startswith("API"):
+            if component["name"].startswith("Completions"):
                 openai_status = component["status"] == "operational"
                 if openai_status:
                     return "openai" 
