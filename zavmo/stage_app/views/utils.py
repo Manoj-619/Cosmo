@@ -6,7 +6,7 @@ from stage_app.serializers import (
     UserProfileSerializer, TNAassessmentSerializer
 )
 from helpers.agents import a_discover, b_discuss,c_deliver,d_demonstrate, profile, tna_assessment
-from helpers.agents.common import get_tna_assessment_instructions
+from helpers.agents.common import get_tna_assessment_instructions, get_agent_instructions
 from helpers.constants import CONTEXT_SUFFIX, HISTORY_SUFFIX, DEFAULT_CACHE_TIMEOUT
 from helpers.swarm import run_step
 from django.db import utils as django_db_utils
@@ -153,7 +153,7 @@ def _get_message_history(email, sequence_id, user_message):
     else:
         message_history.append({
             "role": "system",
-            "content": "Send a personalized welcome message to the learner."
+            "content": "Send a personalized welcome message to the learner, based on current stage that the learner is on."
         })
 # NOTE: Filtering history only in swarm.py
 #    message_history = filter_history(message_history, max_tokens)
@@ -188,10 +188,9 @@ def _process_agent_response(stage_name, message_history, context, max_turns=10):
         
         {summary}        
         """
-        logger.info(f"Agent start message from process_agent_response: {agent.start_message}")
+
     if stage_name == 'tna_assessment':
         agent.instructions = get_tna_assessment_instructions(context, level="")
-
     return run_step(
         agent=agent,
         messages=message_history,

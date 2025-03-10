@@ -4,7 +4,8 @@ Fields:
 """
 from enum import Enum
 from pydantic import Field
-from typing import Dict, List, Literal, Optional
+from typing import Dict, List, Optional
+import json
 from helpers._types import (
     Agent,
     StrictTool,
@@ -18,7 +19,6 @@ from helpers.agents.common import get_agent_instructions, get_tna_assessment_ins
 from helpers.search import fetch_nos_text
 from stage_app.tasks import xAPI_profile_celery_task,xAPI_stage_celery_task
 import logging
-import json
 
 
 class GetSkillFromNOS(StrictTool):
@@ -38,7 +38,7 @@ class GetRequiredSkills(PermissiveTool):
     
     def execute(self, context: Dict):
         if not context.get('nos_docs'):
-            raise ValueError("NOS data not found in context, use GetNOS tool first.")
+            raise ValueError("NOS data not found in context, use `ExtractNOSData` tool first.")
         
         user_profile = UserProfile.objects.get(user__email=context['email'])
         
@@ -107,10 +107,22 @@ class JDBasedRole(Enum):
     FRAUD_INVESTIGATOR_LEVEL_7 = "Fraud Investigator - Level 7"
     ETHICS_COMPLIANCE_ASSURANCE_MANAGER_LEVEL_6 = "Ethics & Compliance Assurance Manager - Level 6"
     ETHICS_COMPLIANCE_HEAD_OF_ASSURANCE_LEVEL_5 = "Ethics & Compliance - Head of Assurance - Level 5"
-
+    GROUP_HEAD_OF_ETHICS = "Group Head of Ethics"
+    ARCHITECTURE_OFFICE_MANAGER_LEVEL_6 = "Architecture Office Manager - Level 6"
+    HSE_BUSINESS_PARTNER = "HSE Business Partner"
+    ARCHITECTURE_ANALYST_LEVEL_7 = "Architecture Analyst - Level 7"
+    NET_ZERO_BUSINESS_DEVELOPMENT_MANAGER = "Net Zero Business Development Manager"
+    DATA_INTELLIGENCE_AUTOMATION_ANALYST_LEVEL_7 = "Data Intelligence & Automation Analyst - Level 7"
+    BUSINESS_FINANCE_MANAGER_LEVEL_6 = "Business Finance Manager - Level 6"
     
 class ExtractNOSData(StrictTool):
+    """Extract NOS data from the user's profile."""
+    
     def execute(self, context: Dict):
+        """Extract NOS data from the user's profile."""
+        if not context.get('profile'):
+            raise ValueError("Profile data not found in context, use `update_profile_data` tool first.")
+        
         profile  = UserProfile.objects.get(user__email=context['email'])
         all_nos  = profile.get_nos()
         nos_docs = "\n\n".join([f"-----------------------------------\n{nos.text}\n" for nos in all_nos])
@@ -215,7 +227,7 @@ class update_profile_data(StrictTool):
             raise ValueError("UserProfile not found")    
         
         logging.info(f"Current role (enum): {self.current_role}")    
-        current_role = self.current_role.value.lower().title().replace("_Level_", " - Level ").replace("_", " ")
+        current_role = self.current_role.value.lower().replace("_level_", " - level ").replace("_", " ").title().strip()
         logging.info(f"Current role (formatted): {current_role}")
 
         # Update the UserProfile object

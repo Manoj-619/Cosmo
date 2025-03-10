@@ -4,11 +4,17 @@ Zavmo backend API, built with django - for managing user profiles, LLM messages,
 ---
 # Docker Setup
 ```
-docker-compose up --build --force-recreate --detach
+docker compose up --build --force-recreate --detach
 ```
 # Stop
 ```
-docker-compose down --remove-orphans
+docker compose down --remove-orphans
+```
+
+# Enter container
+```
+docker exec -it zavmo_app /bin/bash
+cd zavmo
 ```
 
 ## Check logs
