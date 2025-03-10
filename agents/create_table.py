@@ -2,7 +2,7 @@ import os
 import sqlite3
 from dotenv import load_dotenv
 
-ofqual_dir = r"C:\Users\smrit\Downloads\ofqual_firstset_15"
+ofqual_dir = r"C:\Users\smrit\Downloads\ofqual_set3_7"
 
 load_dotenv()
 
@@ -39,3 +39,4 @@ conn.commit()
 conn.close()
 
 print("SQLite DB created and initialized successfully.")
+print(f"Added {len(pdf_filepaths)} new PDF paths to the database.")
