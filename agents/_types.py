@@ -43,9 +43,12 @@ class Ofqual(BaseModel):
             raise ValueError('Qualification number must be in the format of digits separated by slashes (e.g., "603/4162/2")')
         return v
 
+    def to_dict(self):
+        return {"ofqual_id":self.id,"overview":self.overview}
+
     def get_table(self):
-        units = [{**self.model_dump(),
-                  **unit.model_dump() } for unit in self.units]
+        units = [{**self.to_dict(),
+                  **unit.to_dict() } for unit in self.units]
         
         return pd.DataFrame(units)
             
