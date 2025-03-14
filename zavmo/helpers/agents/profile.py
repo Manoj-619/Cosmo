@@ -14,7 +14,8 @@ from helpers._types import (
 )
 from stage_app.models import UserProfile, TNAassessment, FourDSequence, JobDescription
 from stage_app.serializers import TNAassessmentSerializer
-from helpers.agents.a_discover import discover_agent, tna_assessment_agent
+from helpers.agents.a_discover import discover_agent
+from helpers.agents.tna_assessment import get_tna_assessment_agent
 from helpers.agents.common import get_agent_instructions, get_tna_assessment_instructions
 from helpers.search import fetch_nos_text
 from stage_app.tasks import xAPI_profile_celery_task,xAPI_stage_celery_task
@@ -136,7 +137,7 @@ class transfer_to_tna_assessment_step(StrictTool):
     
     def execute(self, context: Dict):
         """After the learner has completed the Discover stage, transfer to the TNA Assessment step"""
-        profile = UserProfile.objects.get(user__email=context['email'])
+        profile   = UserProfile.objects.get(user__email=context['email'])
         email     = context['email']
         name      = context['profile']['first_name'] + " " + context['profile']['last_name']
         is_complete, error = profile.check_complete()
@@ -150,12 +151,12 @@ class transfer_to_tna_assessment_step(StrictTool):
         all_assessments = context['tna_assessment']['total_nos_areas']
         assessments = TNAassessment.objects.filter(sequence_id=context['sequence_id'])
         assessment_areas = [(assessment.assessment_area, assessment.nos_id) for assessment in assessments]
-        agent = tna_assessment_agent
+        agent = get_tna_assessment_agent()
         xAPI_stage_celery_task.apply_async(args=[agent.id, email, name])
         current_assessment_areas = '\n-'.join([f"Assessment Area: {area} (NOS ID: {nos_id})" for area, nos_id in assessment_areas])
         
         # Format the message with proper error handling
-        agent.start_message = (
+        new_message = (
             f"Here is the learner's profile: {summary}\n\n"
             "Greet and introduce the TNA Assessment step, based on instructions and example shared in Introduction.\n"
             f"Total NOS Areas: {all_assessments}\n"
@@ -167,7 +168,7 @@ class transfer_to_tna_assessment_step(StrictTool):
         )
 
         agent.instructions = get_tna_assessment_instructions(context, level="")
-        
+        agent.start_message = new_message
         # Update context with proper integer values
         context['tna_assessment'] = {
             'current_nos_areas': len(assessments),

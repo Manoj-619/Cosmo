@@ -13,11 +13,8 @@ from helpers.utils import get_logger
 from django.urls import get_resolver
 from django.db.utils import OperationalError
 from django.utils.timezone import now
-from redis import Redis
-from redis.exceptions import ConnectionError as RedisConnectionError
 import time
 from django.http import JsonResponse
-from django.conf import settings
 
 logger = get_logger(__name__)
 

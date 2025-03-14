@@ -9,7 +9,6 @@ from helpers.agents.common import get_tna_assessment_instructions
 from helpers.utils import get_logger
 from stage_app.models import  TNAassessment, FourDSequence
 from stage_app.serializers import TNAassessmentSerializer
-import json
 from helpers.agents.b_discuss import discuss_agent
 from helpers.search import fetch_ofqual_text
 from stage_app.tasks import xAPI_tna_assessment_celery_task,xAPI_stage_celery_task
@@ -57,7 +56,7 @@ class MapNOSAssessmentAreaToOFQUAL(StrictTool):
         tna_assessment.raw_ofqual_text = raw_ofqual_text
         tna_assessment.criterias = criteria_of_qualification
         tna_assessment.save()
-        
+        tna_assessment_agent = get_tna_assessment_agent()
         tna_assessment_agent.instructions = get_tna_assessment_instructions(context, self.level)
         return Result(value=f"level: {self.level}", context=context)
 
@@ -78,10 +77,12 @@ class ValidateOnCurrentLevel(StrictTool):
                 return Result(value=f"Based on validation, it is advised to save the details of the assessment area and then move to next NOS assessment area.", context=context)
             else:
                 next_lower_level = all_levels[all_levels.index(self.current_bloom_taxonomy_level) - 1]
+                tna_assessment_agent = get_tna_assessment_agent()
                 tna_assessment_agent.instructions = get_tna_assessment_instructions(context, next_lower_level)
                 return Result(value=f"Inform learner that based on validation, it is advised to move to next lower level.", context=context)
         
         if self.result == "PASS" or self.result == "MERIT":
+            tna_assessment_agent = get_tna_assessment_agent()
             tna_assessment_agent.instructions = get_tna_assessment_instructions(context, "")
             return Result(value=f"""Inform learner that based on evaluating the learner's response against the OFQUAL's benchmarking responses, {self.result} is achieved. 
                                 It is advised to save the details of the assessment area and move to next NOS assessment area.""", context=context)
@@ -91,7 +92,8 @@ class ValidateOnCurrentLevel(StrictTool):
                 return Result(value=f"""Inform learner that based on evaluating the learner's response against the OFQUAL's benchmarking responses, Distinction is achieved. 
                               The learner has reached the highest level. It is advised to save the details of the assessment area and move to next NOS assessment area.""", context=context)
             else:
-                next_higher_level = all_levels[all_levels.index(self.current_bloom_taxonomy_level) + 1]
+                next_higher_level = all_levels[all_levels.index(self.current_bloom_taxonomy_level) + 1]                
+                tna_assessment_agent = get_tna_assessment_agent()
                 tna_assessment_agent.instructions = get_tna_assessment_instructions(context, next_higher_level)
                 return Result(value=f"""Inform learner that based on evaluating the learner's response against the OFQUAL's benchmarking responses, {self.result} is achieved. 
                                 It is advised to move to next higher level and continue assessment process on next shared level and corresponding task.""", context=context)
@@ -139,18 +141,20 @@ class SaveAssessmentArea(StrictTool):
             updated_assessments.append(TNAassessmentSerializer(tna_assessment).data)
         
         xAPI_tna_assessment_celery_task.apply_async(args=[updated_assessments,email,name])
+        tna_assessment_agent = get_tna_assessment_agent()
         tna_assessment_agent.instructions = get_tna_assessment_instructions(context, level="")
         context['tna_assessment']['assessments'] = updated_assessments
         
 
         return Result(value=f"""Saved details for the Assessment area: {self.assessment_area}.""", context=context)
 
-tna_assessment_agent = Agent(
-    name="TNA Assessment",
-    id="tna_assessment",
-    model="gpt-4o",
-    #instructions=get_agent_instructions('tna_assessment'),
-    functions=[SaveAssessmentArea,
+def get_tna_assessment_agent():
+    return Agent(
+        name="TNA Assessment",
+        id="tna_assessment",
+        model="gpt-4o",
+        #instructions=get_agent_instructions('tna_assessment'),
+        functions=[SaveAssessmentArea,
                MapNOSAssessmentAreaToOFQUAL,
                ValidateOnCurrentLevel,
                transfer_to_discussion_stage],

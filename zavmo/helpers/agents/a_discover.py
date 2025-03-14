@@ -16,7 +16,7 @@ from helpers._types import (
 )
 from stage_app.models import DiscoverStage, UserProfile, TNAassessment, FourDSequence
 from stage_app.serializers import TNAassessmentSerializer
-from helpers.agents.tna_assessment import tna_assessment_agent
+from helpers.agents.tna_assessment import get_tna_assessment_agent
 from helpers.agents.common import get_tna_assessment_instructions, get_agent_instructions
 from helpers.utils import get_logger
 from stage_app.tasks import xAPI_discover_celery_task,xAPI_stage_celery_task
@@ -41,7 +41,7 @@ class transfer_to_tna_assessment_step(StrictTool):
         all_assessments = context['tna_assessment']['total_nos_areas']
         assessments = TNAassessment.objects.filter(sequence_id=context['sequence_id'])
         assessment_areas = [(assessment.assessment_area, assessment.nos_id) for assessment in assessments]
-        agent = tna_assessment_agent
+        agent = get_tna_assessment_agent()
         xAPI_stage_celery_task.apply_async(args=[agent.id, email, name])
 
         current_assessment_areas = '\n-'.join([f"Assessment Area: {area} (NOS ID: {nos_id})" for area, nos_id in assessment_areas])
