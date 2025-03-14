@@ -7,7 +7,6 @@ from openai import OpenAI
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-SSA_MAPPING = json.load(open(os.path.join("zavmo/classification/data", "ofqual_SSAs.json")))
 
 def get_batch_list(texts):
     batches = []
@@ -65,13 +64,6 @@ def get_batch_openai_embedding(texts: list, model="text-embedding-3-small", **kw
         embeddings += [r.embedding for r in response.data]
     return embeddings
 
-# Create a mapping from sub-SSA to parent SSA
-sub_ssa_to_parent = {
-    sub_ssa: parent_ssa
-    for item in SSA_MAPPING
-    for parent_ssa, sub_ssas in item.items()
-    for sub_ssa in sub_ssas
-}
 
 def get_parent_ssa(sub_ssa):
     """
@@ -83,4 +75,12 @@ def get_parent_ssa(sub_ssa):
     Returns:
         str: The parent SSA category, or None if not found
     """
+
+    SSA_MAPPING = json.load(open(os.path.join("zavmo/classification/data", "ofqual_SSAs.json")))
+    sub_ssa_to_parent = {
+        sub_ssa: parent_ssa
+        for item in SSA_MAPPING
+        for parent_ssa, sub_ssas in item.items()
+        for sub_ssa in sub_ssas
+    }
     return sub_ssa_to_parent.get(sub_ssa)
