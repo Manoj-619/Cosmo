@@ -40,7 +40,7 @@ def _get_user_and_sequence(request):
     
     if not sequence_id:
         # Get all incomplete sequences for the user, ordered by creation date
-        sequences   = FourDSequence.objects.filter(user=user, current_stage__in=[1, 2, 3, 4]).order_by('-created_at')
+        sequences   = FourDSequence.objects.filter(user=user, current_stage__in=[1, 2, 3, 4]).order_by('created_at')
         sequence_id = sequences.first().id if sequences else None
     logger.info(f"Sequence ID: {sequence_id}")
     return user, sequence_id
