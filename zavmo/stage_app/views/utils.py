@@ -14,7 +14,6 @@ from django.db import utils as django_db_utils
 import json
 from copy import deepcopy
 
-from zavmo.helpers.agents import tna_assessment
 
 stage_order = ['profile', 'discover', 'tna_assessment', 'discuss', 'deliver', 'demonstrate']
 stage_models = [UserProfile, DiscoverStage, TNAassessment, DiscussStage, DeliverStage, DemonstrateStage]
