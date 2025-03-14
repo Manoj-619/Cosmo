@@ -5,13 +5,16 @@ from stage_app.serializers import (
     DiscoverStageSerializer, DiscussStageSerializer, DeliverStageSerializer, DemonstrateStageSerializer,
     UserProfileSerializer, TNAassessmentSerializer
 )
-from helpers.agents import a_discover, b_discuss,c_deliver,d_demonstrate, profile, tna_assessment
+from helpers.agents import a_discover, b_discuss,c_deliver,d_demonstrate, profile
+from helpers.agents.tna_assessment import get_tna_assessment_agent
 from helpers.agents.common import get_tna_assessment_instructions, get_agent_instructions
 from helpers.constants import CONTEXT_SUFFIX, HISTORY_SUFFIX, DEFAULT_CACHE_TIMEOUT
 from helpers.swarm import run_step
 from django.db import utils as django_db_utils
 import json
 from copy import deepcopy
+
+from zavmo.helpers.agents import tna_assessment
 
 stage_order = ['profile', 'discover', 'tna_assessment', 'discuss', 'deliver', 'demonstrate']
 stage_models = [UserProfile, DiscoverStage, TNAassessment, DiscussStage, DeliverStage, DemonstrateStage]
@@ -22,7 +25,7 @@ def get_agent(stage_name):
     elif stage_name == 'discover':
         return deepcopy(a_discover.discover_agent)
     elif stage_name == 'tna_assessment':
-        return deepcopy(tna_assessment.tna_assessment_agent)
+        return deepcopy(get_tna_assessment_agent())
     elif stage_name == 'discuss':
         return deepcopy(b_discuss.discuss_agent)
     elif stage_name == 'deliver':
