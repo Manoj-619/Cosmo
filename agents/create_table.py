@@ -2,14 +2,15 @@ import os
 import sqlite3
 from dotenv import load_dotenv
 
-ofqual_dir = r"C:\Users\smrit\Downloads\ofqual_set3_7"
+#ofqual_dir = r"C:\Users\smrit\Downloads\ofqual_set3_7"
+ofqual_dir = r"/Users/adityachhabra/Documents/ofqual"
 
 load_dotenv()
 
 from utils import walk_dir
 
 # Get PDF file paths
-pdf_filepaths = walk_dir(ofqual_dir)
+pdf_filepaths = walk_dir(ofqual_dir, extension="pdf")
 
 # SQLite database setup
 db_path = "ofqual_details.db"

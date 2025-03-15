@@ -91,42 +91,14 @@ def create_ofqual_csv(ofquals: List[Ofqual], output_path="ofqual_unit_details.cs
     """Create a CSV file with all ofqual unit level details, including qualification_id"""
     if not ofquals:
         logger.warning("No valid Ofqual documents found. CSV not created.")
-        return
-    
-    # Create a list to store all unit data
-    all_units_data = []
-    
+        return    
     # Process each Ofqual document
-    for ofqual in ofquals:
-        try:
-            # Get the table for this Ofqual
-            df = ofqual.get_table()
+    df = pd.concat([ofqual.get_table() for ofqual in ofquals])
             
-            # Add qualification_id to each unit's data
-            df['qualification_id'] = ofqual.id
-
-            # Convert learning_outcomes from list of objects to string
-            df['learning_outcomes'] = df['learning_outcomes'].apply(lambda x: f"{json.dumps(x)}")
-
-            # Reorder columns as per the required order, removing 'units'
-            df = df[['qualification_id', 'overview', 'id', 'title', 'description', 'learning_outcomes']]
-            
-            # Convert DataFrame to list of dictionaries
-            units_data = df.to_dict('records')
-            all_units_data.extend(units_data)
-        except Exception as e:
-            logger.error(f"Error processing Ofqual {ofqual.id}: {str(e)}")
-    
-    # Create a DataFrame from all unit data
-    if all_units_data:
-        df = pd.DataFrame(all_units_data)
-        
-        # Save to CSV
-        df.to_csv(output_path, index=False)
-        logger.info(f"CSV file created successfully: {output_path}")
-        logger.info(f"Total units exported: {len(all_units_data)}")
-    else:
-        logger.warning("No unit data found. CSV not created.")
+    # Save to CSV
+    df.to_csv(output_path, index=False)
+    logger.info(f"CSV file created successfully: {output_path}")
+    logger.info(f"Total units exported: {len(df)}")
 
 
 def main():
