@@ -54,9 +54,11 @@ def fetch_agent_response(agent: Agent, history: List, context: Dict) -> ChatComp
         "model": agent.model,
         "messages": messages,
         "tools": tools or None,
-        "tool_choice": agent.tool_choice if tools else "auto",
+        # "tool_choice": agent.tool_choice if tools else "auto" ,
+
     }
     if tools:
+        create_params["tool_choice"] = agent.tool_choice if tools else "auto"
         create_params["parallel_tool_calls"] = agent.parallel_tool_calls
 
     service = get_operational_service()
