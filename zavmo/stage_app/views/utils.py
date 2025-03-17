@@ -5,13 +5,15 @@ from stage_app.serializers import (
     DiscoverStageSerializer, DiscussStageSerializer, DeliverStageSerializer, DemonstrateStageSerializer,
     UserProfileSerializer, TNAassessmentSerializer
 )
-from helpers.agents import a_discover, b_discuss,c_deliver,d_demonstrate, profile, tna_assessment
+from helpers.agents import a_discover, b_discuss,c_deliver,d_demonstrate, profile
+from helpers.agents.tna_assessment import get_tna_assessment_agent
 from helpers.agents.common import get_tna_assessment_instructions, get_agent_instructions
 from helpers.constants import CONTEXT_SUFFIX, HISTORY_SUFFIX, DEFAULT_CACHE_TIMEOUT
 from helpers.swarm import run_step
 from django.db import utils as django_db_utils
 import json
 from copy import deepcopy
+
 
 stage_order = ['profile', 'discover', 'tna_assessment', 'discuss', 'deliver', 'demonstrate']
 stage_models = [UserProfile, DiscoverStage, TNAassessment, DiscussStage, DeliverStage, DemonstrateStage]
@@ -22,7 +24,7 @@ def get_agent(stage_name):
     elif stage_name == 'discover':
         return deepcopy(a_discover.discover_agent)
     elif stage_name == 'tna_assessment':
-        return deepcopy(tna_assessment.tna_assessment_agent)
+        return deepcopy(get_tna_assessment_agent())
     elif stage_name == 'discuss':
         return deepcopy(b_discuss.discuss_agent)
     elif stage_name == 'deliver':
@@ -35,32 +37,31 @@ logger = get_logger(__name__)
 
 def _get_user_and_sequence(request):
     """Get user and sequence_id from request."""
-    user = request.user
+    user        = request.user
     sequence_id = request.data.get('sequence_id')
     
     if not sequence_id:
         # Get all incomplete sequences for the user, ordered by creation date
-        sequences = FourDSequence.objects.filter(user=user).order_by('created_at')
-        for sequence in sequences:
-            if sequence.stage_display != 'completed':
-                sequence_id = sequence.id
-                break
-        
-        if not sequences.exists():
-            sequence_id = ""
+        sequences   = FourDSequence.objects.filter(user=user, current_stage__in=[1, 2, 3, 4]).order_by('created_at')
+        sequence_id = sequences.first().id if sequences else None
     logger.info(f"Sequence ID: {sequence_id}")
     return user, sequence_id
 
 def _initialize_context(user, sequence_id):
     """Initialize or retrieve cached context."""
+    if sequence_id:
+        cache_key = f"{user.email}_{sequence_id}_{CONTEXT_SUFFIX}"
+    else:
+        cache_key = f"{user.email}_{CONTEXT_SUFFIX}"
+
+    context_data = cache.get(cache_key)
+    if context_data:
+        return context_data
     context = {
         'email': user.email,
         'sequence_id': sequence_id
     }
-    
-    cache_key = f"{user.email}_{sequence_id}_{CONTEXT_SUFFIX}"
-    if cache.get(cache_key):
-        return cache.get(cache_key)
+    cache.set(cache_key, context, timeout=DEFAULT_CACHE_TIMEOUT)
     return context
 
 def _determine_stage(user, context, sequence_id):
