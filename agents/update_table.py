@@ -11,6 +11,7 @@ from utils import walk_dir
 
 # Get current PDF file paths
 pdf_filepaths = walk_dir(ofqual_dir, extension="pdf")
+pdf_basenames = [os.path.basename(fp) for fp in pdf_filepaths]
 
 # SQLite database setup
 db_path = "ofqual_details.db"
@@ -24,18 +25,18 @@ cursor.execute('SELECT filepath FROM ofqual_pdfs')
 existing_filepaths = {row[0] for row in cursor.fetchall()}
 
 # Find new filepaths
-new_filepaths = [fp for fp in pdf_filepaths if fp not in existing_filepaths]
+new_basenames = [bn for bn in pdf_basenames if bn not in existing_filepaths]
 
 # Insert only new file paths
-for fp in new_filepaths:
+for basename in new_basenames:
     cursor.execute('''
     INSERT INTO ofqual_pdfs (filepath, json_data)
     VALUES (?, '{}')
-    ''', (fp,))
+    ''', (basename,))
 
 # Commit changes and close connection
 conn.commit()
 conn.close()
 
 print("Database update completed successfully.")
-print(f"Added {len(new_filepaths)} new PDF paths to the database.") 
+print(f"Added {len(new_basenames)} new PDF paths to the database.") 

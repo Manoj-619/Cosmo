@@ -28,12 +28,13 @@ CREATE TABLE IF NOT EXISTS ofqual_pdfs (
 )
 ''')
 
-# Insert file paths with empty JSON placeholders
+# Insert basenames with empty JSON placeholders
 for fp in pdf_filepaths:
+    basename = os.path.basename(fp)
     cursor.execute('''
     INSERT OR IGNORE INTO ofqual_pdfs (filepath, json_data)
     VALUES (?, '{}')
-    ''', (fp,))
+    ''', (basename,))
 
 # Commit changes and close connection
 conn.commit()

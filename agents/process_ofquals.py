@@ -1,10 +1,21 @@
+"""
+Command example:
+cd agents
+python process_ofquals.py --batch-size 1000 --workers 10
+"""
 import sqlite3
 import argparse
 import logging
+import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dotenv import load_dotenv
 from utils import extract_text
 from extractor import ofqual_agent
+
+# Define PDF directory at the top for easy modification
+#ofqual_dir = r"C:\Users\smrit\Downloads\ofqual_set3_7"
+# ofqual_dir = r"/Users/adityachhabra/Documents/ofqual"
+ofqual_dir = r"F:\ofqual"
 
 load_dotenv()
 
@@ -18,9 +29,12 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def extract_and_save_ofqual(fp, db_path="ofqual_details.db"):
-    logger.debug(f"Processing file: {fp}")
-    text = extract_text(fp)
+def extract_and_save_ofqual(basename, pdf_dir, db_path="ofqual_details.db"):
+    # Construct full path
+    full_path = os.path.join(pdf_dir, basename)
+    
+    logger.debug(f"Processing file: {basename}")
+    text = extract_text(full_path)
     res = ofqual_agent.run_sync(user_prompt="Extract OfQual Details from the following PDF:\n\n" + text)
     json_data = res.data.model_dump_json()
 
@@ -28,19 +42,19 @@ def extract_and_save_ofqual(fp, db_path="ofqual_details.db"):
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
 
-    # Update json_data column in SQLite
+    # Update json_data column in SQLite using basename
     cursor.execute('''
     UPDATE ofqual_pdfs
     SET json_data = ?
     WHERE filepath = ?
-    ''', (json_data, fp))
+    ''', (json_data, basename))
 
     conn.commit()
     conn.close()
 
 
 # Fetch random filepaths with empty JSON data
-def fetch_empty_filepaths(db_path="ofqual.db", limit=5):
+def fetch_empty_filepaths(db_path="ofqual_details.db", limit=5):
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
     cursor.execute('''
@@ -64,12 +78,12 @@ def main():
     args = parser.parse_args()
     
     # Log the parameters
-    logger.info(f"Starting processing with batch_size={args.batch_size}, workers={args.workers}")
+    logger.info(f"Starting processing with batch_size={args.batch_size}, workers={args.workers}, pdf_dir={ofqual_dir}")
     
-    # Fetch filepaths
-    pdf_filepaths = fetch_empty_filepaths(db_path=args.db_path, limit=args.batch_size)
+    # Fetch filepaths (these are now basenames)
+    pdf_basenames = fetch_empty_filepaths(db_path=args.db_path, limit=args.batch_size)
     
-    if not pdf_filepaths:
+    if not pdf_basenames:
         logger.warning("No files found to process")
         return
     
@@ -78,21 +92,22 @@ def main():
     
     # Process concurrently
     with ThreadPoolExecutor(max_workers=args.workers) as executor:
-        future_to_pdf = {executor.submit(extract_and_save_ofqual, fp, args.db_path): fp for fp in pdf_filepaths}
+        future_to_pdf = {executor.submit(extract_and_save_ofqual, basename, ofqual_dir, args.db_path): basename 
+                        for basename in pdf_basenames}
         total = len(future_to_pdf)
         
         logger.info(f"Processing {total} files with {args.workers} workers")
         
         for future in as_completed(future_to_pdf):
-            pdf_fp = future_to_pdf[future]
+            basename = future_to_pdf[future]
             try:
                 future.result()  # result is not captured here, as the DB is already updated
-                results[pdf_fp] = "Success"
+                results[basename] = "Success"
                 completed += 1
-                logger.info(f"Completed {completed}/{total} files. Successfully processed: {pdf_fp}")
+                logger.info(f"Completed {completed}/{total} files. Successfully processed: {basename}")
             except Exception as e:
-                results[pdf_fp] = str(e)
-                logger.error(f"Error processing {pdf_fp}: {str(e)}")
+                results[basename] = str(e)
+                logger.error(f"Error processing {basename}: {str(e)}")
                 completed += 1
                 logger.info(f"Completed {completed}/{total} files")
     

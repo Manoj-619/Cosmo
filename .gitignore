@@ -12,7 +12,7 @@ __pycache__/
 *$py.class
 .env
 .DS_Store
-#*.db
+*.db
 
 # C extensions
 *.so
