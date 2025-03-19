@@ -10,7 +10,6 @@ from helpers.utils import get_logger
 from stage_app.models import  TNAassessment, FourDSequence
 from stage_app.serializers import TNAassessmentSerializer
 from helpers.agents.b_discuss import discuss_agent
-from helpers.search import fetch_ofqual_text
 from stage_app.tasks import xAPI_tna_assessment_celery_task,xAPI_stage_celery_task
 
 logger = get_logger(__name__)
@@ -37,32 +36,19 @@ class transfer_to_discussion_stage(StrictTool):
         """
         return Result(value="Transferred to Discussion stage.", agent=agent, context=context)
 
-
-class MapNOSAssessmentAreaToOFQUAL(StrictTool):
-    """Use this tool immediately after the learner has shared a self assessed level on the scale of 1-7 to map the NOS assessment area to OFQUAL."""
-    assessment_area: str = Field(description="Exact name of current NOS assessment area.")
+class RetrieveOFQUALCriteriaBasedOnUserAssessedLevel(StrictTool):
+    """Use this tool immediately after the learner has shared a self assessed level on the scale of 1-7 to retrieve the OFQUAL criteria for the assessment area."""
+    assessment_area: str = Field(description="Exact name of current assessment area.")
     level: Literal["Remember", "Understand", "Apply", "Analyze", "Evaluate", "Create"] = Field(description="The level mapped to Bloom's Taxonomy level based on the learner's proficiency level as input on the scale of 1-7.")
     
     def execute(self, context: Dict):
-        # Fetch OFQUAL text and criteria
-        raw_ofqual_text, criteria_of_qualification = fetch_ofqual_text(self.assessment_area)
-        
-        # Update the TNA assessment record
-        tna_assessment = TNAassessment.objects.get(
-            user__email=context['email'], 
-            sequence_id=context['sequence_id'], 
-            assessment_area=self.assessment_area
-        )
-        tna_assessment.raw_ofqual_text = raw_ofqual_text
-        tna_assessment.criterias = criteria_of_qualification
-        tna_assessment.save()
         tna_assessment_agent = get_tna_assessment_agent()
         tna_assessment_agent.instructions = get_tna_assessment_instructions(context, self.level)
         return Result(value=f"level: {self.level}", context=context)
 
 class ValidateOnCurrentLevel(StrictTool):
     """Validate the learner's response to advice on progression."""
-    assessment_area: str = Field(description="Exact name of current NOS assessment area.")
+    assessment_area: str = Field(description="Exact name of current assessment area.")
     result: Literal["FAIL", "PASS", "MERIT", "DISTINCTION"] = Field(description="""The result of the assessment. It is based on the learner's response against the OFQUAL's benchmarking responses. 
                                                                     The learner's response could match one of the OFQUAL's benchmarking responses - Fail, Pass, Merit, Distinction. Evaluate strictly based on criterias and benchmarking responses shared from OFQUAL.""")
     current_bloom_taxonomy_level: Literal["Remember", "Understand", "Apply", "Analyze", "Evaluate", "Create"] = Field(description="The current Bloom's Taxonomy level of the assessment area the learner is currently on.")
@@ -155,9 +141,9 @@ def get_tna_assessment_agent():
         model="gpt-4o",
         #instructions=get_agent_instructions('tna_assessment'),
         functions=[SaveAssessmentArea,
-               MapNOSAssessmentAreaToOFQUAL,
-               ValidateOnCurrentLevel,
-               transfer_to_discussion_stage],
+                RetrieveOFQUALCriteriaBasedOnUserAssessedLevel,
+                ValidateOnCurrentLevel,
+                transfer_to_discussion_stage],
     tool_choice="auto",
     parallel_tool_calls=False
 )

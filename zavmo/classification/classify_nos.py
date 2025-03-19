@@ -18,19 +18,19 @@ X_embeddings  = get_batch_openai_embedding(sample_text_for_embeddings, dimension
 print("\n\nPredicting sub SSA....")
 predicted_sub_SSAs = model.predict(np.array(X_embeddings))
 df = pd.DataFrame(sample_text_for_embeddings, columns=["text"])
-df["predicted_sub_SSA"] = predicted_sub_SSAs
+df["sub_SSA"] = predicted_sub_SSAs
 
 print("\n\nGetting SSA....")
-df["SSA"] = df["predicted_sub_SSA"].apply(get_parent_ssa)
+df["SSA"] = df["sub_SSA"].apply(get_parent_ssa)
 df['nos_id'] = missed_nos_records['nos_id'].tolist()
 
 # Create mapping dictionaries for SSA and sub-SSA by ofqual_id
 ssa_mapping = dict(zip(df['nos_id'], df['SSA']))
-sub_ssa_mapping = dict(zip(df['nos_id'], df['predicted_sub_SSA']))
+sub_ssa_mapping = dict(zip(df['nos_id'], df['sub_SSA']))
 
 # Map the values back to missed_ofqual_records using the ofqual_id
 missed_nos_records['SSA'] = missed_nos_records['nos_id'].map(ssa_mapping)
-missed_nos_records['predicted_sub_SSA'] = missed_nos_records['nos_id'].map(sub_ssa_mapping)
+missed_nos_records['sub_SSA'] = missed_nos_records['nos_id'].map(sub_ssa_mapping)
 
 # Save the updated dataframe
-missed_nos_records.to_excel(os.path.join("zavmo/classification/data/predicted", "missed_nos_records_with_predictions.xlsx"), index=False)
+missed_nos_records.to_excel(os.path.join("zavmo/classification/data/predicted", "nos_classified.xlsx"), index=False)

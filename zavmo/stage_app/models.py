@@ -9,51 +9,6 @@ class Org(models.Model):
     def __str__(self):
         return self.org_name
 
-
-class NOS(models.Model):
-    nos_id = models.CharField(max_length=50, primary_key=True)
-    text = models.TextField()
-    industry = models.CharField(max_length=255)
-
-    def __str__(self):
-        return f"{self.nos_id} - {self.industry}"
-
-    class Meta:
-        verbose_name = "NOS"
-        verbose_name_plural = "NOS"
-
-class JobDescription(models.Model):
-    job_role = models.CharField(max_length=255)  # No longer unique
-    description = models.TextField()
-    responsibilities = models.TextField()
-    nos = models.ManyToManyField('NOS', related_name='job_descriptions')
-    ofqual = models.ManyToManyField('OFQUAL', related_name='job_descriptions')
-    
-    def __str__(self):
-        return f"{self.job_role}"
-    
-    @property
-    def summary(self):
-        return f"**Role:** {self.job_role}\n\n**Purpose:** {self.description}\n\n**Responsibilities:**\n{self.responsibilities}"
-
-    class Meta:
-        verbose_name = "Job Description"
-        verbose_name_plural = "Job Descriptions"
-
-class OFQUAL(models.Model):
-    ofqual_id = models.CharField(max_length=50, primary_key=True)
-    level = models.PositiveIntegerField(default=1)
-    text = models.TextField()
-    markscheme = models.JSONField(default=list, blank=True, null=True)
-
-    def __str__(self):
-        return f"{self.ofqual_id} - {self.level}"
-    
-    class Meta:
-        verbose_name = "OFQUAL"
-        verbose_name_plural = "OFQUAL"
-
-
 class UserProfile(models.Model):
     """Profile stage model.
     # NOTE: USED ONLY ONCE PER USER, DURING ONBOARDING
@@ -78,29 +33,11 @@ class UserProfile(models.Model):
     job_duration    = models.PositiveIntegerField(null=True, blank=True, verbose_name="Job Duration")
     manager         = models.CharField(max_length=100, blank=True, null=True, verbose_name="Manager")
     department      = models.CharField(max_length=100, blank=True, null=True, verbose_name="Department")
-    job_description = models.ForeignKey(JobDescription, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Job Description")
+    role_purpose    = models.TextField(blank=True, null=True, verbose_name="Role Purpose")
+    key_responsibilities = models.TextField(blank=True, null=True, verbose_name="Key Responsibilities")
+    stakeholder_engagement = models.TextField(blank=True, null=True, verbose_name="Stakeholder Engagement")
+    processes_and_governance_improvements = models.TextField(blank=True, null=True, verbose_name="Processes and Governance Improvements")
 
-    def save(self, *args, **kwargs):
-        """Override save to automatically link to JobDescription when current_role is set"""
-        if self.current_role and not self.job_description:
-            try:
-                self.job_description = JobDescription.objects.get(job_role__iexact=self.current_role)
-            except JobDescription.DoesNotExist:
-                pass  # If no matching job description found, continue without linking
-        super().save(*args, **kwargs)
-
-    def get_nos(self):
-        """Get the NOS associated with the user's job description"""
-        if self.job_description:
-            # Return all NOS objects related to the job description
-            return self.job_description.nos.all()
-        return NOS.objects.none()  # Return empty queryset if no job description
-
-    def get_ofqual(self):
-        """Get the OFQUAL standard associated with the user's job description"""
-        if self.job_description:
-            return self.job_description.ofqual.all()
-        return OFQUAL.objects.none()
     
     def __str__(self):
         """Get a dump of the Django model as a string."""
@@ -146,7 +83,15 @@ class TNAassessment(models.Model):
 
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='tna_assessments')
     assessment_area = models.CharField(max_length=255, default=None, null=True)
-    criterias       = models.JSONField(default=list, blank=True, null=True, verbose_name="Bloom's Taxonomy Criteria")
+
+    ofqual_criterias = models.JSONField(default=list, blank=True, null=True, verbose_name="Bloom's Taxonomy Criteria")
+    ofqual_unit_data = models.TextField(blank=True, null=True, verbose_name="Ofqual Unit Data")
+    ofqual_unit_id   = models.CharField(max_length=255, blank=True, null=True, verbose_name="Ofqual Unit ID")
+
+    nos_id                = models.CharField(max_length=50, blank=True, null=True, verbose_name="NOS ID")
+    nos_performance_items = models.TextField(blank=True, null=True, verbose_name="NOS Performance Items")
+    nos_knowledge_items   = models.TextField(blank=True, null=True, verbose_name="NOS Knowledge Items")
+
     user_assessed_knowledge_level = models.PositiveSmallIntegerField(
         choices=[
             (1, 'Novice (Basic awareness)'),
@@ -172,17 +117,15 @@ class TNAassessment(models.Model):
         blank=True, null=True
     )
     evidence_of_assessment = models.TextField(blank=True, null=True, verbose_name="Evidence of Assessment")
-    # type = models.CharField(max_length=50, blank=True, null=True, verbose_name="Type")
+
     sequence = models.ForeignKey(
         'FourDSequence',
         on_delete=models.CASCADE,
         related_name='tna_assessments'
     )
-    raw_ofqual_text = models.TextField(blank=True, null=True, verbose_name="Raw Ofqual Text")
     knowledge_gaps = models.TextField(blank=True, null=True, verbose_name="Knowledge Gaps")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    nos_id = models.CharField(max_length=50, blank=True, null=True, verbose_name="NOS ID")
     status = models.CharField(
         max_length=20,
         choices=[
@@ -193,6 +136,7 @@ class TNAassessment(models.Model):
         default='To Assess'
     )
     finalized_blooms_taxonomy_level = models.CharField(max_length=20, blank=True, null=True, verbose_name="Finalized Bloom's Taxonomy Level")
+    
     def __str__(self):
         return f"User {self.user.email} - Sequence {self.sequence.id} - TNA Assessment - Assessment Area: {self.assessment_area}"
     
@@ -258,8 +202,6 @@ class DiscoverStage(models.Model):
         if not self.application_area:
             return False, "Application area is required"
         return True, None
-
-# TODO: Remove interest_areas
 
 # Stage 2
 class DiscussStage(models.Model):

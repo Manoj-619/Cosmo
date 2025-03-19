@@ -33,16 +33,16 @@ df = pd.DataFrame(sample_text_for_embeddings, columns=["text"])
 df["predicted_sub_SSA"] = predicted_sub_SSAs
 
 print("\n\nGetting SSA....")
-df["SSA"] = df["predicted_sub_SSA"].apply(get_parent_ssa)
+df["SSA"] = df["sub_SSA"].apply(get_parent_ssa)  ## predicted sub SSA
 df['ofqual_id'] = data['ofqual_id'].tolist()
 
 # Create mapping dictionaries for SSA and sub-SSA by ofqual_id
 ssa_mapping = dict(zip(df['ofqual_id'], df['SSA']))
-sub_ssa_mapping = dict(zip(df['ofqual_id'], df['predicted_sub_SSA']))
+sub_ssa_mapping = dict(zip(df['ofqual_id'], df['sub_SSA']))
 
 # Map the values back to missed_ofqual_records using the ofqual_id
 missed_ofqual_records['SSA'] = missed_ofqual_records['ofqual_id'].map(ssa_mapping)
-missed_ofqual_records['predicted_sub_SSA'] = missed_ofqual_records['ofqual_id'].map(sub_ssa_mapping)
+missed_ofqual_records['sub_SSA'] = missed_ofqual_records['ofqual_id'].map(sub_ssa_mapping)
 
 # Save the updated dataframe
-missed_ofqual_records.to_excel(os.path.join("zavmo/classification/data/predicted", "missed_ofqual_records_with_predictions.xlsx"), index=False)
+missed_ofqual_records.to_excel(os.path.join("zavmo/classification/data/predicted", "ofqual_classified.xlsx"), index=False)

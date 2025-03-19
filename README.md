@@ -31,6 +31,10 @@ docker system prune -a --volumes
 python manage.py save_data assets/static_data/JDs_NOS_OFQUAL.xlsx
 ```
 
+## For building neo4j
+
+docker run --name neo4j -p 7474:7474 -p 7687:7687 -d -e NEO4J_AUTH=username/password neo4j:latest
+
 ### For dev
 
 ```

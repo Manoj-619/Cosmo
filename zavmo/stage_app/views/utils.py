@@ -11,7 +11,7 @@ from helpers.agents.common import get_tna_assessment_instructions, get_agent_ins
 from helpers.constants import CONTEXT_SUFFIX, HISTORY_SUFFIX, DEFAULT_CACHE_TIMEOUT
 from helpers.swarm import run_step
 from django.db import utils as django_db_utils
-import json
+import logging
 from copy import deepcopy
 
 
@@ -73,7 +73,7 @@ def _determine_stage(user, context, sequence_id):
     if not profile_is_complete:
         context.update(_create_empty_context(user.email, context['sequence_id'], profile))
         return 'profile'
-    
+    logging.info(f"Profile is complete. Sequence ID: {sequence_id}")
     if sequence_id:
         sequence = FourDSequence.objects.get(id=sequence_id)
         if sequence.stage_display == 'discover':
@@ -82,7 +82,7 @@ def _determine_stage(user, context, sequence_id):
             #     context.update(_create_full_context(user.email, context['sequence_id'], profile))
             #     logger.info(f"Incomplete discover stage found. Running discover agent.")
             #     return 'discover'
-            
+
             # Check if all assessments are complete
             incomplete_assessments = [assessment for assessment in TNAassessment.objects.filter(user=profile.user, sequence=sequence) if not assessment.evidence_of_assessment]
             
@@ -131,8 +131,8 @@ def _create_full_context(email, sequence_id, profile):
     current_assessments_structured = [TNAassessmentSerializer(assessment).data for assessment in current_tna_assessments]
     
     tna_assessment_data = {
-        'total_nos_areas': all_tna_assessments.count(),
-        'current_nos_areas': len(current_assessments_structured),
+        'total_assessment_areas': all_tna_assessments.count(),
+        'current_assessment_areas': len(current_assessments_structured),
         'assessments': current_assessments_structured
     }
     return {
@@ -180,7 +180,8 @@ def _process_agent_response(stage_name, message_history, context, max_turns=10):
         ## Get Summary of previous stages    
         if stage_model == TNAassessment:
             current_sequence_tna_assessments = TNAassessment.objects.filter(user__email=email, sequence_id=sequence_id)
-            summary = f"Total NOS Assessment Areas for current 4D Sequence are {current_sequence_tna_assessments.count()}.\n"+"\n\n".join([assessment.get_summary_of_assessment_area() 
+
+            summary = f"Total Assessment Areas for current 4D Sequence are {current_sequence_tna_assessments.count()}.\n"+"\n\n".join([assessment.get_summary_of_assessment_area() 
                                                    for assessment in current_sequence_tna_assessments])
         else:
             summary = stage_model.get_summary()

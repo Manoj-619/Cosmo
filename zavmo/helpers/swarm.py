@@ -62,10 +62,10 @@ def fetch_agent_response(agent: Agent, history: List, context: Dict) -> ChatComp
         create_params["parallel_tool_calls"] = agent.parallel_tool_calls
 
     service = get_operational_service()
-    logging.info(f"Generating agent response using {service} service")
+    logging.info(f"\n\nGenerating agent response using {service} service\n\n")
     openai_client = get_openai_client(service=service)
-    logging.info(f"instructions: {agent.instructions}\n\n")
-    logging.info(f"start message: {agent.start_message}\n\n")
+    # logging.info(f"instructions: {agent.instructions}\n\n")
+    # logging.info(f"start message: {agent.start_message}\n\n")
     return openai_client.chat.completions.create(**create_params)
 
 

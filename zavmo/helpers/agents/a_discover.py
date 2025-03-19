@@ -68,8 +68,8 @@ class transfer_to_tna_assessment_step(StrictTool):
         
         # Update context with proper integer values
         context['tna_assessment'] = {
-            'current_nos_areas': len(assessments),
-            'total_nos_areas': all_assessments,
+            'current_assessment_areas': len(assessments),
+            'total_assessment_areas': all_assessments,
             'assessments': [TNAassessmentSerializer(assessment).data for assessment in assessments]
         }
         

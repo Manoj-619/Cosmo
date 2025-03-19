@@ -12,126 +12,85 @@ from helpers._types import (
     PermissiveTool,
     Result
 )
-from stage_app.models import UserProfile, TNAassessment, FourDSequence, JobDescription
+from stage_app.models import UserProfile, TNAassessment, FourDSequence
 from stage_app.serializers import TNAassessmentSerializer
 from helpers.agents.a_discover import discover_agent
 from helpers.agents.tna_assessment import get_tna_assessment_agent
 from helpers.agents.common import get_agent_instructions, get_tna_assessment_instructions
-from helpers.search import fetch_nos_text
+from helpers.search import retrieve_ofquals_from_neo4j, retrieve_nos_from_neo4j
 from stage_app.tasks import xAPI_profile_celery_task,xAPI_stage_celery_task
 import logging
 
 
-class GetSkillFromNOS(StrictTool):
-    """Get a competency from the NOS document. Competency can be knowledge or performance based."""
-
-    nos_id: str = Field(description="The NOS ID associated with knowledge and performace items provided from which the competency was taken. It will be a string of alphanumeric characters.")
-    assessment_area:str = Field(description="""A competency from the NOS Data picked from either "Performance Criteria" or "Knowledge and Understanding" sections that represents a specific skill, knowledge or behavior required to meet National Occupational Standards and which is relevant to the learner's profile.""")
-
-    def execute(self, context: Dict):
-        return self.model_dump_json() 
-
-class GetRequiredSkills(PermissiveTool):
-    """Use this tool to collect all competencies from the NOS Data provided. First get the count of competencies relevant to the learner's profile and then generate based on the count a list of competencies from the NOS Data."""
-    count_of_competencies: int = Field(description="Get the number of distinct items or elements to be extracted from the National Occupational Standards (NOS) Data, relevant to the learner's profile.")
-    nos: List[GetSkillFromNOS] = Field(description=f"Based on the count of competencies, list competencies from the NOS Data relevant to the learner's profile along with the corresponding NOS ID from which each competency was taken.", 
-                                       min_items=10, max_items=50)
+class MapNOStoOFQUAL(PermissiveTool):
+    """Maps NOS to OFQUAL."""
     
     def execute(self, context: Dict):
-        if not context.get('nos_docs'):
+        nos = context.get('nos_docs',[])
+        if not nos:
             raise ValueError("NOS data not found in context, use `ExtractNOSData` tool first.")
         
         user_profile = UserProfile.objects.get(user__email=context['email'])
         
-        ## Number of assessments per sequence
-        n = 3
-        sequences_to_create = []
-        assessments_to_create = []
-        total_assessments = 0
+        ## Number of 4D sequence to create for a user = length of NOS
 
-        # Create sequence objects
-        for i in range(0, len(self.nos), n):
+        for nos_data in nos:
             sequence = FourDSequence(
                 user=user_profile.user,
                 current_stage=FourDSequence.Stage.DISCOVER
             )
-            sequences_to_create.append(sequence)
 
-        # Save sequences one by one to trigger signals
-        created_sequences = []
-        for sequence in sequences_to_create:
-            sequence.save()  # This will trigger the post_save signal
-            created_sequences.append(sequence)
-        
-        # Prepare assessment objects
-        for seq_index, sequence in enumerate(created_sequences):
-            start_idx = seq_index * n
-            end_idx = min(start_idx + n, len(self.nos))
+            ofqual_units_for_nos = retrieve_ofquals_from_neo4j(nos_data['nos_id'])
             
-            for item in self.nos[start_idx:end_idx]:
-                total_assessments += 1
-                assessment = TNAassessment(
-                    user=user_profile.user,
-                    assessment_area=item.assessment_area,
-                    sequence=sequence,
-                    nos_id=item.nos_id,
-                    status='In Progress' if total_assessments == 1 else 'To Assess'
-                )
-                assessments_to_create.append(assessment)
-
-        # Bulk create assessments
-        TNAassessment.objects.bulk_create(assessments_to_create)
-
+            if len(ofqual_units_for_nos) > 0:
+                sequence.save() # Create the sequence only if ofqual units are found for NOS
+                logging.info(f"\n\nProcessing sequence {sequence.id} with NOS ID: {nos_data['nos_id']} - Found {len(ofqual_units_for_nos)} OFQUAL units\n\n")
+            
+                assessments_for_sequence = []  # Reset for each sequence
+                total_assessments = 0
+                for ofqual in ofqual_units_for_nos:
+                    total_assessments += 1
+                    assessment = TNAassessment(
+                        user=user_profile.user,
+                        assessment_area=ofqual['unit_title'],
+                        sequence=sequence,
+                        nos_id=nos_data['nos_id'],
+                        nos_performance_items=nos_data['performance_criteria'],
+                        nos_knowledge_items=nos_data['knowledge_understanding'],
+                        ofqual_unit_id=ofqual['unit_uid'],
+                        ofqual_unit_data=ofqual['learning_outcomes'],
+                        ofqual_criterias=ofqual['marksscheme'],
+                        status='In Progress' if total_assessments == 1 else 'To Assess'
+                    )
+                    assessments_for_sequence.append(assessment)
+                
+                TNAassessment.objects.bulk_create(assessments_for_sequence)
+            
         # Get all sequence IDs
         all_sequences = list(FourDSequence.objects.filter(
             user=user_profile.user
         ).order_by('created_at').values_list('id', flat=True))
-        
+        logging.info(f"\n\nAll sequences: {all_sequences}\n\n")
         # Update context
         context.update({'sequence_id': all_sequences[0]})
-        context['sequences_to_complete'] = all_sequences
-        context['tna_assessment']['total_nos_areas'] = total_assessments
-        
-        return Result(value=f"FourDSequences created, transfer to discovery stage", context=context)
+        return Result(value=f"NOS to OFQUAL mapped, transfer to TNA Assessment step", context=context)
 
-class JDBasedRole(Enum):
-    FINANCIAL_CRIME_DUE_DILIGENCE_ANALYST_LEVEL_7 = "Financial Crime Due Diligence Analyst - Level 7"
-    FINANCIAL_CRIME_DUE_DILIGENCE_MANAGER_LEVEL_6 = "Financial Crime Due Diligence Manager - Level 6"
-    PEOPLE_PARTNER_LEVEL_5 = "People Partner - Level 5"
-    PEOPLE_PARTNER_LEVEL_6 = "People Partner - Level 6"
-    CUSTOMER_SERVICE_MANAGER_LEVEL_6 = "Customer Service Manager - Level 6"
-    PEOPLE_LEADER_CUSTOMER_FULFILLMENT_LEVEL_7 = "People Leader - Customer Fulfilment - Level 6"
-    POD_SOLVER = "Pod Solver"
-    ETHICS_COMPLIANCE_GOVERNANCE_CONSULTANT_LEVEL_7 = "Ethics & Compliance Governance Consultant - Level 7"
-    SENIOR_ASSURANCE_ASSESSOR_LEVEL_6 = "Senior Assurance Assessor - Ethics & Compliance - Level 6"
-    ENERGY_COMPLIANCE_CONSULTANT_LEVEL_6 = "Energy Compliance Consultant - Level 6"
-    FRAUD_INVESTIGATOR_LEVEL_7 = "Fraud Investigator - Level 7"
-    ETHICS_COMPLIANCE_ASSURANCE_MANAGER_LEVEL_6 = "Ethics & Compliance Assurance Manager - Level 6"
-    ETHICS_COMPLIANCE_HEAD_OF_ASSURANCE_LEVEL_5 = "Ethics & Compliance - Head of Assurance - Level 5"
-    GROUP_HEAD_OF_ETHICS = "Group Head of Ethics"
-    ARCHITECTURE_OFFICE_MANAGER_LEVEL_6 = "Architecture Office Manager - Level 6"
-    HSE_BUSINESS_PARTNER = "HSE Business Partner"
-    ARCHITECTURE_ANALYST_LEVEL_7 = "Architecture Analyst - Level 7"
-    NET_ZERO_BUSINESS_DEVELOPMENT_MANAGER = "Net Zero Business Development Manager"
-    DATA_INTELLIGENCE_AUTOMATION_ANALYST_LEVEL_7 = "Data Intelligence & Automation Analyst - Level 7"
-    BUSINESS_FINANCE_MANAGER_LEVEL_6 = "Business Finance Manager - Level 6"
     
 class ExtractNOSData(StrictTool):
     """Extract NOS data from the user's profile."""
+    query: str = Field(description="A query invloving main purpose, responsibilities and manager responsibilities of the learner's current role.")
     
     def execute(self, context: Dict):
-        """Extract NOS data from the user's profile."""
+        """Extract NOS for the user's profile."""
         if not context.get('profile'):
             raise ValueError("Profile data not found in context, use `update_profile_data` tool first.")
         
-        profile  = UserProfile.objects.get(user__email=context['email'])
-        all_nos  = profile.get_nos()
-        nos_docs = "\n\n".join([f"-----------------------------------\n{nos.text}\n" for nos in all_nos])
-        context['nos_docs'] = nos_docs
-        return Result(value=f"""Providing NOS Data. Generate a list of competencies from the NOS data:\n\n{nos_docs}""", context=context)
+        nos = retrieve_nos_from_neo4j(self.query)
+
+        context['nos_docs'] = nos
+        return Result(value=f"""Extracted NOS for the user's profile. Next Map NOS to OFQUAL.""", context=context)
 
 ### For handoff
-
 class transfer_to_tna_assessment_step(StrictTool):
     """After the learner has completed the Discover stage, transfer to the TNA Assessment step."""
     
@@ -139,16 +98,17 @@ class transfer_to_tna_assessment_step(StrictTool):
         """After the learner has completed the Discover stage, transfer to the TNA Assessment step"""
         profile   = UserProfile.objects.get(user__email=context['email'])
         email     = context['email']
-        name      = context['profile']['first_name'] + " " + context['profile']['last_name']
         is_complete, error = profile.check_complete()
         if not is_complete:
             raise ValueError(error)
-        if context['sequence_id'] == "":
-            raise ValueError("Get Required skills from NOS first using the `GetRequiredSkills` tool, with minimum 10 competencies listed.")
+        if not context['sequence_id']:
+            logging.info(f"No sequence ID found. Running profile agent.")
+            raise ValueError("Map NOS to OFQUAL first.")
         
+        name    = context['profile']['first_name'] + " " + context['profile']['last_name']
         summary = profile.get_summary()
 
-        all_assessments = context['tna_assessment']['total_nos_areas']
+        all_assessments = TNAassessment.objects.filter(user=profile.user).count()
         assessments = TNAassessment.objects.filter(sequence_id=context['sequence_id'])
         assessment_areas = [(assessment.assessment_area, assessment.nos_id) for assessment in assessments]
         agent = get_tna_assessment_agent()
@@ -159,20 +119,20 @@ class transfer_to_tna_assessment_step(StrictTool):
         new_message = (
             f"Here is the learner's profile: {summary}\n\n"
             "Greet and introduce the TNA Assessment step, based on instructions and example shared in Introduction.\n"
-            f"Total NOS Areas: {all_assessments}\n"
+            f"Total Assessment Areas: {all_assessments}\n"
             f"Current Number Of Assessment Areas: {len(assessment_areas)}\n"
-            "NOS Assessment Areas for current 4D Sequence to be presented:"
+            "Assessment Areas for current 4D Sequence to be presented:"
             f"\n-{current_assessment_areas}\n\n"
-            "Present the NOS Assessment Areas for current 4D Sequence in a table form.\n\n"
-            "Then start the TNA assessment on Current NOS Area."
+            "Present the Assessment Areas for current 4D Sequence in a table form.\n\n"
+            "Then start the TNA assessment on Current Assessment Area."
         )
 
         agent.instructions = get_tna_assessment_instructions(context, level="")
         agent.start_message = new_message
         # Update context with proper integer values
         context['tna_assessment'] = {
-            'current_nos_areas': len(assessments),
-            'total_nos_areas': all_assessments,
+            'current_assessment_areas': len(assessments),
+            'total_assessment_areas': all_assessments,
             'assessments': [TNAassessmentSerializer(assessment).data for assessment in assessments]
         }
         
@@ -205,17 +165,17 @@ class update_profile_data(StrictTool):
     
     first_name: str = Field(description="The learner's first name.")
     last_name: str        = Field(description="The learner's last name.")
-    current_role: Optional[JDBasedRole] = Field(description="The learner's current role.")
+    current_role: str = Field(description="The learner's current role.")
     current_industry: str = Field(description="The industry in which the learner is currently working in.")
     years_of_experience: int = Field(description="The number of years the learner has worked in their current industry.")
     department: str       = Field(description="The department the learner works in.")
     manager: str      = Field(description="The name of the person the learner reports to.")
     job_duration: int = Field(description="The number of years the learner has worked in their current job.")
-    # work_experience_in_current_role: str = Field(description="A detailed description of the learner's work experience in their current role.")
-    # main_purpose:  str = Field(description="The main purpose of the learner's current role.")
-    # responsibilities: str = Field(description="The responsibilities of the learner's current role.")
-    # manager_responsibilities: str = Field(description="The responsibilities of the learner's manager.")
-
+    role_purpose: str = Field(description="The main purpose of the learner in their current role.")
+    key_responsibilities: str = Field(description="The key responsibilities of the learner in their current role.")
+    stakeholder_engagement: str = Field(description="The stakeholder engagement of the learner in their current role.")
+    processes_and_governance_improvements: str = Field(description="The processes and governance improvements made by the learner in their current role.")
+    
     def execute(self, context: Dict):
         # Get email and sequence_id from context
         email = context.get('email')
@@ -226,44 +186,30 @@ class update_profile_data(StrictTool):
         profile = UserProfile.objects.get(user__email=email)
         if not profile:
             raise ValueError("UserProfile not found")    
-        
-        logging.info(f"Current role (enum): {self.current_role}")    
-        current_role = self.current_role.value.lower().replace("_level_", " - level ").replace("_", " ").title().strip()
-        logging.info(f"Current role (formatted): {current_role}")
 
         # Update the UserProfile object
         profile.first_name = self.first_name
         profile.last_name = self.last_name
-        profile.current_role = current_role
+        profile.current_role = self.current_role
         profile.current_industry = self.current_industry
         profile.years_of_experience = self.years_of_experience
         profile.manager = self.manager
         profile.department = self.department
         profile.job_duration = self.job_duration
-        
-        # Update JD if role has changed
-        if profile.job_description:
-            if profile.job_description.job_role != current_role:
-                try:
-                    new_jd = JobDescription.objects.get(job_role=current_role)
-                    profile.job_description = new_jd
-                except JobDescription.DoesNotExist:
-                    logging.warning(f"No JD found for role: {current_role}")
-        else:
-            profile.job_description = JobDescription.objects.get(job_role=current_role)
-            
+        profile.role_purpose = self.role_purpose
+        profile.key_responsibilities = self.key_responsibilities
+        profile.stakeholder_engagement = self.stakeholder_engagement
+        profile.processes_and_governance_improvements = self.processes_and_governance_improvements
         profile.save()
 
         xAPI_profile_celery_task.apply_async(args=[json.loads(self.model_dump_json()),email])
         
         # Convert enum to string value before storing in context
         profile_data = self.model_dump()
-        profile_data['current_role'] = current_role
         context['profile'] = profile_data
 
-        JD_details = profile.job_description.summary
-        return Result(value=f"""The JD details which matched with the user's current role is:\n\n{JD_details}. Your must briefly describe the JD and ask if it aligns with the learner's current role.""", context=context)
-            
+        return Result(value="Profile data updated successfully. Get NOS matching with the learner's current role using the `ExtractNOSData` tool.", context=context)
+ 
 profile_agent = Agent(
     name="Profile",
     id="profile",
@@ -272,7 +218,7 @@ profile_agent = Agent(
     functions=[
         update_profile_data,
         ExtractNOSData,
-        GetRequiredSkills,
+        MapNOStoOFQUAL,
         transfer_to_tna_assessment_step
         # transfer_to_discover_stage
     ],
