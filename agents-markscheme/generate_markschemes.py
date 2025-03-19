@@ -1,7 +1,8 @@
 """
 Command example:
-cd agents
-python process_ofquals.py --batch-size 1000 --workers 10
+conda activate squizzyenv
+cd Github/zavmo/zavmo-api/agents-markscheme
+python generate_markschemes.py --batch-size 1000 --workers 20
 """
 import json
 import sqlite3
