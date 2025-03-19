@@ -23,9 +23,13 @@ from typing import List, Dict, Any, Literal
 from collections import defaultdict
 from helpers.utils import get_utc_timestamp
 import time
-
+import logfire
 
 load_dotenv()
+
+# TODO: Add LOGFIRE_TOKEN to .env
+# TODO: Eventually, scrubbing should be enabled
+logfire.configure(scrubbing=False)
 
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logging.basicConfig(level=logging.INFO,
@@ -64,6 +68,11 @@ def fetch_agent_response(agent: Agent, history: List, context: Dict) -> ChatComp
     service = get_operational_service()
     logging.info(f"\n\nGenerating agent response using {service} service\n\n")
     openai_client = get_openai_client(service=service)
+    
+    # TODO: Verify that this does not add latency 
+    # TODO: Verify that this works with AzureOpenAI client as well.
+    
+    logfire.instrument_openai(openai_client)
     # logging.info(f"instructions: {agent.instructions}\n\n")
     # logging.info(f"start message: {agent.start_message}\n\n")
     return openai_client.chat.completions.create(**create_params)
