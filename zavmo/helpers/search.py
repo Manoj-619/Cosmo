@@ -2,7 +2,7 @@ import os
 import base64
 import zlib
 import json
-from typing import List, Dict
+from typing import List, Dict, Any
 from pinecone import Pinecone
 from neomodel import config, db
 from helpers.chat import get_openai_embedding
