@@ -72,7 +72,9 @@ def retrieve_ofquals_from_neo4j(nos_id: str) -> List[Dict[str, Any]]:
     """Get the ofquals mapped to a nos_id"""
     query = """
     MATCH (n:NOSNode {nos_id: $nos_id})-[:MAPS_TO]->(o:OFQUALUnit)
-    RETURN o.unit_id AS unit_id, 
+    RETURN 
+           o.ofqual_id AS ofqual_id,
+           o.unit_id AS unit_id, 
            o.unit_uid AS unit_uid,
            o.unit_title AS unit_title, 
            o.overview AS overview, 
