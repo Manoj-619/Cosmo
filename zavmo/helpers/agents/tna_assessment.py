@@ -101,18 +101,14 @@ class SaveAssessmentArea(StrictTool):
         email = context['email']
         name = context['profile']['first_name'] + " " + context['profile']['last_name']
         logger.info(f"evidence_of_assessment: {self.evidence_of_assessment}")
-
-
         # Update the assessments data in context with proper status handling
         updated_assessments = []
         next_assessment_marked = False
         
         for item in context['tna_assessment']['assessments']:
-            tna_assessment = TNAassessment.objects.get(user__email=context['email'], sequence_id=context['sequence_id'], 
-                                                       assessment_area=item.get('assessment_area'))
-    
-            if item.get('status')=='In Progress':
+            if item.get('assessment_area') == self.assessment_area:
                 # completed assessment
+                tna_assessment = TNAassessment.objects.get(user__email=context['email'], sequence_id=context['sequence_id'], assessment_area=self.assessment_area)
                 tna_assessment.user_assessed_knowledge_level = self.user_assessed_knowledge_level
                 tna_assessment.zavmo_assessed_knowledge_level = self.zavmo_assessed_knowledge_level
                 tna_assessment.evidence_of_assessment = self.evidence_of_assessment
@@ -121,6 +117,7 @@ class SaveAssessmentArea(StrictTool):
                 tna_assessment.save()
             
             else:
+                tna_assessment = TNAassessment.objects.get(user__email=context['email'], sequence_id=context['sequence_id'], assessment_area=item.get('assessment_area'))
                 if not next_assessment_marked and item.get('evidence_of_assessment') is None:
                 # Mark the next unassessed area as 'In Progress'
                     tna_assessment.status = 'In Progress'
