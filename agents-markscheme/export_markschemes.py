@@ -11,7 +11,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-def export_markschemes(db_path="ofqual_units.db", output_path="ofqual_markscheme.csv"):
+def export_markschemes(db_path="ofqual_units.db", output_path="ofqual_markscheme.csv.gz"):
     """Export all records with non-null markschemes from SQLite to CSV."""
     try:
         # Connect to SQLite DB
@@ -42,7 +42,7 @@ def export_markschemes(db_path="ofqual_units.db", output_path="ofqual_markscheme
         
         # Save to CSV
         logger.info(f"Saving to CSV: {output_path}")
-        df.to_csv(output_path, index=False)
+        df.to_csv(output_path, index=False, compression='gzip')
         logger.info(f"Successfully exported {record_count} records to {output_path}")
         
     except Exception as e:

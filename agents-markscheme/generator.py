@@ -14,9 +14,10 @@ logfire.configure(scrubbing=False)
 markscheme_agent = Agent(
     'openai:gpt-4o-mini',
     result_type=List[MarkSchemeItem],
-    model_settings=ModelSettings(parallel_tool_calls=True),
+    # model_settings=ModelSettings(parallel_tool_calls=False),
     system_prompt=get_prompt('system', prompt_dir=""),
-    instrument=True
+    instrument=True,
+    retries=3
 )
 
 
