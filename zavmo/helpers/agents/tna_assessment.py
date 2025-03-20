@@ -27,7 +27,7 @@ class transfer_to_discussion_stage(StrictTool):
         for assessment in tna_assessments:
 
             if not assessment.evidence_of_assessment:
-                raise ValueError(f"Save the details of the assessment area: {assessment.assessment_area} before transitioning to Discussion stage. If Assessment is not taken on this area, start the assessment process on this area, before saving the details.")
+                raise ValueError(f"Save the details of the assessment area: **{assessment.assessment_area}** before transitioning to Discussion stage. If Assessment is not taken on this area, start the assessment process on this area, before saving the details. Otherwise, save the details of the assessment area using `SaveAssessmentArea` tool.")
         
         agent = discuss_agent
         xAPI_stage_celery_task.apply_async(args=[agent.id, email, name])
@@ -88,7 +88,7 @@ class SaveAssessmentArea(StrictTool):
     """
     Save the details of an assessment area.
     """
-    assessment_area: str = Field(description="The assessment area that was assessed.")
+    assessment_area: str = Field(description="The exact name of the assessment area that was assessed.")
     user_assessed_knowledge_level: int = Field(description="The knowledge level in the assessment area self-assessed by the user, rated on a scale of 1 to 7.")
     zavmo_assessed_knowledge_level: int = Field(description="The knowledge level determined by Zavmo based on the assessment, rated on a scale of 1 to 7.")
     evidence_of_assessment: str = Field(description="A report of the assessment process for the assessment area and the learner's response to the proposed assessment questions.")
@@ -101,14 +101,18 @@ class SaveAssessmentArea(StrictTool):
         email = context['email']
         name = context['profile']['first_name'] + " " + context['profile']['last_name']
         logger.info(f"evidence_of_assessment: {self.evidence_of_assessment}")
+
+
         # Update the assessments data in context with proper status handling
         updated_assessments = []
         next_assessment_marked = False
         
         for item in context['tna_assessment']['assessments']:
-            if item.get('assessment_area') == self.assessment_area:
+            tna_assessment = TNAassessment.objects.get(user__email=context['email'], sequence_id=context['sequence_id'], 
+                                                       assessment_area=item.get('assessment_area'))
+    
+            if item.get('status')=='In Progress':
                 # completed assessment
-                tna_assessment = TNAassessment.objects.get(user__email=context['email'], sequence_id=context['sequence_id'], assessment_area=self.assessment_area)
                 tna_assessment.user_assessed_knowledge_level = self.user_assessed_knowledge_level
                 tna_assessment.zavmo_assessed_knowledge_level = self.zavmo_assessed_knowledge_level
                 tna_assessment.evidence_of_assessment = self.evidence_of_assessment
@@ -117,7 +121,6 @@ class SaveAssessmentArea(StrictTool):
                 tna_assessment.save()
             
             else:
-                tna_assessment = TNAassessment.objects.get(user__email=context['email'], sequence_id=context['sequence_id'], assessment_area=item.get('assessment_area'))
                 if not next_assessment_marked and item.get('evidence_of_assessment') is None:
                 # Mark the next unassessed area as 'In Progress'
                     tna_assessment.status = 'In Progress'

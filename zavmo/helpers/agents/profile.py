@@ -33,7 +33,7 @@ class MapNOStoOFQUAL(PermissiveTool):
         user_profile = UserProfile.objects.get(user__email=context['email'])
         
         ## Number of 4D sequence to create for a user = length of NOS
-
+        
         for nos_data in nos:
             sequence = FourDSequence(
                 user=user_profile.user,
@@ -44,7 +44,7 @@ class MapNOStoOFQUAL(PermissiveTool):
             
             if len(ofqual_units_for_nos) > 0:
                 sequence.save() # Create the sequence only if ofqual units are found for NOS
-                logging.info(f"\n\nProcessing sequence {sequence.id} with NOS ID: {nos_data['nos_id']} - Found {len(ofqual_units_for_nos)} OFQUAL units\n\n")
+                logging.info(f"\n\nProcessing 4D sequence creation for NOS ID: {nos_data['nos_id']} - Found {len(ofqual_units_for_nos)} OFQUAL units\n\n")
             
                 assessments_for_sequence = []  # Reset for each sequence
                 total_assessments = 0
@@ -65,15 +65,20 @@ class MapNOStoOFQUAL(PermissiveTool):
                     assessments_for_sequence.append(assessment)
                 
                 TNAassessment.objects.bulk_create(assessments_for_sequence)
+            else:
+                logging.info(f"\n\nNo OFQUAL units found for NOS ID: {nos_data['nos_id']}. Skipping FourD Sequence creation.\n\n")
             
         # Get all sequence IDs
         all_sequences = list(FourDSequence.objects.filter(
             user=user_profile.user
         ).order_by('created_at').values_list('id', flat=True))
-        logging.info(f"\n\nAll sequences: {all_sequences}\n\n")
-        # Update context
-        context.update({'sequence_id': all_sequences[0]})
-        return Result(value=f"NOS to OFQUAL mapped, transfer to TNA Assessment step", context=context)
+
+        if all_sequences:
+            # Update context
+            context.update({'sequence_id': all_sequences[0]})
+            return Result(value=f"NOS to OFQUAL mapped, transfer to TNA Assessment step", context=context)
+        else:
+            return Result(value="No sequences found, execute `ExtractNOSData` tool again.", context=context)
 
     
 class ExtractNOSData(StrictTool):

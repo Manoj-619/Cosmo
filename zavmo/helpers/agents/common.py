@@ -1,10 +1,9 @@
 import os
 import codecs
 import yaml
-from typing import Dict, List, Literal
+from typing import Dict
 from helpers.chat import get_prompt
-from stage_app.models import UserProfile, TNAassessment
-import json
+from stage_app.models import TNAassessment
 import logging
 
 def get_yaml_data(yaml_path, yaml_dir="assets/data"):
@@ -58,40 +57,35 @@ def get_tna_assessment_instructions(context: Dict, level: str):
     agent_keys       = ['name', 'description', 'instructions', 'examples', 'completion_condition', 'next_stage', 'next_stage_description']
     prompt_context   = {k:v for k,v in conf_data.items() if k in agent_keys}
  
-    tna_assessments = TNAassessment.objects.filter(user__email=context['email'], sequence_id=context['sequence_id'])
+    competency_to_assess = TNAassessment.objects.filter(user__email=context['email'], 
+                                                        sequence_id=context['sequence_id'], 
+                                                        status='In Progress')
     
-    competency_to_assess = [{'assessment_area':assessment.assessment_area, 
-                               'ofqual_criterias':assessment.ofqual_criterias} 
-                                for assessment in tna_assessments if assessment.status == 'In Progress']
-    
-
     ## bloom's taxonomy level based instructions
-
-    if competency_to_assess:
-        criterias = competency_to_assess[0]['ofqual_criterias']
+    if competency_to_assess.exists():
+        competency_to_assess = competency_to_assess.first()
         if level:
-            level_based_marks_scheme = [item for item in criterias if item['bloom_taxonomy_level'] == level][0]
+            level_based_marks_scheme = [item for item in competency_to_assess.ofqual_criterias if item['bloom_taxonomy_level'] == level][0]
+            
             criteria     = level_based_marks_scheme['criteria']
             expectations = level_based_marks_scheme['expectations']
             task         = level_based_marks_scheme['task']
 
             benchmarking_responses = level_based_marks_scheme['benchmarking_responses']
-            benchmarking_responses = "\n\n".join([f"**{item['grade'].upper().replace('_', '')}:** {item['example']}" for item in benchmarking_responses.items()])
-            
-            criteria_text = "\n".join(criteria)
+            benchmarking_responses = "\n\n".join([f"   **{item['grade'].upper()}:** {item['example']}" for item in benchmarking_responses])
             
             ofqual_based_instructions = (
-                f"- **Assessment Area:** {competency_to_assess[0]['assessment_area']}\n"
-                f"- **Current Bloom's Taxonomy Level mapped to User facing level:** {level} (While addressing about the level, use the level in User facing scale)\n"
-                f"- **Criteria:** {criteria_text}\n\n"
+                f"- **Assessment Area:** {competency_to_assess.assessment_area}\n\n"
+                f"- **Current Bloom's Taxonomy Level mapped to User facing scale is:** {level} (But While addressing about the level, use the level in User facing scale)\n\n"
+                f"- **Criteria:** {criteria}\n\n"
                 f"- **Task:** {task}\n\n"
                 f"- **Expectations:** {expectations}\n\n"
                 f"- **Benchmarking Responses for validation:** \n\n{benchmarking_responses}\n\n"
             )
-            logging.info(f"OFQUAL based instructions: {ofqual_based_instructions}")
+            logging.info(f"OFQUAL based instructions for evaluation: {ofqual_based_instructions}")
             prompt_context['assessment_area_with_criteria'] = ofqual_based_instructions
         else:
-            prompt_context['assessment_area_with_criteria'] = f"Assessment Area: **{competency_to_assess[0]['assessment_area']}**"
+            prompt_context['assessment_area_with_criteria'] = f"Assessment Area: **{competency_to_assess.assessment_area}**"
     else:
         prompt_context['assessment_area_with_criteria'] = "No Assessment Areas left to assess. Transfer to Discussion stage."
 
