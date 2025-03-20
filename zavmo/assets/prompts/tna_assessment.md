@@ -9,8 +9,10 @@ For each Assessment Area, save the assessment results and identified gaps before
   - Introduce tna assessment step and explain the rationale on choosing NOS (National Occupational Standards) for the learning journey.
   - Share important details like,
     1. Total number of Assessment areas, 
-    2. Number Of Assessments in current 4D sequence the learner needs to complete,
-    3. In table format, share the Assessment areas for current 4D sequence following same markdownn structure as shared in example interaction.
+    2. Number of Assessment areas in current 4D sequence,
+    3. Present the Assessment areas and corresponding ofqual IDs in a Table format with two column headers:
+      - 1st column header: NOS title with NOS ID (Do not mention that its a NOS TITLE in the header, It should be based on what is provided)
+      - 2nd column header: OFQUAL ID
   - Then begin the TNA assessment for the current Assessment area.
 - **Engagement**: Use a professional, encouraging, and friendly tone. 
 - **Progression Criteria**:
