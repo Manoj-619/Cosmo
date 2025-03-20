@@ -5,7 +5,7 @@ import json
 from typing import List, Dict
 from pinecone import Pinecone
 from neomodel import config, db
-from openai import OpenAI
+from helpers.chat import get_openai_embedding
 import ast
 
 # Initialize Pinecone client
@@ -14,25 +14,12 @@ pinecone_client = Pinecone(api_key=os.getenv('PINECONE_API_KEY'))
 # Initialize Neo4j client
 config.DATABASE_URL =  f'bolt://{os.getenv("NEO4J_USERNAME")}:{os.getenv("NEO4J_PASSWORD")}@{os.getenv("NEO4J_URI")}'
 
-def get_embedding(text: str, model: str = "text-embedding-3-small") -> List[float]:
-    """
-    Get the embedding of a text using OpenAI's API.
-    """
-    client = OpenAI(api_key=os.environ['OPENAI_API_KEY'])
-    response = client.embeddings.create(
-        input=text,
-        model=model
-    )
-    embedding = response.data[0].embedding
-    return embedding
-
-
 def retrieve_nos_from_pinecone(query: str) -> List[str]:
     """
     Fetch NOS text from Pinecone based on current role.
     
     """
-    query_vector = get_embedding(query)  
+    query_vector = get_openai_embedding(query)  
 
     # Query the Pinecone index
     ## Get NOS ID
@@ -64,7 +51,7 @@ def retrieve_ofquals_from_pinecone(query: str) -> List[str]:
     Returns:
         tuple[str, str]: Tuple containing (text, markscheme) from the qualification
     """
-    query_vector = get_embedding(query)
+    query_vector = get_openai_embedding(query)
 
     # Query the Pinecone index having unitwise data ingested
     index = pinecone_client.Index('centrica-ofqual') ## TODO: Change to ofqual index
@@ -81,38 +68,45 @@ def retrieve_ofquals_from_pinecone(query: str) -> List[str]:
     
     return text, markscheme
 
-def retrieve_ofquals_from_neo4j(nos_id: str) -> List[str]:
+def retrieve_ofquals_from_neo4j(nos_id: str) -> List[Dict[str, Any]]:
     """Get the ofquals mapped to a nos_id"""
     query = """
     MATCH (n:NOSNode {nos_id: $nos_id})-[:MAPS_TO]->(o:OFQUALUnit)
-    RETURN o.unit_id AS unit_id, o.unit_title AS unit_title, 
-    o.overview AS overview, 
-    o.level AS level, 
-    o.qualification_type AS qualification_type, 
-    o.qualification_level AS qualification_level, 
-    o.awarding_organisation AS awarding_organisation, 
-    o.total_credits AS total_credits, 
-    o.guided_learning_hours AS guided_learning_hours, 
-    o.total_qualification_time AS total_qualification_time, 
-    o.unit_learning_outcomes AS learning_outcomes, 
-    o.assessment_methods AS assessment_methods,
-    o.ofqual_id as ofqual_id,
-    o.markscheme AS marksscheme
+    RETURN o.unit_id AS unit_id, 
+           o.unit_uid AS unit_uid,
+           o.unit_title AS unit_title, 
+           o.overview AS overview, 
+           o.qualification_type AS qualification_type, 
+           o.qualification_level AS qualification_level, 
+           o.awarding_organisation AS awarding_organisation, 
+           o.total_credits AS total_credits, 
+           o.guided_learning_hours AS guided_learning_hours, 
+           o.total_qualification_time AS total_qualification_time, 
+           o.unit_learning_outcomes AS learning_outcomes, 
+           o.assessment_methods AS assessment_methods,
+           o.markscheme AS markscheme
     """
-    
+    json_columns = ['markscheme']
     # Execute the query
-    results, _ = db.cypher_query(query, {'nos_id': nos_id})
+    results, meta = db.cypher_query(query, {'nos_id': nos_id})
     
-    connected_ofqual_units = [{'unit_id': row[0], 'unit_title': row[1], 'overview': row[2], 'level': row[3], 
-                        'qualification_type': row[4], 'qualification_level': row[5], 'awarding_organisation': row[6], 
-                        'total_credits': row[7], 'guided_learning_hours': row[8], 'total_qualification_time': row[9], 
-                        'learning_outcomes': row[10], 'assessment_methods': row[11], 'ofqual_id': row[12], 'marksscheme': json.loads(row[13])} for row in results]
-    
-    return connected_ofqual_units
+    # Process and return results
+    ofqual_units = []
+    for row in results:
+        # Convert row to dictionary using column names from meta
+        unit = {}
+        for i, col_name in enumerate(meta):
+            val = row[i]
+            if col_name in json_columns:
+                val = [json.loads(x) for x in json.loads(val)]               
+            unit[col_name] = val
+        ofqual_units.append(unit)    
+    return ofqual_units
 
-def retrieve_nos_from_neo4j(query,index_name='nos_vector_index', top_k=5):
+
+def retrieve_nos_from_neo4j(query, index_name='nos_vector_index', top_k=5):
     """Retrieve NOS from Neo4j"""
-    query_embedding = get_embedding(query)
+    query_embedding = get_openai_embedding(query)
     cypher_query = f"""
         CALL db.index.vector.queryNodes('{index_name}', $top_k, $query_embedding) 
             YIELD node, score
