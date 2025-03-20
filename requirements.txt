@@ -28,6 +28,9 @@ anthropic
 tiktoken
 tenacity
 
+# Logfire
+logfire
+
 # for web
 # gunicorn>=20.0.4
 gevent>=20.6.2
