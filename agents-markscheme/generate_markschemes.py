@@ -1,6 +1,6 @@
 """
 Command example:
-conda activate squizzyenv
+
 cd Github/zavmo/zavmo-api/agents-markscheme
 python generate_markschemes.py --batch-size 1000 --workers 20
 """
