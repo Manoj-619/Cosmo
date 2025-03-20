@@ -180,8 +180,9 @@ def _process_agent_response(stage_name, message_history, context, max_turns=10):
         ## Get Summary of previous stages    
         if stage_model == TNAassessment:
             current_sequence_tna_assessments = TNAassessment.objects.filter(user__email=email, sequence_id=sequence_id)
-
-            summary = f"Total Assessment Areas for current 4D Sequence are {current_sequence_tna_assessments.count()}.\n"+"\n\n".join([assessment.get_summary_of_assessment_area() 
+            nos_title = current_sequence_tna_assessments.first().nos_title
+            nos_id    = current_sequence_tna_assessments.first().nos_id
+            summary   = f"NOS_TITLE: **{nos_title}**\nNOS_ID: **({nos_id}**)\n\nTotal Assessment Areas for current 4D Sequence are {current_sequence_tna_assessments.count()}.\n"+"\n\n".join([assessment.get_summary_of_assessment_area() 
                                                    for assessment in current_sequence_tna_assessments])
         else:
             summary = stage_model.get_summary()

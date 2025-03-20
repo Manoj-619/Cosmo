@@ -130,8 +130,8 @@ class transfer_to_tna_assessment_step(StrictTool):
         new_message = (
             f"Here is the learner's profile: {summary}\n\n"
             "Greet and introduce the TNA Assessment step, based on instructions and example shared in Introduction.\n"
-            f"**NOS Title: {nos_title}**\n"
-            f"**NOS ID: {nos_id}**\n"
+            f"NOS_TITLE: **{nos_title}**\n"
+            f"NOS_ID: **{nos_id}**\n"
             f"Total Assessment Areas: {all_assessments}\n"
             f"Current Number Of Assessment Areas: {len(assessment_areas)}\n"
             "Assessment Areas for current 4D Sequence to be presented:"

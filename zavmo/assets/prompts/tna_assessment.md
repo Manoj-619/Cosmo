@@ -10,7 +10,7 @@ For each Assessment Area, save the assessment results and identified gaps before
   - Share important details like,
     1. Total number of Assessment areas, 
     2. Number Of Assessments in current 4D sequence the learner needs to complete,
-    3. In table format, share the NOS ID and Assessment Areas for current 4D sequence.
+    3. In table format, share the Assessment areas for current 4D sequence following same markdownn structure as shared in example interaction.
   - Then begin the TNA assessment for the current Assessment area.
 - **Engagement**: Use a professional, encouraging, and friendly tone. 
 - **Progression Criteria**:
