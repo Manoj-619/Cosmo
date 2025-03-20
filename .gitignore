@@ -1,4 +1,4 @@
-
+*.xz
 celerybeat-schedule*.db
 celerybeat-schedule*.bak
 celerybeat-schedule*.dat
