@@ -60,7 +60,7 @@ class MapNOStoOFQUAL(PermissiveTool):
                         nos_knowledge_items=nos_data['knowledge_understanding'],
                         ofqual_unit_id=ofqual['unit_id'],
                         ofqual_unit_data=ofqual['learning_outcomes'],
-                        ofqual_criterias=ofqual['marksscheme'],
+                        ofqual_criterias=ofqual['markscheme'],
                         ofqual_id=ofqual['ofqual_id'],
                         status='In Progress' if total_assessments == 1 else 'To Assess'
                     )
