@@ -87,8 +87,10 @@ class TNAassessment(models.Model):
     ofqual_criterias = models.JSONField(default=list, blank=True, null=True, verbose_name="Bloom's Taxonomy Criteria")
     ofqual_unit_data = models.TextField(blank=True, null=True, verbose_name="Ofqual Unit Data")
     ofqual_unit_id   = models.CharField(max_length=255, blank=True, null=True, verbose_name="Ofqual Unit ID")
+    ofqual_id        = models.CharField(max_length=255, blank=True, null=True, verbose_name="Ofqual ID")
 
     nos_id                = models.CharField(max_length=50, blank=True, null=True, verbose_name="NOS ID")
+    nos_title             = models.CharField(max_length=255, blank=True, null=True, verbose_name="NOS Title")
     nos_performance_items = models.TextField(blank=True, null=True, verbose_name="NOS Performance Items")
     nos_knowledge_items   = models.TextField(blank=True, null=True, verbose_name="NOS Knowledge Items")
 

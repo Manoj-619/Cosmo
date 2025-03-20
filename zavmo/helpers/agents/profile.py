@@ -55,11 +55,13 @@ class MapNOStoOFQUAL(PermissiveTool):
                         assessment_area=ofqual['unit_title'],
                         sequence=sequence,
                         nos_id=nos_data['nos_id'],
+                        nos_title=nos_data['title'],
                         nos_performance_items=nos_data['performance_criteria'],
                         nos_knowledge_items=nos_data['knowledge_understanding'],
-                        ofqual_unit_id=ofqual['unit_uid'],
+                        ofqual_unit_id=ofqual['unit_id'],
                         ofqual_unit_data=ofqual['learning_outcomes'],
                         ofqual_criterias=ofqual['marksscheme'],
+                        ofqual_id=ofqual['ofqual_id'],
                         status='In Progress' if total_assessments == 1 else 'To Assess'
                     )
                     assessments_for_sequence.append(assessment)
@@ -114,21 +116,27 @@ class transfer_to_tna_assessment_step(StrictTool):
         summary = profile.get_summary()
 
         all_assessments = TNAassessment.objects.filter(user=profile.user).count()
+
         assessments = TNAassessment.objects.filter(sequence_id=context['sequence_id'])
-        assessment_areas = [(assessment.assessment_area, assessment.nos_id) for assessment in assessments]
+        nos_title   = assessments.first().nos_title
+        nos_id      = assessments.first().nos_id
+
+        assessment_areas = [(assessment.assessment_area, assessment.ofqual_id, assessment.ofqual_unit_id) for assessment in assessments]
         agent = get_tna_assessment_agent()
         xAPI_stage_celery_task.apply_async(args=[agent.id, email, name])
-        current_assessment_areas = '\n-'.join([f"Assessment Area: {area} (NOS ID: {nos_id})" for area, nos_id in assessment_areas])
+        current_assessment_areas = '\n-'.join([f"Assessment Area: {area} (OFQUAL ID: {ofqual_id} (Unit: {ofqual_unit_id}))" for area, ofqual_id, ofqual_unit_id in assessment_areas])
         
         # Format the message with proper error handling
         new_message = (
             f"Here is the learner's profile: {summary}\n\n"
             "Greet and introduce the TNA Assessment step, based on instructions and example shared in Introduction.\n"
+            f"**NOS Title: {nos_title}**\n"
+            f"**NOS ID: {nos_id}**\n"
             f"Total Assessment Areas: {all_assessments}\n"
             f"Current Number Of Assessment Areas: {len(assessment_areas)}\n"
             "Assessment Areas for current 4D Sequence to be presented:"
             f"\n-{current_assessment_areas}\n\n"
-            "Present the Assessment Areas for current 4D Sequence in a table form.\n\n"
+            "Present the Assessment Areas for current 4D Sequence in a Table form.\n\n"
             "Then start the TNA assessment on Current Assessment Area."
         )
 

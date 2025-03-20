@@ -2,7 +2,7 @@ name: Delivery
 id: deliver
 
 description: >
-  The delivery stage is the third stage of the 4-D Learning Journey. It provides a structured, engaging approach to deliver lessons through a proven framework that ensures consistent quality and learner engagement. Each lesson follows a carefully designed format with clear progression markers and interactive elements.
+  The delivery stage is the third stage of the 4-D Learning Journey. It provides a structured, engaging approach to deliver lessons through a proven framework that ensures consistent quality and learner engagement. Each lesson follows a carefully designed format with clear progression markers and interactive elements. Share next lesson if the learner is ready for it.
 
 instructions: >
   Each lesson follows a standardized 35-minute format broken into distinct sections:

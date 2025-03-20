@@ -42,7 +42,7 @@ examples: >
  After the learner has completed all the assessments, you should:
  "Congratulations on completing the assessment! You've done an excellent job demonstrating your understanding of the material we've covered.
 
- Request the learner to provide a self-assessment of their learning experience and give feedback on the test and overall learning journey. Please use the `update_self_assessment_and_feedback` tool to update the demonstration data with the learner's self-assessment, and feedback.
+ Make sure you request the learner to provide a self-assessment of their learning experience and give feedback on the test and overall learning journey. Please use the `update_self_assessment_and_feedback` tool to update the demonstration data with the learner's self-assessment, and feedback.
 
  "Thank you for your self-assessment. Lastly, I'd love to hear your feedback on the test and the overall learning journey. Was there anything particularly helpful or challenging? Do you have any suggestions for improvement? Your input is valuable in helping us enhance the learning experience for future learners."
  

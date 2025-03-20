@@ -132,7 +132,8 @@ CACHES = {
                 "retry_on_timeout": True
             },
         },
-        "KEY_PREFIX": "zavmo-cache-"  # Optional: helps identify JSON-serialized keys
+        "KEY_PREFIX": "zavmo-cache-",  # Optional: helps identify JSON-serialized keys
+        "TIMEOUT": 60 * 24 * 60 * 60,  # 60 days in seconds
     }
 }
 # Password validation

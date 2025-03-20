@@ -96,7 +96,7 @@ def retrieve_ofquals_from_neo4j(nos_id: str) -> List[str]:
     o.total_qualification_time AS total_qualification_time, 
     o.unit_learning_outcomes AS learning_outcomes, 
     o.assessment_methods AS assessment_methods,
-    o.unit_uid as unit_uid,
+    o.ofqual_id as ofqual_id,
     o.markscheme AS marksscheme
     """
     
@@ -106,7 +106,7 @@ def retrieve_ofquals_from_neo4j(nos_id: str) -> List[str]:
     connected_ofqual_units = [{'unit_id': row[0], 'unit_title': row[1], 'overview': row[2], 'level': row[3], 
                         'qualification_type': row[4], 'qualification_level': row[5], 'awarding_organisation': row[6], 
                         'total_credits': row[7], 'guided_learning_hours': row[8], 'total_qualification_time': row[9], 
-                        'learning_outcomes': row[10], 'assessment_methods': row[11], 'unit_uid': row[12], 'marksscheme': ast.literal_eval(row[13])} for row in results]
+                        'learning_outcomes': row[10], 'assessment_methods': row[11], 'ofqual_id': row[12], 'marksscheme': ast.literal_eval(row[13])} for row in results]
     
     ## Converting marksscheme to json object
     [res.update({'marksscheme': [json.loads(i) for i in ast.literal_eval(res['marksscheme'])]}) for res in connected_ofqual_units]

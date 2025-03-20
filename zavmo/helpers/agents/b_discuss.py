@@ -99,7 +99,7 @@ class update_discussion_data(StrictTool):
         for assessment_item in assessment_areas:
             tna_assessment_data += f"**Assessment Area:** {assessment_item.assessment_area}\n**Learner's Report:** {assessment_item.evidence_of_assessment}\n**Gaps Determined:** {assessment_item.knowledge_gaps}\n\n"
 
-        ofqual_units = "\n\n".join([f"**OFQUAL Unit {ofqual.ofqual_unit_id}:**\n{ofqual.ofqual_unit_data}" for ofqual in assessment_areas])
+        ofqual_units = "\n\n".join([f"**OFQUAL ID: {ofqual.ofqual_id} (Unit: {ofqual.ofqual_unit_id}):**\n{ofqual.ofqual_unit_data}" for ofqual in assessment_areas])
        
         value = f"""Discussion data updated successfully for {email}
         
