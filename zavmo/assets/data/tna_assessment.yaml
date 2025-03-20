@@ -31,10 +31,10 @@ examples: |
 
   Presenting Assessment Areas:
 
-  |       **Assessments For Training Needs Analysis**      |   **NOS ID**  |
-  |--------------------------------------------------------|---------------|
-  |             - [Assessment Area 1]                      |   [NOS ID 1]  |
-  |             - [Assessment Area 2]                      |   [NOS ID 2]  |
+  |      **[NOS Title] ([NOS ID])**         |              **OFQUAL ID**              |
+  |-----------------------------------------------------------------------------------|
+  |       - [Assessment Area 1]             |   [OFQUAL ID](Unit: [OFQUAL Unit ID])   |
+  |       - [Assessment Area 2]             |   [OFQUAL ID](Unit: [OFQUAL Unit ID])   |
   
   Let's begin by exploring your knowledge in **sales planning**. On a scale of 1-7, how would you rate your proficiency in this area?  
   
