@@ -106,16 +106,16 @@ class update_discussion_data(StrictTool):
 **Timeline**: {self.timeline}
 **Learning Style**: {self.learning_style}
 
-Two different aspects of data is provided below for Curriculum Generation:
-1. TNA Assessment Data
-2. All OFQUAL Units data
+The following data sources are being used to inform the personalized curriculum design:
+1. All TNA Assessment Data
+2. All OFQUAL Units Data
 
 
-**All TNA Assessment Data provided below must be used for Curriculum Generation**:
+- **All TNA Assessment Data provided below must be used for Curriculum Generation**:
 
 {tna_assessment_data}
 
-**All OFQUAL Units Data provided below must be used for Curriculum Generation**:
+- **All OFQUAL Units Data provided below must be used for Curriculum Generation**:
 
 {ofqual_units}
         """
