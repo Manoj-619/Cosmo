@@ -74,7 +74,7 @@ class Curriculum(StrictTool):
 
 class update_discussion_data(StrictTool):
     """Update the discussion data after the learner has expressed their interest areas, learning style, and timeline."""
-    interest_areas: str = Field(description="The learner's interest areas")
+    # interest_areas: str = Field(description="The learner's interest areas")
     learning_style: str = Field(description="The learner's preferred conversational learning style, for example, role-play, storytelling, or case study discussions")
     timeline: int = Field(description="The learner's timeline for completing the curriculum")
     
@@ -88,7 +88,7 @@ class update_discussion_data(StrictTool):
         # Get the DiscussStage object
         discuss_stage = DiscussStage.objects.get(user__email=email, sequence_id=sequence_id)
                 
-        discuss_stage.interest_areas  = self.interest_areas
+        # discuss_stage.interest_areas  = self.interest_areas
         discuss_stage.learning_style  = self.learning_style
         discuss_stage.timeline        = self.timeline
         logger.info(f"Curriculum: {discuss_stage.curriculum}.")
@@ -106,13 +106,16 @@ class update_discussion_data(StrictTool):
 **Timeline**: {self.timeline}
 **Learning Style**: {self.learning_style}
 
-**Prioritize using this data for Curriculum Generation**:
+Two different aspects of data is provided below for Curriculum Generation:
+1. TNA Assessment Data
+2. All OFQUAL Units data
 
-**TNA Assessment Data**:
+
+**All TNA Assessment Data provided below must be used for Curriculum Generation**:
 
 {tna_assessment_data}
 
-**All OFQUAL Units provided below must be used for Curriculum Generation**:
+**All OFQUAL Units Data provided below must be used for Curriculum Generation**:
 
 {ofqual_units}
         """
