@@ -41,12 +41,12 @@ class Module(BaseModel):
     duration: int = Field(description="The total duration of the module in hours")
 
 class Curriculum(StrictTool):
-    """Generate a detailed curriculum for the learner based on the NOS Assessment Areas and corresponding OFQUAL Units shared."""
+    """Generate a detailed curriculum for the learner based on the Assessment Areas and corresponding OFQUAL Units shared."""
     title: str = Field(description="The title of the curriculum")
     subject: str = Field(description="The main subject area of the curriculum.")
     level: str = Field(description="The difficulty level of the curriculum (e.g., beginner, intermediate, advanced)")
     prerequisites: List[str] = Field(description="Any prerequisites needed to undertake this curriculum")
-    modules: List[Module] = Field(description="List upto 10 or more modules majorly designed on NOS Assessment Areas and OFQUAL Units data shared. Include 1-2 modules on learner's interest areas as well.")
+    modules: List[Module] = Field(description="List upto 10 or more modules majorly designed on Assessment Areas and OFQUAL Units data shared. Include 1-2 modules on learner's interest areas as well.")
 
     def execute(self, context: Dict):
         email       = context['email']
