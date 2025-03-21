@@ -35,7 +35,7 @@ logger = get_logger(__name__)
 #     exercises: List[str] = Field( description="List of exercises for the learner to practice")
 
 class Module(BaseModel):
-    title: str = Field(description="The title of the module. It can be an NOS Assessment Area or OFQUAL Unit")
+    title: str = Field(description="The title of the module. It can be an Assessment Area or OFQUAL Unit")
     learning_outcomes: List[str] = Field(description="List upto 5 learning outcomes.")
     lessons: List[str] = Field(description="List of lessons in this module based on the learning outcomes.")
     duration: int = Field(description="The total duration of the module in hours")
