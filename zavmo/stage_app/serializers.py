@@ -1,7 +1,7 @@
 import uuid  # Add this import at the top
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
-from .models import UserProfile, DiscoverStage, DiscussStage, DeliverStage, DemonstrateStage, Org, FourDSequence
+from .models import UserProfile, DiscoverStage, DiscussStage, DeliverStage, DemonstrateStage, Org, FourDSequence, TNAassessment
 
 User = get_user_model()
 
@@ -34,8 +34,14 @@ class UserProfileSerializer(BaseStageSerializer):
     org_name = serializers.CharField(source='org.org_name', read_only=True)
     class Meta:
         model = UserProfile
-        fields = ['id', 'email', 'org_id', 'org_name', 'first_name', 'last_name', 'age', 'edu_level', 'current_role']
-                
+        fields = ['id', 'email', 'org_id', 'org_name', 'first_name', 'last_name', 'current_role']
+
+
+class TNAassessmentSerializer(BaseStageSerializer):
+    class Meta:
+        model   = TNAassessment
+        fields = ['assessment_area', 'evidence_of_assessment', 'user_assessed_knowledge_level', 'zavmo_assessed_knowledge_level', 'status', 'nos_id']
+
 class DiscoverStageSerializer(BaseStageSerializer):
     class Meta:
         model = DiscoverStage
@@ -60,11 +66,11 @@ class FourDSequenceSerializer(serializers.ModelSerializer):
     uuid_str = serializers.SerializerMethodField()
     stage_name = serializers.CharField(source='stage_display', read_only=True)
     email = serializers.CharField(source='user.email', read_only=True)
+    assessments = TNAassessmentSerializer(many=True, read_only=True)
 
     def get_uuid_str(self, obj):
-        return str(obj.id)  # Ensure UUID is converted to string
-    
+        return str(obj.id)
 
     class Meta:
         model = FourDSequence
-        fields = ['uuid_str', 'created_at', 'updated_at', 'stage_name', 'email']
+        fields = ['uuid_str', 'created_at', 'updated_at', 'stage_name', 'email', 'assessments']

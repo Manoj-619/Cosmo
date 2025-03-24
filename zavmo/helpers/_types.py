@@ -2,7 +2,7 @@ import inspect
 import openai
 from pydantic import BaseModel
 from collections.abc import Callable
-from typing import List, Dict, Union, Optional, Any, ForwardRef
+from typing import List, Dict, Union, Optional, Any, ForwardRef, Literal
 
 # Define forward references
 AgentRef = ForwardRef('Agent')
@@ -24,6 +24,7 @@ class Agent(BaseModel):
         functions (List[AgentFunction]): The functions that the agent can use.
         tool_choice (str): The tool choice for the agent.
         parallel_tool_calls (bool): Whether to allow parallel tool calls.
+        service (Literal["openai", "azure"]): The service provider to use (default: "openai")
     """
     name: str = "Agent"
     id: str = "agent"
@@ -34,6 +35,8 @@ class Agent(BaseModel):
     functions: List[AgentFunction] = []
     tool_choice: str = None
     parallel_tool_calls: bool = True
+    context: dict = {}
+    service: Literal["openai", "azure"] = "openai"
 
 
 class StrictTool(BaseModel):

@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand
 from django.contrib.auth.models import User
-from stage_app.models import Org, UserProfile, FourDSequence
+from stage_app.models import Org, UserProfile, FourDSequence, TNAassessment
 
 class Command(BaseCommand):
     help = 'Creates test users and associates them with an organization'

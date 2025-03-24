@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 from openai import OpenAI
 from openai.types.chat import ChatCompletionMessage
 from openai.types.chat.chat_completion_message_tool_call import ChatCompletionMessageToolCall
-from helpers.chat import filter_history
+from helpers.chat import filter_history, get_operational_service, get_openai_client
 from pydantic import BaseModel
 import logging
 from helpers._types import (
@@ -19,41 +19,62 @@ from helpers._types import (
     AgentFunction,
     function_to_json,
 )
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Literal
 from collections import defaultdict
+from helpers.utils import get_utc_timestamp
+import time
+import logfire
 
 load_dotenv()
+
+# TODO: Add LOGFIRE_TOKEN to .env
+# TODO: Eventually, scrubbing should be enabled
+logfire.configure(scrubbing=False)
 
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logging.basicConfig(level=logging.INFO,
                     format="%(asctime)s - %(levelname)s - %(message)s")
 
-openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
 
 
 def fetch_agent_response(agent: Agent, history: List, context: Dict) -> ChatCompletionMessage:
-    """Fetches the response from an agent."""
-    logging.info('Logging from fetch_agent response')
+    """Fetches the response from an agent with automatic service failover."""
     context = defaultdict(str, context)
     instructions = agent.instructions
+    
     # Start with system message
     system_message = {"role": "system", "content": instructions}
     init_messages  = [system_message]
     if agent.start_message:
         init_messages.append({"role": "user", "content": agent.start_message})
 
-    messages = init_messages + filter_history(history)
+    messages_history = init_messages + filter_history(history)
+    messages = [{k: v for k, v in message.items() if k != 'context'} for message in messages_history]
+
     tools = [function_to_json(f) for f in agent.functions]
 
     create_params = {
         "model": agent.model,
         "messages": messages,
         "tools": tools or None,
-        "tool_choice": agent.tool_choice if tools else "auto",
+        # "tool_choice": agent.tool_choice if tools else "auto" ,
+
     }
     if tools:
+        create_params["tool_choice"] = agent.tool_choice if tools else "auto"
         create_params["parallel_tool_calls"] = agent.parallel_tool_calls
 
+    service = get_operational_service()
+    logging.info(f"\n\nGenerating agent response using {service} service\n\n")
+    openai_client = get_openai_client(service=service)
+    
+    # TODO: Verify that this does not add latency 
+    # TODO: Verify that this works with AzureOpenAI client as well.
+    
+    logfire.instrument_openai(openai_client)
+    # logging.info(f"instructions: {agent.instructions}\n\n")
+    # logging.info(f"start message: {agent.start_message}\n\n")
     return openai_client.chat.completions.create(**create_params)
 
 
@@ -80,7 +101,7 @@ def execute_tool_calls(
                     "role": "tool",
                     "tool_call_id": tool_call.id,
                     "tool_name": name,
-                    "content": f"Error: Tool {name} not found.",
+                    "content": f"Error: Tool {name} not found."
                 }
             )
             continue
@@ -167,6 +188,7 @@ def run_step(agent: Agent, messages: List, context: Dict = {}, max_turns: int = 
     # If no active agent, we're done
     while active_agent and turns < max_turns:
         logging.info(f"Running step {turns+1} with agent {active_agent.name}")
+        
         completion = fetch_agent_response(
             active_agent, history, context=context)
 
@@ -179,7 +201,10 @@ def run_step(agent: Agent, messages: List, context: Dict = {}, max_turns: int = 
         message.sender = active_agent.name
         # Convert the message to dict and add to history
         message_dict = json.loads(message.model_dump_json())
+        # TODO: message_dict['intent'] = 
 
+        # message_dict['context'] = context
+        # message_dict['context']['timestamp'] = get_utc_timestamp()
         # If no tool calls, we're done with this turn
         if not message.tool_calls:
             history.append(message_dict)
@@ -200,8 +225,6 @@ def run_step(agent: Agent, messages: List, context: Dict = {}, max_turns: int = 
         if partial_response.stop:
             logging.info("Stopping agent chain")
             break
-        # Update context
-        context.update(partial_response.context)
 
         # Update active_agent if a new agent is returned
         if partial_response.agent and partial_response.agent != active_agent:

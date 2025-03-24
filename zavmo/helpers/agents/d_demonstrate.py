@@ -15,12 +15,16 @@ from helpers._types import (
     StrictTool,
     Result,
 )
-from helpers.agents.common import get_agent_instructions
-from stage_app.models import FourDSequence, DemonstrateStage
+import json
+from helpers.agents.common import get_agent_instructions, get_tna_assessment_instructions
+from stage_app.models import FourDSequence, DemonstrateStage, TNAassessment, DiscoverStage
+from stage_app.serializers import TNAassessmentSerializer
 from django.contrib.auth.models import User
 from helpers.utils import get_logger
+from stage_app.tasks import xAPI_evaluation_celery_task, xAPI_feedback_celery_task
 
 logger = get_logger(__name__)
+
 
 class question(StrictTool):
     """Use this tool to generate a single set of question, answer, and explanation for an assessment."""
@@ -46,6 +50,7 @@ class evaluate_answer(StrictTool):
     def execute(self, context: Dict):        
         logger.info(f"Evaluating learner's answer to question: {self.question}")        
         email = context['email']
+        name = context['profile']['first_name'] + " " + context['profile']['last_name']
         sequence_id = context['sequence_id']
                 
         evaluation         = self.model_dump()
@@ -54,7 +59,10 @@ class evaluate_answer(StrictTool):
         # Update evaluations in the DemonstrateStage object and save
         demonstrate_object.evaluations.append(evaluation)
         demonstrate_object.save()
+
+        xAPI_evaluation_celery_task.apply_async(args=[json.loads(self.model_dump_json()),email,name])
         
+
         return Result(value=str(evaluation), context=context)
 
 
@@ -67,6 +75,7 @@ class update_self_assessment_and_feedback(StrictTool):
         logger.info(f"Updating demonstration data for {context['email']}.")
         
         email = context['email']
+        name = context['profile']['first_name'] + " " + context['profile']['last_name']
         sequence_id = context['sequence_id']
         
         # Update the DemonstrateStage object
@@ -83,24 +92,36 @@ class update_self_assessment_and_feedback(StrictTool):
         demonstrate_stage.feedback_summary    = self.feedback_summary
         demonstrate_stage.save()
         
+        xAPI_feedback_celery_task.apply_async(args=[self.feedback_summary,self.understanding_level,email,name])
         return Result(value="Demonstration data updated successfully", context=context)
     
-
 class mark_completed(StrictTool):
-    """Mark the Demonstration stage as complete so that a new 4D learning journey can be created."""    
+    """Mark the Demonstration stage as complete and transition to the next sequence."""    
     def execute(self, context: Dict):
-        email = context['email']        
+        email = context['email']      
         if not email:
             raise ValueError("Email is required to mark the Demonstration stage as complete.")        
+        
         # Retrieve user and create a new 4D Sequence
-        demonstrate_stage = DemonstrateStage.objects.get(user__email=email)
+        demonstrate_stage = DemonstrateStage.objects.get(user__email=email, sequence_id=context['sequence_id'])
         is_complete, error = demonstrate_stage.check_complete()
         if not is_complete:
-            raise ValueError(error)        
-        user     = User.objects.get(email=email)
-        sequence = FourDSequence.objects.create(user=user)        
-        value = f"4D Sequence {sequence.id} marked as completed. New 4D learning journey created."
-        return Result(value=value, context=context)
+            raise ValueError(error)  
+        
+        current_sequence_id = context['sequence_id']
+        user = User.objects.get(email=email)
+        demonstrate_agent.id = "completed"  ## Important
+
+        sequences = FourDSequence.objects.filter(user=user).order_by('created_at')
+        if sequences.exists():
+            return Result(
+                    value=f"Completed sequence {current_sequence_id}, starting new sequence to continue with next NOS assessment areas. Greet the learner and inform about the completion of current FourD Sequence and the beginning of the next FourD Sequence with TNA Assessment step.",
+                    context=context)
+        else:
+            logger.info("No existing 4D sequences found for the user. Creating a new 4D learning journey.")
+            sequence = FourDSequence.objects.create(user=user)        
+            value = f"4D Sequence {sequence.id} marked as completed. New 4D learning journey created."
+            return Result(value=value, context=context)
 
 demonstrate_agent = Agent(
     name="Demonstration",

@@ -5,6 +5,7 @@ from rest_framework.decorators import api_view, authentication_classes, permissi
 from rest_framework.response import Response as DRFResponse
 from rest_framework import status
 from stage_app.views.utils import _get_user_and_sequence, _initialize_context, _determine_stage, _get_message_history, _process_agent_response, _update_context_and_cache
+from ..tasks import xAPI_chat_celery_task, xAPI_stage_celery_task
 
 
 logger = get_logger(__name__)
@@ -26,6 +27,7 @@ def chat_view(request):
             "stage": stage_name,
             "stages": {
                 "profile": context.get('profile', {}),
+                "tna_assessment": context.get('tna_assessment', {}),
                 "discover": context.get('discover', {}),
                 "discuss": context.get('discuss', {}),
                 "deliver": context.get('deliver', {}),
@@ -34,8 +36,29 @@ def chat_view(request):
         })
 
     message_history = _get_message_history(user.email, sequence_id, request.data.get('message'))
-    response        = _process_agent_response(stage_name, message_history, context)
-    
+
+    email = context['email']
+    if stage_name == "profile" and not context.get('has_called_profile_stage_xapi', False):
+        xAPI_stage_celery_task.apply_async(args=[stage_name, email, email])
+        context['has_called_profile_stage_xapi'] = True
+
+    # Get the latest user message from the message history
+    if message_history and message_history[-1].get("role") == "user":
+        latest_user_message = message_history[-1].get("content")
+        if len(message_history) > 1 and message_history[-2].get("role")=="assistant":
+            latest_stage=message_history[-2].get("sender")
+            latest_zavmo_message=message_history[-2].get("content")
+        else:
+            latest_stage=None
+            latest_zavmo_message=None
+    else:
+        latest_user_message = None  # No new user message yet
+
+    if latest_user_message:
+        xAPI_chat_celery_task.apply_async(args=[latest_user_message, latest_stage,context['email'],latest_zavmo_message])
+
+    response = _process_agent_response(stage_name, message_history, context)
+
     if not response.messages:
         return DRFResponse({
             "error": "No response generated from the agent",
@@ -44,6 +67,7 @@ def chat_view(request):
             "stage_data": {
                 "profile": context.get('profile', {}),
                 "discover": context.get('discover', {}),
+                "tna_assessment": context.get('tna_assessment', {}),
                 "discuss": context.get('discuss', {}),
                 "deliver": context.get('deliver', {}),
                 "demonstrate": context.get('demonstrate', {})
@@ -60,6 +84,7 @@ def chat_view(request):
         "stage_data": {
             "profile": context.get('profile', {}),
             "discover": context.get('discover', {}),
+            "tna_assessment": context.get('tna_assessment', {}),
             "discuss": context.get('discuss', {}),
             "deliver": context.get('deliver', {}),
             "demonstrate": context.get('demonstrate', {})

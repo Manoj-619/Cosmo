@@ -4,22 +4,36 @@ Zavmo backend API, built with django - for managing user profiles, LLM messages,
 ---
 # Docker Setup
 ```
-docker-compose up --build --force-recreate --detach
+docker compose up --build --force-recreate --detach
 ```
 # Stop
 ```
-docker-compose down --remove-orphans
+docker compose down --remove-orphans
+```
+
+# Enter container
+```
+docker exec -it zavmo_app /bin/bash
+cd zavmo
 ```
 
 ## Check logs
 ```
-docker logs -f zavmo-api-app-1
+docker logs -f zavmo_app
 ```
 ## Delete all volumes
 ```
 docker system prune -a --volumes
 ```
 
+## For loading static data from excel to django models
+```
+python manage.py save_data assets/static_data/JDs_NOS_OFQUAL.xlsx
+```
+
+## For building neo4j
+
+docker run --name neo4j -p 7474:7474 -p 7687:7687 -d -e NEO4J_AUTH=username/password neo4j:latest
 
 ### For dev
 
@@ -42,13 +56,6 @@ python manage.py runserver
 - **xAPI Exploration**
   - Explore and review xAPI
   - Testing by saving dummy information using xAPI
-
-- **Bug Fixes**
-  - User profile switching issue
-  - Token filtering issue with tool calls
-
-- **Prompt Changes**
-  - Update initial message for 4D prompt
 
 - **Infrastructure**
   - Redis Insight whitelisting

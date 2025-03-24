@@ -18,8 +18,9 @@ from helpers._types import (
 from helpers.utils import get_logger
 from helpers.agents.common import get_agent_instructions
 from helpers.agents.d_demonstrate import demonstrate_agent
+from stage_app.tasks import xAPI_lesson_celery_task, xAPI_curriculum_completion_celery_task,xAPI_stage_celery_task
 from stage_app.models import DeliverStage, DiscussStage, UserProfile
-
+import json
 
 load_dotenv()
 
@@ -33,6 +34,8 @@ class transfer_to_demonstrate_stage(StrictTool):
     def execute(self, context: Dict):
         # Get email and sequence id from context
         email       = context['email']
+        name        = context['profile']['first_name'] + " " + context['profile']['last_name']
+        curriculum_title  = context["discuss"]['curriculum']['title']
         sequence_id = context['sequence_id']
         
         if not email or not sequence_id:
@@ -45,12 +48,15 @@ class transfer_to_demonstrate_stage(StrictTool):
         
         deliver_stage             = DeliverStage.objects.get(user__email=email, sequence_id=sequence_id)
         deliver_stage.is_complete = self.is_complete
-        deliver_stage.save()        
-        
+        deliver_stage.save()   
+
+        if deliver_stage.is_complete:
+            xAPI_curriculum_completion_celery_task.apply_async(args=[curriculum_title,email,name])
+
         agent = demonstrate_agent
-        
+        xAPI_stage_celery_task.apply_async(args=[agent.id, email, name])
         # Create the start message for the Demonstration agent
-        agent.start_message += f"""
+        agent.start_message = f"""
         
         **Curriculum:**
         {curriculum}
@@ -82,10 +88,9 @@ class Lesson(StrictTool):
     def execute(self, context: Dict):
         # Get email and sequence id from context
         email       = context['email']
+        name        = context['profile']['first_name'] + " " + context['profile']['last_name']
         sequence_id = context['sequence_id']
-        
-        # Get curriculum from previous stage
-        curriculum = DiscussStage.objects.get(user__email=email, sequence_id=sequence_id).curriculum
+            
         
         new_lesson  = self.model_dump()
         
@@ -93,19 +98,14 @@ class Lesson(StrictTool):
             user__email=email, 
             sequence_id=sequence_id
         )
-        lesson_number = len(deliver_stage.lessons) + 1
         deliver_stage.lessons.append(new_lesson)
         deliver_stage.save()
         
-        value = f"""
-        **Curriculum:**
-        {curriculum}
+        context['deliver']['lesson_data']=self.model_dump_json()
         
-        ** Lesson #{lesson_number} **
-        
-        {new_lesson}
-        """
-        return Result(value=value, context=context)
+        xAPI_lesson_celery_task.apply_async(args=[json.loads(self.model_dump_json()),email,name])
+
+        return Result(value=self.model_dump_json(), context=context)
 
 
     

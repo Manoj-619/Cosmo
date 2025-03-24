@@ -3,11 +3,16 @@ import logging
 import tiktoken
 import openai
 import anthropic
-from openai import OpenAI
+from openai import OpenAI, AzureOpenAI
 from dotenv import load_dotenv
 from pydantic import BaseModel
-from typing import Union, List, Any, Callable
+from typing import Union, List, Any, Callable, Literal
 import functools
+from helpers.utils import batch_list
+import requests
+from django.core.cache import cache
+
+
 load_dotenv(override=True)
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
@@ -187,7 +192,6 @@ def filter_history(history, max_tokens=84000):
     # Check if the first message is a tool call message and remove it if so
     if message_history and message_history[0].get('role') == 'tool':
         message_history.pop(0)
-
     return message_history
 
 def validate_message_history(filtered_messages):
@@ -266,3 +270,107 @@ def validate_message_history(message_history):
         elif msg['role'] == 'user':
             valid_history.append(msg)
     return valid_history
+
+
+
+def get_openai_client(service: Literal["openai", "azure"] = "openai", **kwargs):
+    """
+    Get an OpenAI or Azure OpenAI client.
+    
+    Args:
+        service (Literal["openai", "azure"]): The service to use. Defaults to "openai".
+        **kwargs: Additional arguments to pass to the client constructor.
+    
+    Returns:
+        OpenAI or AzureOpenAI: The appropriate client instance.
+    
+    Raises:
+        NotImplementedError: If the service is not supported.
+    """
+    if service == "openai":
+        openai_client = OpenAI(
+            api_key=os.getenv("OPENAI_API_KEY"),
+            **kwargs
+        )
+    elif service == "azure":
+        openai_client = AzureOpenAI(
+            api_key=os.getenv("AZURE_OPENAI_API_KEY"),
+            azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
+            api_version=os.getenv("AZURE_OPENAI_API_VERSION"),
+            **kwargs
+        )
+    else:
+        raise NotImplementedError(f"OpenAI client for {service} not implemented")
+    return openai_client
+
+
+def get_openai_embedding(text, model="text-embedding-3-small", **kwargs):
+    """
+    Get the embeddings of the text from OpenAI API.
+
+    Args:
+        text (str): Text to get embeddings for.
+        model (str): Model to use for embeddings.
+    Returns:
+        list: Embeddings of the text.
+    """
+    response = client.embeddings.create(
+        model=model,
+        input=[text],
+        **kwargs,
+    )
+    return response.data[0].embedding
+
+
+def get_batch_openai_embedding(texts: list, model="text-embedding-3-small", **kwargs):
+    """
+    Get embeddings of a batch of texts from OpenAI API.
+
+    Args:
+        texts (list): List of texts to get embeddings for.
+        model (str): Model to use for embeddings.
+        **kwargs: Additional arguments to pass to the OpenAI API.
+    Returns:
+        list[list]: List of embeddings of the texts.
+    """
+    text_batches = batch_list(texts, 1024) if len(texts) > 1024 else [texts]
+    embeddings = []
+    for text_batch in text_batches:
+        response = client.embeddings.create(
+            model=model,
+            input=text_batch,
+            **kwargs,
+        )
+        embeddings += [r.embedding for r in response.data]
+    return embeddings
+
+def get_operational_service() -> Literal["openai", "azure"]:
+    """
+    Check which service is operational.
+    Returns openai by default if both are operational.
+    
+    Returns:
+        Literal["openai", "azure"]: The operational service to use
+    
+    Raises:
+        RuntimeError: If both services are experiencing outages
+    """
+
+    url = "https://status.openai.com/api/v2/summary.json"
+    try:
+
+        response = requests.get(url)
+        response.raise_for_status()
+        data = response.json()
+        
+        # Find the API component
+
+        for component in data["components"]:
+            if component["name"].startswith("Completions"):
+                openai_status = component["status"] == "operational"
+                if openai_status:
+                    return "openai" 
+        
+    except requests.exceptions.RequestException as e:
+        logger.warning(f"Error checking OpenAI status: {e}")
+    return "azure"

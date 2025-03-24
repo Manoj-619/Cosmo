@@ -14,34 +14,66 @@ from helpers._types import (
     StrictTool,
     Result,
 )
-from stage_app.models import DiscoverStage, UserProfile
-from helpers.agents.b_discuss import discuss_agent
-from helpers.agents.common import get_agent_instructions
+from stage_app.models import DiscoverStage, UserProfile, TNAassessment, FourDSequence
+from stage_app.serializers import TNAassessmentSerializer
+from helpers.agents.tna_assessment import get_tna_assessment_agent
+from helpers.agents.common import get_tna_assessment_instructions, get_agent_instructions
 from helpers.utils import get_logger
+from stage_app.tasks import xAPI_discover_celery_task,xAPI_stage_celery_task
+import json
 
 logger = get_logger(__name__)
 
 ### For handoff
-class transfer_to_discussion_stage(StrictTool):
-    """Transfer to the Discussion stage when the learner approves the summary of the information gathered."""    
+class transfer_to_tna_assessment_step(StrictTool):
+    """After the learner has completed the Discover stage, transfer to the TNA Assessment step."""
+    
     def execute(self, context: Dict):
+        """After the learner has completed the Discover stage, transfer to the TNA Assessment step"""
         email = context['email']
-        sequence_id = context['sequence_id']
+        name = context['profile']['first_name'] + " " + context['profile']['last_name']
+        discover_stage = DiscoverStage.objects.get(user__email=context['email'], sequence=context['sequence_id'])
+        discover_is_complete, error = discover_stage.check_complete()
+        if not discover_is_complete:
+
+            raise ValueError(f"Use the `update_discover_data` tool to update the discovery data if details are already shared, before proceeding to TNA Assessment step or ask the learner to share the details about the required item.\n\n{error}")
         
-        logger.info(f"Transferring to the Discussion stage for {context['email']}.")
-        profile = UserProfile.objects.get(user__email=email)
-        discovery_object = DiscoverStage.objects.get(user__email=email, sequence_id=sequence_id)
-        is_complete, error = discovery_object.check_complete()
-        if not is_complete:
-            raise ValueError(error)
+        all_assessments = context['tna_assessment']['total_nos_areas']
+        assessments = TNAassessment.objects.filter(sequence_id=context['sequence_id'])
+        assessment_areas = [(assessment.assessment_area, assessment.nos_id) for assessment in assessments]
+        agent = get_tna_assessment_agent()
+        xAPI_stage_celery_task.apply_async(args=[agent.id, email, name])
+
+        current_assessment_areas = '\n-'.join([f"Assessment Area: {area} (NOS ID: {nos_id})" for area, nos_id in assessment_areas])
         
-        agent               = discuss_agent        
-        agent.start_message += f"""
-        **Discovery Data:**
-        {discovery_object.get_summary()}
-        """
-        return Result(
-            value="Transferred to Discussion stage.",
+        # Format the message with proper error handling
+        agent.start_message = (
+            "Greet and introduce the TNA Assessment step, based on instructions and example shared on Introduction.\n"
+            f"Total NOS Areas: {all_assessments}\n"
+            f"Current Number Of Assessment Areas: {len(assessment_areas)}\n"
+            "NOS Assessment Areas for current 4D Sequence to be presented:"
+            f"\n-{current_assessment_areas}\n\n"
+            "Present the NOS Assessment Areas for current 4D Sequence in the below shared table form.\n\n"
+            "Presenting NOS Areas:"
+            + "\n"
+            "|  **Assessments For Training Needs Analysis**  |   **NOS ID**  |\n"
+            "|-----------------------------------------------|---------------|\n"
+            "|            [Assessment Area 1]                |   [NOS ID 1]  |\n"
+            "|            [Assessment Area 2]                |   [NOS ID 2]  |\n"
+            "|            [Assessment Area 3]                |   [NOS ID 3]  |\n"
+            "Then start the TNA assessment on Current NOS Area."
+        )
+
+        agent.instructions = get_tna_assessment_instructions(context, level="")
+        
+        # Update context with proper integer values
+        context['tna_assessment'] = {
+            'current_assessment_areas': len(assessments),
+            'total_assessment_areas': all_assessments,
+            'assessments': [TNAassessmentSerializer(assessment).data for assessment in assessments]
+        }
+        
+        return Result(value="Transferred to TNA Assessment step.",
             agent=agent, 
             context=context)
 
@@ -57,6 +89,7 @@ class update_discover_data(StrictTool):
     def execute(self, context: Dict):
         # Get email and sequence_id from context
         email       = context.get('email')
+        name        =context['profile']['first_name'] + " " + context['profile']['last_name']
         sequence_id = context.get('sequence_id')
         
         if not email or not sequence_id:
@@ -66,13 +99,17 @@ class update_discover_data(StrictTool):
         discover_stage = DiscoverStage.objects.get(user__email=email, sequence_id=sequence_id)
         discover_stage.learning_goals = self.learning_goals
         discover_stage.learning_goal_rationale = self.learning_goal_rationale
+        
         discover_stage.knowledge_level = self.knowledge_level
         discover_stage.application_area = self.application_area
-        discover_stage.save()        
+        discover_stage.save() 
+
+        xAPI_discover_celery_task.apply_async(args=[json.loads(self.model_dump_json()),email,name])
+
         context['discover'] = self.model_dump() # JSON dump of pydantic model
-        logger.info(f"Updated DiscoverStage Data for {email}. The following data was updated:\n\n{str(self)}")
+        logger.info(f"Updated Discover stage Data for {email}. The following data was updated:\n\n{str(self)}")
         
-        return Result(value=self.model_dump_json(),
+        return Result(value=f"Updated Discover stage Data for {email}.",
                       context=context)
             
 discover_agent = Agent(
@@ -82,7 +119,7 @@ discover_agent = Agent(
     instructions=get_agent_instructions('discover'),
     functions=[
         update_discover_data,
-        transfer_to_discussion_stage
+        transfer_to_tna_assessment_step
     ],
     tool_choice="auto",
     parallel_tool_calls=False

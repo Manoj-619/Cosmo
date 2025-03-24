@@ -1,0 +1,112 @@
+[
+  {
+    "Health, Public Services and Care": [
+      "Medicine and Dentistry",
+      "Nursing and subjects and vocations allied to medicine",
+      "Health and social care",
+      "Public services",
+      "Child development and well-being"
+    ]
+  },
+  {
+    "Science and Mathematics": [
+      "Science",
+      "Mathematics and statistics"
+    ]
+  },
+  {
+    "Agriculture, Horticulture and Animal Care": [
+      "Agriculture",
+      "Horticulture and forestry",
+      "Animal care and veterinary science",
+      "Environmental conservation"
+    ]
+  },
+  {
+    "Engineering and Manufacturing Technologies": [
+      "Engineering",
+      "Manufacturing technologies",
+      "Transportation operations and maintenance"
+    ]
+  },
+  {
+    "Construction, Planning and the Built Environment": [
+      "Architecture",
+      "Building and construction",
+      "Urban, rural and regional planning"
+    ]
+  },
+  {
+    "Digital Technology": [
+      "Digital technology (practitioners)",
+      "Digital technology (users)"
+    ]
+  },
+  {
+    "Retail and Commercial Enterprise": [
+      "Retailing and wholesaling",
+      "Warehousing and distribution",
+      "Service enterprises",
+      "Hospitality and catering"
+    ]
+  },
+  {
+    "Leisure, Travel and Tourism": [
+      "Sport, leisure and recreation",
+      "Travel and tourism"
+    ]
+  },
+  {
+    "Arts, Media and Publishing": [
+      "Performing arts",
+      "Crafts, creative arts and design",
+      "Media and communication",
+      "Publishing and information services"
+    ]
+  },
+  {
+    "History, Philosophy and Theology": [
+      "History",
+      "Archaeology and archaeological sciences",
+      "Philosophy",
+      "Theology and religious studies"
+    ]
+  },
+  {
+    "Social Sciences": [
+      "Geography",
+      "Sociology and social policy",
+      "Politics",
+      "Economics",
+      "Anthropology"
+    ]
+  },
+  {
+    "Languages, Literature and Culture": [
+      "Languages, literature and culture of the British Isles",
+      "Other languages, literature and culture",
+      "Linguistics"
+    ]
+  },
+  {
+    "Education and Training": [
+      "Teaching and lecturing",
+      "Direct learning support"
+    ]
+  },
+  {
+    "Preparation for Life and Work": [
+      "Foundations for learning and life",
+      "Preparation for work"
+    ]
+  },
+  {
+    "Business, Administration and Law": [
+      "Accounting and finance",
+      "Administration",
+      "Business management",
+      "Marketing and sales",
+      "Law and legal services"
+    ]
+  }
+]
