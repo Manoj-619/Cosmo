@@ -1,5 +1,4 @@
-*.xz 
-# Ignore all xz files
+*.xz
 celerybeat-schedule*.db
 celerybeat-schedule*.bak
 celerybeat-schedule*.dat
