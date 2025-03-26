@@ -118,4 +118,5 @@ discover_agent = Agent(
     ],
     # NOTE: What should the dependencies be?
     # deps_type= 
+    instrument=True
 )
