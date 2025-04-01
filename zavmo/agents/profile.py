@@ -1,12 +1,13 @@
 from pydantic_ai import Agent, RunContext
 from pydantic import BaseModel, Field
 from pydantic_ai.model_settings import ModelSettings
+from pydantic_ai.tools import Tool
 
 from agents.common import model, get_agent_instructions
 from helpers.search import retrieve_nos_from_neo4j, retrieve_ofquals_from_neo4j
 from stage_app.models import UserProfile, FourDSequence, TNAassessment
-
-from stage_app.tasks import xAPI_profile_celery_task
+from agents.tna_assessment import tna_assessment_agent
+from stage_app.tasks import xAPI_profile_celery_task, xAPI_stage_celery_task
 
 import json
 import logfire
@@ -17,27 +18,39 @@ logfire.configure(scrubbing=False)
 class Deps(BaseModel):
     email: str
 
-profile_agent = Agent(
-    model,
-    model_settings=ModelSettings(parallel_tool_calls=False),
-    system_prompt=get_agent_instructions('profile'),
-    instrument=True,
-    retries=3
-)
+### For handoff
+class transfer_to_tna_assessment_step(BaseModel):
+    """After the learner has completed the Discover stage, transfer to the TNA Assessment step."""
+    
+    async def execute(self, ctx: RunContext[Deps]):
+        """After the learner has completed the Discover stage, transfer to the TNA Assessment step"""
+        email       = ctx.deps.email
+        profile     = UserProfile.objects.get(user__email=email)
+        sequences   = FourDSequence.objects.filter(user=profile.user, current_stage__in=[1, 2, 3, 4]).order_by('created_at')
+        sequence_id = sequences.first().id if sequences else None
+
+        if not sequence_id:
+            logging.info(f"No sequence ID found. Running profile agent.")
+            raise ValueError("Find NOS and OFQUAL first.")
+        
+        agent = tna_assessment_agent
+
+        name  = profile.first_name + " " + profile.last_name
+        xAPI_stage_celery_task.apply_async(args=[agent.id, email, name])    
+        return "Transferred to TNA Assessment step."
 
 
-@profile_agent.tool
 class FindNOSandOFQUAL(BaseModel):
     """Finds relevant NOS and OFQUAL standards for the user's profile"""
     query: str = Field(description="A query invloving main purpose, responsibilities and manager responsibilities of the learner's current role.")
 
     async def execute(self, ctx: RunContext[Deps]):
         # Get email from dependencies
-        email = ctx.deps.email
-        if not email:
-            raise ValueError("Email is required to update profile data.")
-        
+        email        = ctx.deps.email
         user_profile = UserProfile.objects.get(user__email=email)
+        is_complete, error = user_profile.check_complete()
+        if not is_complete:
+            raise ValueError(error)
 
         ## Number of 4D sequence to create for a user => length of NOS
         nos = retrieve_nos_from_neo4j(self.query)
@@ -80,7 +93,6 @@ class FindNOSandOFQUAL(BaseModel):
         return f"NOS to OFQUAL mapped, transfer to TNA Assessment step"
 
 
-@profile_agent.tool
 class update_profile_data(BaseModel):
     """Update the learner's information gathered during the Profile stage."""
     
@@ -126,3 +138,18 @@ class update_profile_data(BaseModel):
         xAPI_profile_celery_task.apply_async(args=[json.loads(self.model_dump_json()), email])
 
         return "Profile Data updated successfully. Get NOS matching with the learner's current role using the `ExtractNOSData` tool."
+
+
+
+profile_agent = Agent(
+    model,
+    model_settings=ModelSettings(parallel_tool_calls=True),
+    system_prompt=get_agent_instructions('profile'),
+    instrument=True,
+    tools=[
+        Tool(transfer_to_tna_assessment_step, takes_ctx=True),
+        Tool(FindNOSandOFQUAL, takes_ctx=True),
+        Tool(update_profile_data, takes_ctx=True),
+    ],
+    retries=3
+)
