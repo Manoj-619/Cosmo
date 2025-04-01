@@ -13,7 +13,7 @@ from pydantic_ai import Agent, RunContext, Tool
 from pydantic_ai.settings import ModelSettings
 from typing import List, Dict, Literal, Optional
 from helpers.utils import get_logger
-from stage_app.models import DiscussStage, UserProfile, TNAassessment, DiscoverStag
+from stage_app.models import DiscussStage, UserProfile, TNAassessment, DiscoverStag, FourDSequence
 from helpers.agents.common import get_agent_instructions
 from stage_app.tasks import xAPI_discuss_celery_task,xAPI_stage_celery_task
 # from helpers.agents.c_deliver import deliver_agent
@@ -61,8 +61,7 @@ def generate_curriculum(ctx: RunContext, data: Curriculum):
         
     logger.info(f"Curriculum: {discuss_stage.curriculum}.")
     xAPI_discuss_celery_task.apply_async(args=[json.loads(data.model_dump_json()),discuss_stage.learning_style,discuss_stage.interest_areas,discuss_stage.timeline,email,name])
-
-    # context['discuss']['curriculum'] = self.model_dump() # NOTE: Do we need this?        
+        
     logger.info(f"Generated Curriculum for {email}:\n\n{str(data.model_dump())}")
     return f"Successfully generated Curriculum for {email}.\n\n{str(data.model_dump())}"
 
@@ -164,20 +163,68 @@ The following data sources are being used to inform the personalized curriculum 
 #         )
 
 
+class Deps(BaseModel):
+    email: str
+
+class transfer_to_deliver_step(BaseModel):
+    """After the learner has completed the Discuss stage, transfer to the Deliver step."""
+    
+    async def execute(self, ctx: RunContext[Deps]):
+        """Transfer the learner to the Deliver stage"""
+        email = ctx.deps.email
+        profile = UserProfile.objects.get(user__email=email)
+        name = profile.first_name + " " + profile.last_name
+        
+        # Update the current sequence to Deliver stage
+        sequences = FourDSequence.objects.filter(
+            user=profile.user, 
+            current_stage=FourDSequence.Stage.DISCUSS
+        ).order_by('created_at')
+        
+        if not sequences:
+            raise ValueError("No active Discuss stage sequence found.")
+        
+        current_sequence = sequences.first()
+        current_sequence.current_stage = FourDSequence.Stage.DELIVER
+        current_sequence.save()
+        
+        xAPI_stage_celery_task.apply_async(args=["deliver_agent", email, name])
+        return "Transferred to Deliver step."
+
+class update_discuss_data(BaseModel):
+    """Update the discussion data for the current sequence."""
+    discussion_notes: str = Field(description="Notes from the discussion with the learner.")
+    action_items: str = Field(description="Action items identified during the discussion.")
+    
+    async def execute(self, ctx: RunContext[Deps]):
+        email = ctx.deps.email
+        profile = UserProfile.objects.get(user__email=email)
+        
+        sequence = FourDSequence.objects.filter(
+            user=profile.user,
+            current_stage=FourDSequence.Stage.DISCUSS
+        ).order_by('created_at').first()
+        
+        if not sequence:
+            raise ValueError("No active Discuss stage sequence found.")
+        
+        sequence.discussion_notes = self.discussion_notes
+        sequence.action_items = self.action_items
+        sequence.save()
+        
+        return "Discussion data updated successfully."
+
 discuss_agent = Agent(
     model="openai:gpt-4o",
     system_prompt=get_agent_instructions('discuss'),
     tools=[
-        Tool(generate_curriculum, takes_ctx=True),
-        Tool(update_discussion_data, takes_ctx=True)
+        Tool(transfer_to_deliver_step, takes_ctx=True),
+        Tool(update_discuss_data, takes_ctx=True)
     ],
     instrument=True,
     model_settings=ModelSettings(
         tool_choice='auto',
         parallel_tool_calls=False
-    )
+    ),
+    retries=3
 )
-
-
-# NOTE: What should the dependencies be?
-# NOTE: What should the result types be?

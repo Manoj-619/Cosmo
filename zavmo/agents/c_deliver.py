@@ -17,7 +17,13 @@ from helpers.utils import get_logger
 from agents.utils import get_agent_instructions
 # from helpers.agents.d_demonstrate import demonstrate_agent
 from stage_app.tasks import xAPI_lesson_celery_task, xAPI_curriculum_completion_celery_task,xAPI_stage_celery_task
-from stage_app.models import DeliverStage, DiscussStage, UserProfile
+from stage_app.models import DeliverStage, DiscussStage, UserProfile, FourDSequence, TNAassessment
+from agents.common import model
+
+import logfire
+import logging
+
+logfire.configure(scrubbing=False)
 
 load_dotenv()
 
@@ -123,15 +129,66 @@ def generate_lesson(ctx: RunContext, lesson: Lesson):
     return f"Lesson generated for {email}.\n\n{lesson}"
 
 
+class Deps(BaseModel):
+    email: str
+
+class transfer_to_demonstrate_step(BaseModel):
+    """After the learner has completed the Deliver stage, transfer to the Demonstrate step."""
+    
+    async def execute(self, ctx: RunContext[Deps]):
+        """Transfer the learner to the Demonstrate stage"""
+        email = ctx.deps.email
+        profile = UserProfile.objects.get(user__email=email)
+        name = profile.first_name + " " + profile.last_name
+        
+        # Update the current sequence to Demonstrate stage
+        sequences = FourDSequence.objects.filter(
+            user=profile.user, 
+            current_stage=FourDSequence.Stage.DELIVER
+        ).order_by('created_at')
+        
+        if not sequences:
+            raise ValueError("No active Deliver stage sequence found.")
+        
+        current_sequence = sequences.first()
+        current_sequence.current_stage = FourDSequence.Stage.DEMONSTRATE
+        current_sequence.save()
+        
+        xAPI_stage_celery_task.apply_async(args=["demonstrate_agent", email, name])
+        return "Transferred to Demonstrate step."
+
+class update_deliver_data(BaseModel):
+    """Update the delivery data for the current sequence."""
+    learning_progress: str = Field(description="Progress made in learning objectives.")
+    completion_status: str = Field(description="Status of completion for assigned tasks.")
+    feedback: str = Field(description="Feedback on the delivery phase.")
+    
+    async def execute(self, ctx: RunContext[Deps]):
+        email = ctx.deps.email
+        profile = UserProfile.objects.get(user__email=email)
+        
+        sequence = FourDSequence.objects.filter(
+            user=profile.user,
+            current_stage=FourDSequence.Stage.DELIVER
+        ).order_by('created_at').first()
+        
+        if not sequence:
+            raise ValueError("No active Deliver stage sequence found.")
+        
+        sequence.learning_progress = self.learning_progress
+        sequence.completion_status = self.completion_status
+        sequence.delivery_feedback = self.feedback
+        sequence.save()
+        
+        return "Delivery data updated successfully."
+
 deliver_agent = Agent(
-    model="openai:gpt-4o",
+    model,
+    model_settings=ModelSettings(parallel_tool_calls=True),
     system_prompt=get_agent_instructions('deliver'),
-    functions=[
-        Tool(generate_lesson, takes_ctx=True),
-        Tool(transfer_to_demonstrate_stage, takes_ctx=True)
+    instrument=True,
+    tools=[
+        Tool(transfer_to_demonstrate_step, takes_ctx=True),
+        Tool(update_deliver_data, takes_ctx=True),
     ],
-    settings=ModelSettings(
-        parallel_tool_calls=False,
-        tool_choice='auto',
-    )
-)
+    retries=3)
