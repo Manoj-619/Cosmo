@@ -3,7 +3,7 @@ from pydantic import BaseModel, Field
 from pydantic_ai.model_settings import ModelSettings
 from pydantic_ai.tools import Tool
 
-from agents.common import model, get_agent_instructions
+from agents.common import model, get_agent_instructions, Deps
 from helpers.search import retrieve_nos_from_neo4j, retrieve_ofquals_from_neo4j
 from stage_app.models import UserProfile, FourDSequence, TNAassessment
 from agents.tna_assessment import tna_assessment_agent
@@ -14,9 +14,6 @@ import logfire
 import logging
 
 logfire.configure(scrubbing=False)
-
-class Deps(BaseModel):
-    email: str
 
 ### For handoff
 class transfer_to_tna_assessment_step(BaseModel):

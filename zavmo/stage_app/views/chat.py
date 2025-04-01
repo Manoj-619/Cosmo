@@ -17,30 +17,20 @@ logger = get_logger(__name__)
 def chat_view(request):
     """Handles chat sessions between a user and the AI assistant."""
     user, sequence_id = _get_user_and_sequence(request)
-    context    = _initialize_context(user, sequence_id)
-    stage_name = _determine_stage(user, context, sequence_id)
+    stage_name        = _determine_stage(user, sequence_id)
     
     if stage_name == 'completed':
         return DRFResponse({
             "type": "text",
             "message": "You have finished all stages for the sequence.",
-            "stage": stage_name,
-            "stages": {
-                "profile": context.get('profile', {}),
-                "tna_assessment": context.get('tna_assessment', {}),
-                "discover": context.get('discover', {}),
-                "discuss": context.get('discuss', {}),
-                "deliver": context.get('deliver', {}),
-                "demonstrate": context.get('demonstrate', {})
-            }
+            "stage": stage_name
         })
 
-    message_history = _get_message_history(user.email, sequence_id, request.data.get('message'))
+    message_history = _get_message_history(user.email, sequence_id)
+    email = user.email
 
-    email = context['email']
-    if stage_name == "profile" and not context.get('has_called_profile_stage_xapi', False):
+    if stage_name == "profile" and message_history==[]:
         xAPI_stage_celery_task.apply_async(args=[stage_name, email, email])
-        context['has_called_profile_stage_xapi'] = True
 
     # Get the latest user message from the message history
     if message_history and message_history[-1].get("role") == "user":
@@ -55,39 +45,39 @@ def chat_view(request):
         latest_user_message = None  # No new user message yet
 
     if latest_user_message:
-        xAPI_chat_celery_task.apply_async(args=[latest_user_message, latest_stage,context['email'],latest_zavmo_message])
+        xAPI_chat_celery_task.apply_async(args=[latest_user_message, latest_stage,email,latest_zavmo_message])
 
-    response = _process_agent_response(stage_name, message_history, context)
+    response = _process_agent_response(stage_name, message_history, request.data.get('message'))
 
-    if not response.messages:
-        return DRFResponse({
-            "error": "No response generated from the agent",
-            "stage": response.agent.id,
-            "sequence_id": sequence_id,
-            "stage_data": {
-                "profile": context.get('profile', {}),
-                "discover": context.get('discover', {}),
-                "tna_assessment": context.get('tna_assessment', {}),
-                "discuss": context.get('discuss', {}),
-                "deliver": context.get('deliver', {}),
-                "demonstrate": context.get('demonstrate', {})
-            }
-        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    # if not response.messages:
+    #     return DRFResponse({
+    #         "error": "No response generated from the agent",
+    #         "stage": response.agent.id,
+    #         "sequence_id": sequence_id,
+    #         "stage_data": {
+    #             "profile": context.get('profile', {}),
+    #             "discover": context.get('discover', {}),
+    #             "tna_assessment": context.get('tna_assessment', {}),
+    #             "discuss": context.get('discuss', {}),
+    #             "deliver": context.get('deliver', {}),
+    #             "demonstrate": context.get('demonstrate', {})
+    #         }
+    #     }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    _update_context_and_cache(user, sequence_id, context, message_history, response)
+    _update_context_and_cache(user, sequence_id, message_history, response)
     
-    return DRFResponse({
-        "type": "text",
-        "message": response.messages[-1]['content'],
-        "stage": response.agent.id,
-        "sequence_id": sequence_id,
-        "stage_data": {
-            "profile": context.get('profile', {}),
-            "discover": context.get('discover', {}),
-            "tna_assessment": context.get('tna_assessment', {}),
-            "discuss": context.get('discuss', {}),
-            "deliver": context.get('deliver', {}),
-            "demonstrate": context.get('demonstrate', {})
-        }
-    })
+    # return DRFResponse({
+    #     "type": "text",
+    #     "message": response.messages[-1]['content'],
+    #     "stage": response.agent.id,
+    #     "sequence_id": sequence_id,
+    #     "stage_data": {
+    #         "profile": context.get('profile', {}),
+    #         "discover": context.get('discover', {}),
+    #         "tna_assessment": context.get('tna_assessment', {}),
+    #         "discuss": context.get('discuss', {}),
+    #         "deliver": context.get('deliver', {}),
+    #         "demonstrate": context.get('demonstrate', {})
+    #     }
+    # })
 
