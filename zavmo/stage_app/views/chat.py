@@ -4,7 +4,7 @@ from helpers.utils import get_logger
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.response import Response as DRFResponse
 from rest_framework import status
-from stage_app.views.utils import _get_user_and_sequence, _determine_stage, _get_message_history, _process_agent_response, _update_message_history
+from stage_app.views.utils import _get_user_and_sequence, _determine_stage, _get_message_history, _update_message_history
 from ..tasks import xAPI_chat_celery_task, xAPI_stage_celery_task
 from stage_app.models import TNAassessment, DiscussStage, DeliverStage, DemonstrateStage, DiscoverStage
 from stage_app.serializers import UserProfileSerializer, TNAassessmentSerializer, DiscussStageSerializer, DeliverStageSerializer, DemonstrateStageSerializer, DiscoverStageSerializer
@@ -66,7 +66,7 @@ def chat_view(request):
     
     agent = get_agent(stage_name)
     response=agent.run_sync(
-        message=request.data.get('message'),
+        request.data.get('message'),
         message_history=message_history,
         deps=Deps(email=user.email)
     )
