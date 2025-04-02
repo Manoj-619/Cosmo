@@ -106,7 +106,6 @@ class SaveAssessmentArea(BaseModel):
         next_tna_assessment.status = 'In Progress'
         next_tna_assessment.save()
 
-        tna_assessment_agent.system_prompt = get_system_prompt(User(email=email), "")
         return f"""Saved details for the Assessment area: {self.assessment_area}."""
 
 tna_assessment_agent = Agent(
