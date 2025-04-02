@@ -13,28 +13,6 @@ import json
 import logging
 
 
-### For handoff
-class transfer_to_tna_assessment_step(BaseModel):
-    """After the learner has completed the Discover stage, transfer to the TNA Assessment step."""
-    
-    async def execute(self, ctx: RunContext[Deps]):
-        """After the learner has completed the Discover stage, transfer to the TNA Assessment step"""
-        email       = ctx.deps.email
-        profile     = UserProfile.objects.get(user__email=email)
-        sequences   = FourDSequence.objects.filter(user=profile.user, current_stage__in=[1, 2, 3, 4]).order_by('created_at')
-        sequence_id = sequences.first().id if sequences else None
-
-        if not sequence_id:
-            logging.info(f"No sequence ID found. Running profile agent.")
-            raise ValueError("Find NOS and OFQUAL first.")
-        
-        agent = tna_assessment_agent
-
-        name  = profile.first_name + " " + profile.last_name
-        xAPI_stage_celery_task.apply_async(args=[agent.id, email, name])    
-        return "Transferred to TNA Assessment step."
-
-
 class FindNOSandOFQUAL(BaseModel):
     """Finds relevant NOS and OFQUAL standards for the user's profile"""
     query: str = Field(description="A query invloving main purpose, responsibilities and manager responsibilities of the learner's current role.")

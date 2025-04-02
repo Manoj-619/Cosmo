@@ -26,14 +26,15 @@ docker logs -f zavmo_app
 docker system prune -a --volumes
 ```
 
-## For loading static data from excel to django models
-```
-python manage.py save_data assets/static_data/JDs_NOS_OFQUAL.xlsx
-```
-
 ## For building neo4j
-
+```
 docker run --name neo4j -p 7474:7474 -p 7687:7687 -d -e NEO4J_AUTH=username/password neo4j:latest
+```
+## For running redis
+```
+docker network create zavmonetwork
+docker rm -f redis-stack && docker run -d --name redis-stack --network zavmonetwork -p 6379:6379 -p 8001:8001 redis/redis-stack:latest
+```
 
 ### For dev
 

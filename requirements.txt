@@ -24,7 +24,7 @@ rich
 anthropic
 openai>=1.51.2
 pydantic>=2.10.0
-pydantic-ai[logfire]
+pydantic-ai[logfire]==1.2.1
 anthropic
 tiktoken
 tenacity

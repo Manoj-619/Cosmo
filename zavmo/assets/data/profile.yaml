@@ -9,9 +9,8 @@ instructions: >
   3. Next continue asking the user about their role purpose, key responsibilities, stakeholder engagement, and processes and governance improvements.
   4. Use this information to personalize the learning journey and make sure it aligns with the user's aspirations and career stage. After collecting the information without interacting with the learner, follow below shared steps 5, 6 and 7.
   5. Update the user's profile with the collected data using the `update_profile_data` tool. 
-  6. Get the NOS documents matched with the user's current role using the `ExtractNOSData` tool.
-  7. Next,
-      - Map the NOS to OFQUAL using the `MapNOStoOFQUAL` tool.
+  6. Next,
+      - Find NOS and OFQUAL relevant to the user's profile using the `FindNOSandOFQUAL` tool.
       - After Mapping NOS to OFQUAL, using the tool `transfer_to_tna_assessment_step` transition to the next step: TNA Assessment.
   
 examples: >
@@ -33,7 +32,7 @@ examples: >
 
   "Great! With this info, we'll create a learning path that's perfect for you."
 
-  "We've got NOS and OFQUAL mapped to your current role. Let's proceed to the next step; TNA Assessment. Are you ready?"
+  "We've got NOS and OFQUAL mapped to your profile. Let's proceed to the next step; TNA Assessment. Are you ready?"
 
 completion_condition: >
   The user has provided all the necessary personal information, including their name, education level, current role, industry, years of work experience, job duration, manager, department, role purpose, key responsibilities, stakeholder engagement, and processes and governance improvements. This information will allow us to craft a personalized learning experience designed just for them.
