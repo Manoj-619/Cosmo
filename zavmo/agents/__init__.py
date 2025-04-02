@@ -17,17 +17,21 @@ def transfer_to_tna_assessment_step(ctx: RunContext[Deps]):
 
     # name  = profile.first_name + " " + profile.last_name
     # xAPI_stage_celery_task.apply_async(args=['tna_assessment', email, name])   
+    ctx.deps.stage_name = 'tna_assessment'
 
     return tna_assessment_agent
 
 @tna_assessment_agent.tool
 def transfer_to_discuss_stage(ctx: RunContext[Deps]):
     """After the learner has completed the TNA Assessment step, transfer to the Discuss stage"""
+    
     email = ctx.deps.email
     profile = UserProfile.objects.get(user__email=email)
 
     name  = profile.first_name + " " + profile.last_name
     xAPI_stage_celery_task.apply_async(args=['discuss', email, name])  
+    
+    ctx.deps.stage_name = 'discuss'
 
     return discuss_agent
 
@@ -39,6 +43,8 @@ def transfer_to_deliver_stage(ctx: RunContext[Deps]):
 
     name  = profile.first_name + " " + profile.last_name
     xAPI_stage_celery_task.apply_async(args=['deliver', email, name])  
+    
+    ctx.deps.stage_name = 'deliver'
 
     return deliver_agent
 
@@ -50,5 +56,23 @@ def transfer_to_demonstrate_stage(ctx: RunContext[Deps]):
 
     name  = profile.first_name + " " + profile.last_name
     xAPI_stage_celery_task.apply_async(args=['demonstrate', email, name])  
+    
+    ctx.deps.stage_name = 'demonstrate'
 
     return demonstrate_agent    
+
+
+def get_agent(stage_name):
+    """Get the agent for the given stage name"""
+    if stage_name == 'profile':
+        return profile_agent
+    elif stage_name == 'discover':
+        return discover_agent
+    elif stage_name == 'tna_assessment':
+        return tna_assessment_agent
+    elif stage_name == 'discuss':
+        return discuss_agent
+    elif stage_name == 'deliver':
+        return deliver_agent
+    elif stage_name == 'demonstrate':
+        return demonstrate_agent

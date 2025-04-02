@@ -8,25 +8,12 @@ from stage_app.views.utils import _get_user_and_sequence, _determine_stage, _get
 from ..tasks import xAPI_chat_celery_task, xAPI_stage_celery_task
 from stage_app.models import TNAassessment, DiscussStage, DeliverStage, DemonstrateStage, DiscoverStage, UserProfile
 from stage_app.serializers import UserProfileSerializer, TNAassessmentSerializer, DiscussStageSerializer, DeliverStageSerializer, DemonstrateStageSerializer, DiscoverStageSerializer
-from agents import profile, a_discover, tna_assessment, b_discuss, c_deliver, d_demonstrate
+from agents import get_agent
 from agents.common import Deps
 from pydantic_ai.agent import Agent
 import json
 logger = get_logger(__name__)
 
-def get_agent(stage_name):
-    if stage_name == 'profile':
-        return profile.profile_agent
-    elif stage_name == 'discover':
-        return a_discover.discover_agent
-    elif stage_name == 'tna_assessment':
-        return tna_assessment.tna_assessment_agent
-    elif stage_name == 'discuss':
-        return b_discuss.discuss_agent
-    elif stage_name == 'deliver':
-        return c_deliver.deliver_agent
-    elif stage_name == 'demonstrate':
-        return d_demonstrate.demonstrate_agent
 
 @api_view(['POST', 'OPTIONS'])
 @authentication_classes([CustomJWTAuthentication])
@@ -34,6 +21,7 @@ def get_agent(stage_name):
 def chat_view(request):
     """Handles chat sessions between a user and the AI assistant."""
     user, sequence_id = _get_user_and_sequence(request)
+    message           = request.data.get('message','Initiate conversation with the user.')
     stage_name        = _determine_stage(user, sequence_id)
     
     if stage_name == 'completed':
@@ -64,19 +52,20 @@ def chat_view(request):
     # if latest_user_message:
     #     xAPI_chat_celery_task.apply_async(args=[latest_user_message, latest_stage,email,latest_zavmo_message])
     
-    agent = get_agent(stage_name)
-    response=agent.run_sync(
-        request.data.get('message'),
+    agent    = get_agent(stage_name)
+    
+    deps     = Deps(email=user.email, stage_name=stage_name)
+    response = agent.run_sync(
+        message,
         message_history=message_history,
-        deps=Deps(email=user.email)
+        deps=deps
     )
     logger.info(f"\n\nResponse: {response}\n\n")
-    if isinstance(response, Agent):  # Check if response is an Agent (transfer case)
-        current_stage = response.name
-        response      = ''
-    else:
-        current_stage = stage_name
-        _update_message_history(email, sequence_id, json.loads(response.all_messages_json()))
+
+    # TODO: Check if deps is updated  or is there a different way to access updated deps
+    # NOTE: When we transfer to a new stage, the stage_name is updated in the deps
+    current_stage = deps.stage_name
+    _update_message_history(email, sequence_id, json.loads(response.all_messages_json()))
     
 
     if not response:

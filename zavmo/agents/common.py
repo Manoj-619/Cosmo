@@ -1,3 +1,4 @@
+from dataclasses import Field
 from pydantic_ai.models.openai import OpenAIModel
 from pydantic_ai.providers.azure import AzureProvider
 from pydantic_ai.models.anthropic import AnthropicModel
@@ -30,6 +31,7 @@ model = FallbackModel(openai_model, azure_model)
 
 class Deps(BaseModel):
     email: str
+    stage_name: str = Field(default='profile')
 
 def get_yaml_data(yaml_path, yaml_dir="assets/data"):
     """Load a YAML file containing field data.
