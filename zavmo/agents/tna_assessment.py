@@ -3,7 +3,7 @@ from agents.common import model, get_agent_instructions
 from pydantic_ai.settings import ModelSettings
 from pydantic_ai.tools import Tool
 from pydantic_ai import Agent, RunContext
-from agents.common import User, get_yaml_data, get_prompt
+from agents.common import get_yaml_data, get_prompt
 import logging
 from pydantic import BaseModel, Field
 from typing import Literal, Dict, List
@@ -41,7 +41,7 @@ class ValidateOnCurrentLevel(BaseModel):
                                                                     The learner's response could match one of the OFQUAL's benchmarking responses - Fail, Pass, Merit, Distinction. Evaluate strictly based on criterias and benchmarking responses shared from OFQUAL.""")
     current_bloom_taxonomy_level: Literal["Remember", "Understand", "Apply", "Analyze", "Evaluate", "Create"] = Field(description="The current Bloom's Taxonomy level of the assessment area the learner is currently on.")
     
-    def execute(self, ctx: RunContext[TNADeps]):
+    async def execute(self, ctx: RunContext[TNADeps]) -> str:
         email       = ctx.deps.email
         sequences   = FourDSequence.objects.filter(user__email=email, current_stage__in=[1, 2, 3, 4]).order_by('created_at')
         sequence_id = sequences.first().id if sequences else None
@@ -86,7 +86,7 @@ class SaveAssessmentArea(BaseModel):
     evidence_of_assessment: str = Field(description="A report of the assessment process for the assessment area and the learner's response to the proposed assessment questions.")
     gaps: List[str] = Field(description="List of all knowledge gaps determined for learner's responses validating against OFQUAL requirements such as benchmarking response (DISTINCTION), expectations, and criterias provided for the Assessment Area.")
     
-    def execute(self, ctx: RunContext[TNADeps]):
+    async def execute(self, ctx: RunContext[TNADeps]) -> str:
         """
         Save the details of an assessment area.
         """
@@ -112,9 +112,9 @@ class SaveAssessmentArea(BaseModel):
 tna_assessment_agent = Agent(
     model,
     model_settings=ModelSettings(parallel_tool_calls=True),
-    instrument=True,
-    tools=[Tool(ValidateOnCurrentLevel, takes_ctx=True),
-           Tool(SaveAssessmentArea, takes_ctx=True)],
+    # instrument=True,
+    tools=[Tool(ValidateOnCurrentLevel),
+           Tool(SaveAssessmentArea)],
     retries=3
 )
 

@@ -3,13 +3,16 @@ from pydantic_ai.providers.azure import AzureProvider
 from pydantic_ai.models.anthropic import AnthropicModel
 from pydantic_ai.models.fallback import FallbackModel
 from pydantic import BaseModel
+import logfire
 
 import os
 from dotenv import load_dotenv
 
 load_dotenv()
 
-from zavmo.helpers.chat import get_prompt
+# logfire.configure(scrubbing=False)
+
+from helpers.chat import get_prompt
 import codecs
 import yaml
 

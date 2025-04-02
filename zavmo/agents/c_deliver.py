@@ -8,7 +8,6 @@ Fields:
 """
 
 import json
-from dotenv import load_dotenv
 from pydantic import BaseModel, Field
 from pydantic_ai import Agent, RunContext, Tool
 from pydantic_ai.settings import ModelSettings
@@ -18,80 +17,12 @@ from agents.utils import get_agent_instructions
 # from helpers.agents.d_demonstrate import demonstrate_agent
 from stage_app.tasks import xAPI_lesson_celery_task, xAPI_curriculum_completion_celery_task,xAPI_stage_celery_task
 from stage_app.models import DeliverStage, DiscussStage, UserProfile, FourDSequence, TNAassessment
-from agents.common import model
+from agents.common import model, get_agent_instructions, Deps   
 
-import logfire
-import logging
-
-logfire.configure(scrubbing=False)
-
-load_dotenv()
 
 logger = get_logger(__name__)
 
-
-def transfer_to_demonstrate_stage(ctx: RunContext):
-    """Once all lessons have been delivered, and the DeliverStage is updated, transfer to the Demonstration stage."""
-    email       = ctx.get('email')
-    name        = ctx['profile']['first_name'] + " " + ctx['profile']['last_name']
-    sequence_id = ctx.get('sequence_id')
-    
-    if not email or not sequence_id:
-        raise ValueError("Email and sequence id are required to transfer to the Demonstration stage.")
-    
-    profile = UserProfile.objects.get(user__email=email)
-    
-    deliver_stage = DeliverStage.objects.get(user__email=email, sequence_id=sequence_id)
-    
-    
-    
-# class transfer_to_demonstrate_stage(StrictTool):
-#     """Once all lessons have been delivered, and the DeliverStage is updated, transfer to the Demonstration stage."""
-#     is_complete: bool = Field(description="Whether all lessons have been delivered and the DeliverStage is updated.")
-    
-#     def execute(self, context: Dict):
-#         # Get email and sequence id from context
-#         email       = context['email']
-#         name        = context['profile']['first_name'] + " " + context['profile']['last_name']
-#         curriculum_title  = context["discuss"]['curriculum']['title']
-#         sequence_id = context['sequence_id']
-        
-#         if not email or not sequence_id:
-#             raise ValueError("Email and sequence id are required to transfer to the Demonstration stage.")
-        
-#         profile = UserProfile.objects.get(user__email=email)
-        
-#         # Get the DeliverStage object
-#         curriculum = DiscussStage.objects.get(user__email=email, sequence_id=sequence_id).curriculum
-        
-#         deliver_stage             = DeliverStage.objects.get(user__email=email, sequence_id=sequence_id)
-#         deliver_stage.is_complete = self.is_complete
-#         deliver_stage.save()   
-
-#         if deliver_stage.is_complete:
-#             xAPI_curriculum_completion_celery_task.apply_async(args=[curriculum_title,email,name])
-
-#         agent = demonstrate_agent
-#         xAPI_stage_celery_task.apply_async(args=[agent.id, email, name])
-#         # Create the start message for the Demonstration agent
-#         agent.start_message = f"""
-        
-#         **Curriculum:**
-#         {curriculum}
-        
-#         **Deliver Stage:**
-#         {deliver_stage.get_summary()}
-        
-#         Greet the learner and introduce the Demonstration stage.
-#         """
-        
-#         return Result(
-#             value="Transferred to Demonstration stage.",
-#             agent=agent, 
-#             context=context
-#         )
-
-        
+      
 class Lesson(BaseModel):
     """Generate a lesson for a module to be delivered to the learner."""
     module: str  = Field(description="The module that the lesson belongs to")
@@ -103,11 +34,13 @@ class Lesson(BaseModel):
         return f"Module: {self.module}\nLearning Objective: {self.learning_objective}\nTitle: {self.title}\nLesson: {self.lesson}"
 
 
-def generate_lesson(ctx: RunContext, lesson: Lesson):
+def generate_lesson(ctx: RunContext[Deps], lesson: Lesson):
     """Generate a lesson for a module to be delivered to the learner."""
-    email       = ctx.get('email')
-    name        = ctx['profile']['first_name'] + " " + ctx['profile']['last_name']
-    sequence_id = ctx.get('sequence_id')
+    email       = ctx.deps.email
+    profile     = UserProfile.objects.get(user__email=email)
+    name        = profile.first_name + " " + profile.last_name
+    sequences   = FourDSequence.objects.filter(user__email=email, current_stage__in=[1, 2, 3, 4]).order_by('created_at')
+    sequence_id = sequences.first().id if sequences else None
     
     if not email or not sequence_id:
         raise ValueError("Email and sequence id are required to generate a lesson.")
@@ -128,9 +61,6 @@ def generate_lesson(ctx: RunContext, lesson: Lesson):
 
     return f"Lesson generated for {email}.\n\n{lesson}"
 
-
-class Deps(BaseModel):
-    email: str
 
 class transfer_to_demonstrate_step(BaseModel):
     """After the learner has completed the Deliver stage, transfer to the Demonstrate step."""
@@ -188,7 +118,8 @@ deliver_agent = Agent(
     system_prompt=get_agent_instructions('deliver'),
     instrument=True,
     tools=[
-        Tool(transfer_to_demonstrate_step, takes_ctx=True),
-        Tool(update_deliver_data, takes_ctx=True),
+        Tool(transfer_to_demonstrate_step),
+        Tool(update_deliver_data),
+        Tool(generate_lesson)
     ],
     retries=3)

@@ -34,13 +34,13 @@ class UserProfileSerializer(BaseStageSerializer):
     org_name = serializers.CharField(source='org.org_name', read_only=True)
     class Meta:
         model = UserProfile
-        fields = ['id', 'email', 'org_id', 'org_name', 'first_name', 'last_name', 'current_role']
+        fields = ['id', 'email', 'org_id', 'org_name', 'first_name', 'last_name', 'current_role', 'current_industry', 'years_of_experience', 'department', 'role_purpose', 'key_responsibilities']
 
 
 class TNAassessmentSerializer(BaseStageSerializer):
     class Meta:
         model   = TNAassessment
-        fields = ['assessment_area', 'evidence_of_assessment', 'user_assessed_knowledge_level', 'zavmo_assessed_knowledge_level', 'status', 'nos_id']
+        fields = ['assessment_area', 'evidence_of_assessment', 'user_assessed_knowledge_level', 'zavmo_assessed_knowledge_level', 'status', 'nos_id', 'ofqual_unit_id', 'ofqual_id']
 
 class DiscoverStageSerializer(BaseStageSerializer):
     class Meta:

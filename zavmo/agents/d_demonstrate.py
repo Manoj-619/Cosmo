@@ -1,19 +1,11 @@
 from pydantic_ai import Agent, RunContext
 from pydantic import BaseModel, Field
-from pydantic_ai.model_settings import ModelSettings
+from pydantic_ai.settings import ModelSettings
 from pydantic_ai.tools import Tool
 
-from agents.common import model, get_agent_instructions
-from stage_app.models import UserProfile, FourDSequence, TNAassessment
+from agents.common import model, get_agent_instructions, Deps
+from stage_app.models import UserProfile, FourDSequence
 from stage_app.tasks import xAPI_stage_celery_task
-
-import logfire
-import logging
-
-logfire.configure(scrubbing=False)
-
-class Deps(BaseModel):
-    email: str
 
 class complete_sequence(BaseModel):
     """Complete the current learning sequence and prepare for the next one."""
@@ -32,9 +24,9 @@ class complete_sequence(BaseModel):
         if not sequence:
             raise ValueError("No active Demonstrate stage sequence found.")
         
-        sequence.is_complete = True
+        sequence.update_stage('completed')
         sequence.save()
-        
+
         # Find next incomplete sequence and set it to Discover stage
         next_sequence = FourDSequence.objects.filter(
             user=profile.user,
@@ -77,9 +69,9 @@ demonstrate_agent = Agent(
     model,
     model_settings=ModelSettings(parallel_tool_calls=True),
     system_prompt=get_agent_instructions('demonstrate'),
-    instrument=True,
+    # instrument=True,
     tools=[
-        Tool(complete_sequence, takes_ctx=True),
-        Tool(update_demonstrate_data, takes_ctx=True),
+        Tool(complete_sequence),
+        Tool(update_demonstrate_data),
     ],
     retries=3) 

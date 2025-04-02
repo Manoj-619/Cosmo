@@ -1,39 +1,14 @@
 from helpers.utils import get_logger
 from django.core.cache import cache
 from stage_app.models import UserProfile, FourDSequence, DeliverStage, DiscoverStage, DiscussStage, DemonstrateStage, TNAassessment
-from stage_app.serializers import (
-    DiscoverStageSerializer, DiscussStageSerializer, DeliverStageSerializer, DemonstrateStageSerializer,
-    UserProfileSerializer, TNAassessmentSerializer
-)
-# from helpers.agents import a_discover, b_discuss,c_deliver,d_demonstrate, profile
-from agents import a_discover, b_discuss,c_deliver,d_demonstrate, profile
-from helpers.agents.tna_assessment import get_tna_assessment_agent
-from helpers.agents.common import get_tna_assessment_instructions, get_agent_instructions
-from helpers.constants import CONTEXT_SUFFIX, HISTORY_SUFFIX, DEFAULT_CACHE_TIMEOUT
-from helpers.swarm import run_step
-from django.db import utils as django_db_utils
-import logging
+from helpers.constants import HISTORY_SUFFIX, DEFAULT_CACHE_TIMEOUT
 from copy import deepcopy
-from pydantic_ai.models.message import ModelMessagesTypeAdapter
 
+from typing import List, Dict
+from pydantic_ai.messages import ModelMessagesTypeAdapter 
 
 stage_order = ['profile', 'discover', 'tna_assessment', 'discuss', 'deliver', 'demonstrate']
 stage_models = [UserProfile, DiscoverStage, TNAassessment, DiscussStage, DeliverStage, DemonstrateStage]
-
-def get_agent(stage_name):
-    if stage_name == 'profile':
-        return deepcopy(profile.profile_agent)
-    # elif stage_name == 'discover':
-    #     return deepcopy(a_discover.discover_agent)
-    # elif stage_name == 'tna_assessment':
-    #     return deepcopy(get_tna_assessment_agent())
-    # elif stage_name == 'discuss':
-    #     return deepcopy(b_discuss.discuss_agent)
-    # elif stage_name == 'deliver':
-    #     return deepcopy(c_deliver.deliver_agent)
-    # elif stage_name == 'demonstrate':
-    #     return deepcopy(d_demonstrate.demonstrate_agent)
-
 
 logger = get_logger(__name__)
 
@@ -95,51 +70,4 @@ def _get_message_history(email, sequence_id) -> List[Dict]:
 
 def _update_message_history(email, sequence_id, all_messages: List[Dict]):
     """Update message history."""
-
-    if sequence_id:
-        sequence = FourDSequence.objects.get(id=sequence_id)
-        valid_stages = ['discover', 'discuss', 'deliver', 'demonstrate', 'completed']
-        
-        # Only update stage if it's different and valid
-        if response.agent.id != sequence.stage_display and response.agent.id in valid_stages:
-            # Check if stage already exists before updating
-            try:
-                sequence.update_stage(response.agent.id)
-                context['stage'] = response.agent.id
-            except django_db_utils.IntegrityError:
-                logger.warning(f"Stage {response.agent.id} already exists for sequence {sequence_id}")
-                pass
-    # cache.set(f"{user.email}_{sequence_id}_{CONTEXT_SUFFIX}", context, timeout=DEFAULT_CACHE_TIMEOUT)
     cache.set(f"{email}_{sequence_id}_{HISTORY_SUFFIX}", all_messages, timeout=DEFAULT_CACHE_TIMEOUT)
-
-
-def _process_agent_response(stage_name, message_history, user_input):
-    """Process agent response with given context and messages."""
-    agent = get_agent(stage_name)
-    
-    return agent.run_sync(user_input, message_history)
-
-def _update_context_and_cache(user, sequence_id, context, message_history, response):
-    """Update context and cache with response data."""
-    # NOTE:  Add either last message or all recent messages
-    # message_history.append(response.messages[-1])
-    message_history.extend(response.messages)
-
-    context.update(response.context)
-    sequence_id = context['sequence_id']
-    if sequence_id:
-        sequence = FourDSequence.objects.get(id=sequence_id)
-        valid_stages = ['discover', 'discuss', 'deliver', 'demonstrate', 'completed']
-        
-        # Only update stage if it's different and valid
-        if response.agent.id != sequence.stage_display and response.agent.id in valid_stages:
-            # Check if stage already exists before updating
-            try:
-                sequence.update_stage(response.agent.id)
-                context['stage'] = response.agent.id
-            except django_db_utils.IntegrityError:
-                logger.warning(f"Stage {response.agent.id} already exists for sequence {sequence_id}")
-                pass
-
-    # cache.set(f"{user.email}_{sequence_id}_{CONTEXT_SUFFIX}", context, timeout=DEFAULT_CACHE_TIMEOUT)
-    cache.set(f"{user.email}_{sequence_id}_{HISTORY_SUFFIX}", message_history, timeout=DEFAULT_CACHE_TIMEOUT)

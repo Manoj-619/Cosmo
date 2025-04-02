@@ -1,6 +1,6 @@
 from pydantic_ai import Agent, RunContext
 from pydantic import BaseModel, Field
-from pydantic_ai.model_settings import ModelSettings
+from pydantic_ai.settings import ModelSettings
 from pydantic_ai.tools import Tool
 
 from agents.common import model, get_agent_instructions, Deps
@@ -10,10 +10,8 @@ from agents.tna_assessment import tna_assessment_agent
 from stage_app.tasks import xAPI_profile_celery_task, xAPI_stage_celery_task
 
 import json
-import logfire
 import logging
 
-logfire.configure(scrubbing=False)
 
 ### For handoff
 class transfer_to_tna_assessment_step(BaseModel):
@@ -142,11 +140,10 @@ profile_agent = Agent(
     model,
     model_settings=ModelSettings(parallel_tool_calls=True),
     system_prompt=get_agent_instructions('profile'),
-    instrument=True,
+    # instrument=True,
     tools=[
-        Tool(transfer_to_tna_assessment_step, takes_ctx=True),
-        Tool(FindNOSandOFQUAL, takes_ctx=True),
-        Tool(update_profile_data, takes_ctx=True),
+        Tool(FindNOSandOFQUAL),
+        Tool(update_profile_data),
     ],
     retries=3
 )

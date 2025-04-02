@@ -23,7 +23,7 @@ rich
 # LLM
 anthropic
 openai>=1.51.2
-pydantic==2.9.1
+pydantic>=2.10.0
 pydantic-ai[logfire]
 anthropic
 tiktoken
@@ -67,3 +67,4 @@ tabulate
 pinecone
 openpyxl
 neomodel
+logfire
