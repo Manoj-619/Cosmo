@@ -9,6 +9,7 @@ from stage_app.models import UserProfile, FourDSequence, TNAassessment
 from agents.tna_assessment import tna_assessment_agent
 from stage_app.tasks import xAPI_profile_celery_task, xAPI_stage_celery_task
 
+import time
 import json
 import logging
 
@@ -18,8 +19,10 @@ class nos_query(BaseModel):
     query: str = Field(description="A query invloving main purpose, responsibilities and manager responsibilities of the learner's current role.")
 
 def FindNOSandOFQUAL(ctx: RunContext[Deps], nos_query: nos_query):
+    """Find relevant NOS and OFQUAL for the user's profile"""
     # Get email from dependencies
     email        = ctx.deps.email
+    time.sleep(2)
     user_profile = UserProfile.objects.get(user__email=email)
     is_complete, error = user_profile.check_complete()
     if not is_complete:
@@ -55,6 +58,7 @@ def FindNOSandOFQUAL(ctx: RunContext[Deps], nos_query: nos_query):
                     ofqual_unit_data=ofqual['learning_outcomes'],
                     ofqual_criterias=ofqual['markscheme'],
                     ofqual_id=ofqual['ofqual_id'],
+                    nos_id=nos_data['nos_id'],
                     status='In Progress' if total_assessments == 1 else 'To Assess'
                 )
                 assessments_for_sequence.append(assessment)
@@ -83,6 +87,7 @@ class profile(BaseModel):
     processes_and_governance_improvements: str = Field(description="The processes and governance improvements made by the learner in their current role.")
     
 def update_profile_data(ctx: RunContext[Deps], data: profile):
+    """Update the profile data of the learner. First name, last name, current role, etc."""
     # Get email from dependencies
     email = ctx.deps.email
     if not email:
@@ -91,8 +96,8 @@ def update_profile_data(ctx: RunContext[Deps], data: profile):
     # Get the UserProfile object
     user_profile = UserProfile.objects.get(user__email=email)
     if not user_profile:
-        raise ValueError("UserProfile not found")    
-
+        raise ValueError("UserProfile not found")
+    
     # Update the UserProfile object
     user_profile.first_name = data.first_name
     user_profile.last_name = data.last_name
@@ -108,7 +113,7 @@ def update_profile_data(ctx: RunContext[Deps], data: profile):
     user_profile.processes_and_governance_improvements = data.processes_and_governance_improvements
     user_profile.save()
 
-    xAPI_profile_celery_task.apply_async(args=[data, email])
+    # xAPI_profile_celery_task.apply_async(args=[data, email])
 
     return "Profile Data updated successfully. Find NOS and OFQUAL matching with the learner's profile using the `FindNOSandOFQUAL` tool."
 

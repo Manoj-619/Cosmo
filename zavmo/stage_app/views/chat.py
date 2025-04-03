@@ -10,6 +10,7 @@ from stage_app.models import TNAassessment, DiscussStage, DeliverStage, Demonstr
 from stage_app.serializers import UserProfileSerializer, TNAassessmentSerializer, DiscussStageSerializer, DeliverStageSerializer, DemonstrateStageSerializer, DiscoverStageSerializer
 from agents import get_agent
 from agents.common import Deps
+from agents.tna_assessment import TNADeps
 from pydantic_ai.agent import Agent
 import json
 logger = get_logger(__name__)
@@ -53,19 +54,14 @@ def chat_view(request):
     #     xAPI_chat_celery_task.apply_async(args=[latest_user_message, latest_stage,email,latest_zavmo_message])
     
     agent    = get_agent(stage_name)
-    
-    deps     = Deps(email=user.email, stage_name=stage_name)
-    response = agent.run_sync(
-        message,
-        message_history=message_history,
-        deps=deps
-    )
-    logger.info(f"\n\nResponse: {response}\n\n")
+    if stage_name=='tna_assessment':
+        deps = TNADeps(email=user.email, stage_name= stage_name)
+    else:
+        deps = Deps(email=user.email, stage_name=stage_name)
+    response = agent.run_sync(message,message_history=message_history, deps=deps)
 
-    # TODO: Check if deps is updated  or is there a different way to access updated deps
-    # NOTE: When we transfer to a new stage, the stage_name is updated in the deps
     current_stage = deps.stage_name
-
+    logger.info(f"\n\nCurrent stage: {current_stage}\n\n")
     _update_message_history(email, sequence_id, json.loads(response.all_messages_json()), current_stage)
     
 

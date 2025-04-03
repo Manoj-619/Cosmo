@@ -21,7 +21,6 @@ def _get_user_and_sequence(request):
         # Get all incomplete sequences for the user, ordered by creation date
         sequences   = FourDSequence.objects.filter(user=user, current_stage__in=[1, 2, 3, 4]).order_by('created_at')
         sequence_id = sequences.first().id if sequences else None
-    logger.info(f"Sequence ID: {sequence_id}")
     return user, sequence_id
 
 
@@ -70,15 +69,16 @@ def _get_message_history(email, sequence_id) -> List[Dict]:
 
 def _update_message_history(email, sequence_id, all_messages: List[Dict], current_stage: str):
     """Update message history."""
-
+    valid_stages = ['discover', 'discuss', 'deliver', 'demonstrate', 'completed']
     ## Update the stage of the sequence
-    sequence = FourDSequence.objects.get(
-            user__email=email,
-            id=sequence_id
-        )
-        
-    sequence.update_stage(current_stage)
-    sequence.save()
+    if sequence_id and current_stage in valid_stages:
+        sequence = FourDSequence.objects.get(
+                user__email=email,
+                id=sequence_id
+            )
+            
+        sequence.update_stage(current_stage)
+        sequence.save()
     
     ## Update the message history
     cache.set(f"{email}_{sequence_id}_{HISTORY_SUFFIX}", all_messages, timeout=DEFAULT_CACHE_TIMEOUT)

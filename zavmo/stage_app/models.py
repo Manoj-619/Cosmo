@@ -89,10 +89,7 @@ class TNAassessment(models.Model):
     ofqual_unit_id   = models.CharField(max_length=255, blank=True, null=True, verbose_name="Ofqual Unit ID")
     ofqual_id        = models.CharField(max_length=255, blank=True, null=True, verbose_name="Ofqual ID")
 
-    nos_id                = models.CharField(max_length=50, blank=True, null=True, verbose_name="NOS ID")
-    nos_title             = models.CharField(max_length=255, blank=True, null=True, verbose_name="NOS Title")
-    nos_performance_items = models.TextField(blank=True, null=True, verbose_name="NOS Performance Items")
-    nos_knowledge_items   = models.TextField(blank=True, null=True, verbose_name="NOS Knowledge Items")
+    nos_id           = models.CharField(max_length=255, blank=True, null=True, verbose_name="NOS ID")
 
     user_assessed_knowledge_level = models.PositiveSmallIntegerField(
         choices=[
@@ -339,6 +336,11 @@ class FourDSequence(models.Model):
         choices=Stage.choices, 
         default=Stage.DISCOVER
     )
+    
+    nos_id                = models.CharField(max_length=50, blank=True, null=True, verbose_name="NOS ID")
+    nos_title             = models.CharField(max_length=255, blank=True, null=True, verbose_name="NOS Title")
+    nos_performance_items = models.TextField(blank=True, null=True, verbose_name="NOS Performance Items")
+    nos_knowledge_items   = models.TextField(blank=True, null=True, verbose_name="NOS Knowledge Items")
 
     def __str__(self):
         return f"Sequence {self.id} - {self.stage_display}"
