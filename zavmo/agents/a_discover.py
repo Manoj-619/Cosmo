@@ -48,7 +48,7 @@ def update_discover_data(ctx: RunContext[Deps], data: DiscoverData):
     discover_stage.application_area = data.application_area
     discover_stage.save() 
 
-    xAPI_discover_celery_task.apply_async(args=[data,email,name])
+    xAPI_discover_celery_task.apply_async(args=[data.model_dump(),email,name])
 
     logger.info(f"Updated Discover stage Data for {email}. The following data was updated:\n\n{str(data)}")
     

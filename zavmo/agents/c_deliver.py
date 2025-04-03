@@ -57,7 +57,7 @@ def generate_lesson(ctx: RunContext[Deps], lesson: Lesson):
     deliver_stage.lessons.append(lesson.model_dump_json())
     deliver_stage.save()
     logger.info(f"Lesson generated for {email}.")
-    xAPI_lesson_celery_task.apply_async(args=[json.loads(lesson.model_dump_json()),email,name])
+    xAPI_lesson_celery_task.apply_async(args=[lesson.model_dump(),email,name])
 
     return f"Lesson generated for {email}.\n\n{lesson}"
 

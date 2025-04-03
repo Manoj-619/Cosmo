@@ -59,9 +59,9 @@ def generate_curriculum(ctx: RunContext[Deps], curriculum: Curriculum):
     discuss_stage.curriculum = curriculum
     discuss_stage.save()
     
-    xAPI_discuss_celery_task.apply_async(args=[curriculum,discuss_stage.learning_style,discuss_stage.interest_areas,discuss_stage.timeline,email,name])
+    xAPI_discuss_celery_task.apply_async(args=[curriculum.model_dump(),discuss_stage.learning_style,discuss_stage.interest_areas,discuss_stage.timeline,email,name])
         
-    return f"Successfully generated Curriculum for {email}.\n\n{str(self.model_dump())}"
+    return f"Successfully generated Curriculum for {email}.\n\n{str(curriculum.model_dump())}"
 
 
 class discussion_data(BaseModel):

@@ -1,7 +1,7 @@
 from helpers.utils import get_logger
 from django.core.cache import cache
 from stage_app.models import UserProfile, FourDSequence, DeliverStage, DiscoverStage, DiscussStage, DemonstrateStage, TNAassessment
-from helpers.constants import HISTORY_SUFFIX, DEFAULT_CACHE_TIMEOUT
+from helpers.constants import HISTORY_SUFFIX, DEFAULT_CACHE_TIMEOUT, CONTEXT_SUFFIX
 from copy import deepcopy
 
 from typing import List, Dict
@@ -63,9 +63,13 @@ def _determine_stage(user, sequence_id):
 def _get_message_history(email, sequence_id) -> List[Dict]:
     """Get or initialize message history."""
     message_history = cache.get(f"{email}_{sequence_id}_{HISTORY_SUFFIX}", [])
-    if message_history:
-        return ModelMessagesTypeAdapter.validate_python(message_history)
-    return []
+    return ModelMessagesTypeAdapter.validate_python(message_history)
+   
+
+def _get_deps(email, sequence_id) -> Dict:
+    """Get or initialize dependencies."""
+    deps = cache.get(f"{email}_{sequence_id}_{CONTEXT_SUFFIX}", {})
+    return deps
 
 def _update_message_history(email, sequence_id, all_messages: List[Dict], current_stage: str):
     """Update message history."""
@@ -82,3 +86,7 @@ def _update_message_history(email, sequence_id, all_messages: List[Dict], curren
     
     ## Update the message history
     cache.set(f"{email}_{sequence_id}_{HISTORY_SUFFIX}", all_messages, timeout=DEFAULT_CACHE_TIMEOUT)
+
+def _update_deps(email, sequence_id, deps: Dict):
+    """Update dependencies."""
+    cache.set(f"{email}_{sequence_id}_{CONTEXT_SUFFIX}", deps, timeout=DEFAULT_CACHE_TIMEOUT)

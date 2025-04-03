@@ -113,7 +113,7 @@ def update_profile_data(ctx: RunContext[Deps], data: profile):
     user_profile.processes_and_governance_improvements = data.processes_and_governance_improvements
     user_profile.save()
 
-    # xAPI_profile_celery_task.apply_async(args=[data, email])
+    xAPI_profile_celery_task.apply_async(args=[data.model_dump(), email])
 
     return "Profile Data updated successfully. Find NOS and OFQUAL matching with the learner's profile using the `FindNOSandOFQUAL` tool."
 
