@@ -34,49 +34,49 @@ def get_ofqual_based_instructions(ctx: RunContext[TNADeps], level: str, competen
     )
     return ofqual_based_instructions
 
-class ValidateOnCurrentLevel(BaseModel):
+class CurrentLevel(BaseModel):
     """Validate the learner's response to advice on progression."""
     assessment_area: str = Field(description="Exact name of current assessment area.")
     result: Literal["FAIL", "PASS", "MERIT", "DISTINCTION"] = Field(description="""The result of the assessment. It is based on the learner's response against the OFQUAL's benchmarking responses. 
                                                                     The learner's response could match one of the OFQUAL's benchmarking responses - Fail, Pass, Merit, Distinction. Evaluate strictly based on criterias and benchmarking responses shared from OFQUAL.""")
     current_bloom_taxonomy_level: Literal["Remember", "Understand", "Apply", "Analyze", "Evaluate", "Create"] = Field(description="The current Bloom's Taxonomy level of the assessment area the learner is currently on.")
     
-    async def execute(self, ctx: RunContext[TNADeps]) -> str:
+def validate_on_current_level(ctx: RunContext[TNADeps], current_level: CurrentLevel) -> str:
         email       = ctx.deps.email
         sequences   = FourDSequence.objects.filter(user__email=email, current_stage__in=[1, 2, 3, 4]).order_by('created_at')
         sequence_id = sequences.first().id if sequences else None
 
         all_levels = ["Remember", "Understand", "Apply", "Analyze", "Evaluate", "Create"]
         tna_assessment = TNAassessment.objects.get(user__email=email, sequence_id=sequence_id, assessment_area=self.assessment_area)
-        tna_assessment.finalized_blooms_taxonomy_level = self.current_bloom_taxonomy_level
+        tna_assessment.finalized_blooms_taxonomy_level = current_level.current_bloom_taxonomy_level
         tna_assessment.save()
-        if self.result == "FAIL":
-            if self.current_bloom_taxonomy_level == "Remember":
+        if current_level.result == "FAIL":
+            if current_level.current_bloom_taxonomy_level == "Remember":
                 ctx.deps.level = "Remember"
                 return f"Based on validation, it is advised to save the details of the assessment area and then move to next NOS assessment area."
             else:
-                next_lower_level = all_levels[all_levels.index(self.current_bloom_taxonomy_level) - 1]
+                next_lower_level = all_levels[all_levels.index(current_level.current_bloom_taxonomy_level) - 1]
                 ctx.deps.level = next_lower_level
                 return f"Inform learner that based on validation, it is advised to move to next lower level {next_lower_level}."
         
-        if self.result == "PASS" or self.result == "MERIT":
-            ctx.deps.level = self.current_bloom_taxonomy_level
-            return f"""Inform learner that based on evaluating the learner's response against the OFQUAL's benchmarking responses, {self.result} is achieved. 
+        if current_level.result == "PASS" or current_level.result == "MERIT":
+            ctx.deps.level = current_level.current_bloom_taxonomy_level
+            return f"""Inform learner that based on evaluating the learner's response against the OFQUAL's benchmarking responses, {current_level.result} is achieved. 
                                 It is advised to save the details of the assessment area and move to next NOS assessment area."""
         
-        if self.result == "DISTINCTION":
-            if self.current_bloom_taxonomy_level == "Create":
+        if current_level.result == "DISTINCTION":
+            if current_level.current_bloom_taxonomy_level == "Create":
                 ctx.deps.level = "Create"
                 return f"""Inform learner that based on evaluating the learner's response against the OFQUAL's benchmarking responses, Distinction is achieved. 
                               The learner has reached the highest level. It is advised to save the details of the assessment area and move to next NOS assessment area."""
             else:
-                next_higher_level = all_levels[all_levels.index(self.current_bloom_taxonomy_level) + 1]
+                next_higher_level = all_levels[all_levels.index(current_level.current_bloom_taxonomy_level) + 1]
                 ctx.deps.level = next_higher_level
                 return f"""Inform learner that based on evaluating the learner's response against the OFQUAL's benchmarking responses, {next_higher_level} is achieved. 
                                 It is advised to move to next higher level and continue assessment process on next shared level and corresponding task."""
 
 
-class SaveAssessmentArea(BaseModel):
+class AssessmentAreaDetails(BaseModel):
     """
     Save the details of an assessment area.
     """
@@ -86,19 +86,18 @@ class SaveAssessmentArea(BaseModel):
     evidence_of_assessment: str = Field(description="A report of the assessment process for the assessment area and the learner's response to the proposed assessment questions.")
     gaps: List[str] = Field(description="List of all knowledge gaps determined for learner's responses validating against OFQUAL requirements such as benchmarking response (DISTINCTION), expectations, and criterias provided for the Assessment Area.")
     
-    async def execute(self, ctx: RunContext[TNADeps]) -> str:
+def save_assessment_area(ctx: RunContext[TNADeps], assessment_area_details: AssessmentAreaDetails) -> str:
         """
         Save the details of an assessment area.
         """
         email       = ctx.deps.email
         sequences   = FourDSequence.objects.filter(user__email=email, current_stage__in=[1, 2, 3, 4]).order_by('created_at')
         sequence_id = sequences.first().id if sequences else None
-        
-        tna_assessment = TNAassessment.objects.get(user__email=email, sequence_id=sequence_id, assessment_area=self.assessment_area)
-        tna_assessment.user_assessed_knowledge_level = self.user_assessed_knowledge_level
-        tna_assessment.zavmo_assessed_knowledge_level = self.zavmo_assessed_knowledge_level
-        tna_assessment.evidence_of_assessment = self.evidence_of_assessment
-        tna_assessment.knowledge_gaps = self.gaps
+        tna_assessment = TNAassessment.objects.get(user__email=email, sequence_id=sequence_id, assessment_area=assessment_area_details.assessment_area)
+        tna_assessment.user_assessed_knowledge_level = assessment_area_details.user_assessed_knowledge_level
+        tna_assessment.zavmo_assessed_knowledge_level = assessment_area_details.zavmo_assessed_knowledge_level
+        tna_assessment.evidence_of_assessment = assessment_area_details.evidence_of_assessment
+        tna_assessment.knowledge_gaps = assessment_area_details.gaps
         tna_assessment.status = 'Completed'
         tna_assessment.save()
 
@@ -106,14 +105,14 @@ class SaveAssessmentArea(BaseModel):
         next_tna_assessment.status = 'In Progress'
         next_tna_assessment.save()
 
-        return f"""Saved details for the Assessment area: {self.assessment_area}."""
+        return f"""Saved details for the Assessment area: {assessment_area_details.assessment_area}."""
 
 tna_assessment_agent = Agent(
     model,
     model_settings=ModelSettings(parallel_tool_calls=True),
     # instrument=True,
-    tools=[Tool(ValidateOnCurrentLevel),
-           Tool(SaveAssessmentArea)],
+    tools=[Tool(validate_on_current_level),
+           Tool(save_assessment_area)],
     retries=3
 )
 

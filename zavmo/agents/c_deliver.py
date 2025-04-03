@@ -62,38 +62,14 @@ def generate_lesson(ctx: RunContext[Deps], lesson: Lesson):
     return f"Lesson generated for {email}.\n\n{lesson}"
 
 
-class transfer_to_demonstrate_step(BaseModel):
-    """After the learner has completed the Deliver stage, transfer to the Demonstrate step."""
-    
-    async def execute(self, ctx: RunContext[Deps]):
-        """Transfer the learner to the Demonstrate stage"""
-        email = ctx.deps.email
-        profile = UserProfile.objects.get(user__email=email)
-        name = profile.first_name + " " + profile.last_name
-        
-        # Update the current sequence to Demonstrate stage
-        sequences = FourDSequence.objects.filter(
-            user=profile.user, 
-            current_stage=FourDSequence.Stage.DELIVER
-        ).order_by('created_at')
-        
-        if not sequences:
-            raise ValueError("No active Deliver stage sequence found.")
-        
-        current_sequence = sequences.first()
-        current_sequence.current_stage = FourDSequence.Stage.DEMONSTRATE
-        current_sequence.save()
-        
-        xAPI_stage_celery_task.apply_async(args=["demonstrate_agent", email, name])
-        return "Transferred to Demonstrate step."
 
-class update_deliver_data(BaseModel):
+class deliver_data(BaseModel):
     """Update the delivery data for the current sequence."""
     learning_progress: str = Field(description="Progress made in learning objectives.")
     completion_status: str = Field(description="Status of completion for assigned tasks.")
     feedback: str = Field(description="Feedback on the delivery phase.")
     
-    async def execute(self, ctx: RunContext[Deps]):
+def update_deliver_data(ctx: RunContext[Deps], data: deliver_data):
         email = ctx.deps.email
         profile = UserProfile.objects.get(user__email=email)
         
@@ -105,9 +81,9 @@ class update_deliver_data(BaseModel):
         if not sequence:
             raise ValueError("No active Deliver stage sequence found.")
         
-        sequence.learning_progress = self.learning_progress
-        sequence.completion_status = self.completion_status
-        sequence.delivery_feedback = self.feedback
+        sequence.learning_progress = data.learning_progress
+        sequence.completion_status = data.completion_status
+        sequence.delivery_feedback = data.feedback
         sequence.save()
         
         return "Delivery data updated successfully."
@@ -118,7 +94,6 @@ deliver_agent = Agent(
     system_prompt=get_agent_instructions('deliver'),
     instrument=True,
     tools=[
-        Tool(transfer_to_demonstrate_step),
         Tool(update_deliver_data),
         Tool(generate_lesson)
     ],

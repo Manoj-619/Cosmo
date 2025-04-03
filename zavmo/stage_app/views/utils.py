@@ -68,6 +68,17 @@ def _get_message_history(email, sequence_id) -> List[Dict]:
         return ModelMessagesTypeAdapter.validate_python(message_history)
     return []
 
-def _update_message_history(email, sequence_id, all_messages: List[Dict]):
+def _update_message_history(email, sequence_id, all_messages: List[Dict], current_stage: str):
     """Update message history."""
+
+    ## Update the stage of the sequence
+    sequence = FourDSequence.objects.get(
+            user__email=email,
+            id=sequence_id
+        )
+        
+    sequence.update_stage(current_stage)
+    sequence.save()
+    
+    ## Update the message history
     cache.set(f"{email}_{sequence_id}_{HISTORY_SUFFIX}", all_messages, timeout=DEFAULT_CACHE_TIMEOUT)

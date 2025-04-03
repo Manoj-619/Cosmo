@@ -1,9 +1,8 @@
-from dataclasses import Field
 from pydantic_ai.models.openai import OpenAIModel
 from pydantic_ai.providers.azure import AzureProvider
 from pydantic_ai.models.anthropic import AnthropicModel
 from pydantic_ai.models.fallback import FallbackModel
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 import logfire
 
 import os

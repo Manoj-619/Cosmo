@@ -12,11 +12,11 @@ from stage_app.tasks import xAPI_stage_celery_task
 @profile_agent.tool
 def transfer_to_tna_assessment_step(ctx: RunContext[Deps]):
     """After the learner has completed the Discover stage, transfer to the TNA Assessment step"""
-    # email = ctx.deps.email
-    # profile = UserProfile.objects.get(user__email=email)
+    email = ctx.deps.email
+    profile = UserProfile.objects.get(user__email=email)
 
-    # name  = profile.first_name + " " + profile.last_name
-    # xAPI_stage_celery_task.apply_async(args=['tna_assessment', email, name])   
+    name  = profile.first_name + " " + profile.last_name
+    xAPI_stage_celery_task.apply_async(args=['tna_assessment', email, name])   
     ctx.deps.stage_name = 'tna_assessment'
 
     return tna_assessment_agent

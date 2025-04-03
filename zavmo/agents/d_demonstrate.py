@@ -7,63 +7,62 @@ from agents.common import model, get_agent_instructions, Deps
 from stage_app.models import UserProfile, FourDSequence
 from stage_app.tasks import xAPI_stage_celery_task
 
-class complete_sequence(BaseModel):
-    """Complete the current learning sequence and prepare for the next one."""
+def complete_sequence(ctx: RunContext[Deps]):
+    """Mark the current sequence as complete and prepare for next sequence"""
+
+    email = ctx.deps.email
+    profile = UserProfile.objects.get(user__email=email)
     
-    async def execute(self, ctx: RunContext[Deps]):
-        """Mark the current sequence as complete and prepare for next sequence"""
-        email = ctx.deps.email
-        profile = UserProfile.objects.get(user__email=email)
-        
-        # Get and complete current sequence
-        sequence = FourDSequence.objects.filter(
-            user=profile.user,
-            current_stage=FourDSequence.Stage.DEMONSTRATE
-        ).order_by('created_at').first()
-        
-        if not sequence:
-            raise ValueError("No active Demonstrate stage sequence found.")
-        
-        sequence.update_stage('completed')
-        sequence.save()
+    # Get and complete current sequence
+    sequence = FourDSequence.objects.filter(
+        user=profile.user,
+        current_stage=FourDSequence.Stage.DEMONSTRATE
+    ).order_by('created_at')
+    
+    if not sequence:
+        raise ValueError("No active Demonstrate stage sequence found.")
+    
+    sequence.first().update_stage('completed')
+    sequence.save()
 
-        # Find next incomplete sequence and set it to Discover stage
-        next_sequence = FourDSequence.objects.filter(
-            user=profile.user,
-            is_complete=False
-        ).order_by('created_at').first()
-        
-        if next_sequence:
-            next_sequence.current_stage = FourDSequence.Stage.DISCOVER
-            next_sequence.save()
-            return "Current sequence completed. Next sequence set to Discover stage."
-        
-        return "All sequences completed successfully!"
+    # Find next incomplete sequence and set it to Discover stage
+    next_sequence = FourDSequence.objects.filter(
+        user=profile.user,
+        is_complete=False
+    ).order_by('created_at').first()
+    
+    if next_sequence:
+        next_sequence.current_stage = FourDSequence.Stage.DISCOVER
+        next_sequence.save()
+        return "Current sequence completed. Next sequence set to Discover stage."
+    
+    return "All sequences completed successfully!"
 
-class update_demonstrate_data(BaseModel):
-    """Update the demonstration data for the current sequence."""
+class demonstrate_data(BaseModel):
+    """"""
     demonstration_evidence: str = Field(description="Evidence of skills demonstrated.")
     assessment_results: str = Field(description="Results of the demonstration assessment.")
     feedback: str = Field(description="Feedback on the demonstration phase.")
     
-    async def execute(self, ctx: RunContext[Deps]):
-        email = ctx.deps.email
-        profile = UserProfile.objects.get(user__email=email)
-        
-        sequence = FourDSequence.objects.filter(
-            user=profile.user,
-            current_stage=FourDSequence.Stage.DEMONSTRATE
-        ).order_by('created_at').first()
-        
-        if not sequence:
-            raise ValueError("No active Demonstrate stage sequence found.")
-        
-        sequence.demonstration_evidence = self.demonstration_evidence
-        sequence.assessment_results = self.assessment_results
-        sequence.demonstration_feedback = self.feedback
-        sequence.save()
-        
-        return "Demonstration data updated successfully."
+def update_demonstrate_data(ctx: RunContext[Deps], data: demonstrate_data):
+    """Update the demonstration data for the current sequence."""
+    email = ctx.deps.email
+    profile = UserProfile.objects.get(user__email=email)
+    
+    sequence = FourDSequence.objects.filter(
+        user=profile.user,
+        current_stage=FourDSequence.Stage.DEMONSTRATE
+    ).order_by('created_at').first()
+    
+    if not sequence:
+        raise ValueError("No active Demonstrate stage sequence found.")
+    
+    sequence.demonstration_evidence = data.demonstration_evidence
+    sequence.assessment_results = data.assessment_results
+    sequence.demonstration_feedback = data.feedback
+    sequence.save()
+    
+    return "Demonstration data updated successfully."
 
 demonstrate_agent = Agent(
     model,

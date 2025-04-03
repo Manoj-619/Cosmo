@@ -65,7 +65,8 @@ def chat_view(request):
     # TODO: Check if deps is updated  or is there a different way to access updated deps
     # NOTE: When we transfer to a new stage, the stage_name is updated in the deps
     current_stage = deps.stage_name
-    _update_message_history(email, sequence_id, json.loads(response.all_messages_json()))
+
+    _update_message_history(email, sequence_id, json.loads(response.all_messages_json()), current_stage)
     
 
     if not response:

@@ -44,58 +44,58 @@ class Curriculum(BaseModel):
     modules: List[Module] = Field(description="List upto 10 or more modules majorly designed on Assessment Areas and OFQUAL Units data shared. Include 1-2 modules on learner's interest areas as well.")
 
 
-    async def execute(self, ctx: RunContext[Deps]):
-        """Generate a detailed curriculum for the learner based on the Assessment Areas and corresponding OFQUAL Units shared."""
-        email       = ctx.deps.email
-        profile     = UserProfile.objects.get(user__email=email)
-        name        = profile.first_name + " " + profile.last_name
-        sequences   = FourDSequence.objects.filter(user=profile.user, current_stage__in=[1, 2, 3, 4]).order_by('created_at')
-        sequence_id = sequences.first().id if sequences else None
+def generate_curriculum(ctx: RunContext[Deps], curriculum: Curriculum):
+    """Generate a detailed curriculum for the learner based on the Assessment Areas and corresponding OFQUAL Units shared."""
+    email       = ctx.deps.email
+    profile     = UserProfile.objects.get(user__email=email)
+    name        = profile.first_name + " " + profile.last_name
+    sequences   = FourDSequence.objects.filter(user=profile.user, current_stage__in=[1, 2, 3, 4]).order_by('created_at')
+    sequence_id = sequences.first().id if sequences else None
+    
+    if not email or not sequence_id:
+        raise ValueError("Email and sequence id are required to generate a curriculum.")   
+    
+    discuss_stage = DiscussStage.objects.get(user__email=email, sequence_id=sequence_id)
+    discuss_stage.curriculum = curriculum
+    discuss_stage.save()
+    
+    xAPI_discuss_celery_task.apply_async(args=[curriculum,discuss_stage.learning_style,discuss_stage.interest_areas,discuss_stage.timeline,email,name])
         
-        if not email or not sequence_id:
-            raise ValueError("Email and sequence id are required to generate a curriculum.")   
-        
-        discuss_stage = DiscussStage.objects.get(user__email=email, sequence_id=sequence_id)
-        discuss_stage.curriculum = self.model_dump()
-        discuss_stage.save()
-        
-        xAPI_discuss_celery_task.apply_async(args=[json.loads(self.model_dump_json()),discuss_stage.learning_style,discuss_stage.interest_areas,discuss_stage.timeline,email,name])
-            
-        return f"Successfully generated Curriculum for {email}.\n\n{str(self.model_dump())}"
+    return f"Successfully generated Curriculum for {email}.\n\n{str(self.model_dump())}"
 
 
-class update_discussion_data(BaseModel):
+class discussion_data(BaseModel):
     interest_areas: str = Field(description="The learner's interest areas")
     learning_style: str = Field(description="The learner's preferred conversational learning style, for example, role-play, storytelling, or case study discussions")
     timeline: int = Field(description="The learner's timeline for completing the curriculum")
 
-    async def execute(self, ctx: RunContext[Deps]):
-        """Update the discussion data after the learner has expressed their interest areas, learning style, and timeline."""
-        email       = ctx.deps.email
-        sequences   = FourDSequence.objects.filter(user__email=email, current_stage__in=[1, 2, 3, 4]).order_by('created_at')
-        sequence_id = sequences.first().id if sequences else None
+def update_discussion_data(ctx: RunContext[Deps], data: discussion_data):
+    """Update the discussion data after the learner has expressed their interest areas, learning style, and timeline."""
+    email       = ctx.deps.email
+    sequences   = FourDSequence.objects.filter(user__email=email, current_stage__in=[1, 2, 3, 4]).order_by('created_at')
+    sequence_id = sequences.first().id if sequences else None
+    
+    if not email or not sequence_id:
+        raise ValueError("Email and sequence id are required to update discussion data.")        
+    
+    discuss_stage = DiscussStage.objects.get(user__email=email, sequence_id=sequence_id)
+                
+    discuss_stage.interest_areas  = data.interest_areas
+    discuss_stage.learning_style  = data.learning_style
+    discuss_stage.timeline        = data.timeline
+    discuss_stage.save()
         
-        if not email or not sequence_id:
-            raise ValueError("Email and sequence id are required to update discussion data.")        
-        
-        discuss_stage = DiscussStage.objects.get(user__email=email, sequence_id=sequence_id)
-                    
-        discuss_stage.interest_areas  = self.interest_areas
-        discuss_stage.learning_style  = self.learning_style
-        discuss_stage.timeline        = self.timeline
-        discuss_stage.save()
-            
-        assessment_areas = TNAassessment.objects.filter(user__email=email, sequence_id=sequence_id)
-        tna_assessment_data = ""
-        for assessment_item in assessment_areas:
-            tna_assessment_data += f"**Assessment Area:** {assessment_item.assessment_area}\n**Learner's Report:** {assessment_item.evidence_of_assessment}\n**Gaps Determined:** {assessment_item.knowledge_gaps}\n\n"
+    assessment_areas = TNAassessment.objects.filter(user__email=email, sequence_id=sequence_id)
+    tna_assessment_data = ""
+    for assessment_item in assessment_areas:
+        tna_assessment_data += f"**Assessment Area:** {assessment_item.assessment_area}\n**Learner's Report:** {assessment_item.evidence_of_assessment}\n**Gaps Determined:** {assessment_item.knowledge_gaps}\n\n"
 
-            ofqual_units = "\n\n".join([f"**OFQUAL ID: {ofqual.ofqual_id} (Unit: {ofqual.ofqual_unit_id}):**\n{ofqual.ofqual_unit_data}" for ofqual in assessment_areas])
-        
-        value = f"""Discussion data updated successfully for {email}
+        ofqual_units = "\n\n".join([f"**OFQUAL ID: {ofqual.ofqual_id} (Unit: {ofqual.ofqual_unit_id}):**\n{ofqual.ofqual_unit_data}" for ofqual in assessment_areas])
+    
+    value = f"""Discussion data updated successfully for {email}
             
-    **Timeline**: {self.timeline}
-    **Learning Style**: {self.learning_style}
+    **Timeline**: {data.timeline}
+    **Learning Style**: {data.learning_style}
 
     The following data sources are being used to inform the personalized curriculum design:
     1. All TNA Assessment Data
@@ -111,60 +111,17 @@ class update_discussion_data(BaseModel):
     {ofqual_units}
             """
             
-        logger.info(f"Discussion data updated successfully for {email}:\n\n{value}")
-
-        # Update context with the current stage data
-        # NOTE: Again, do we need this?
-        # context['discuss'] = {
-        #     "interest_areas": data.interest_areas,
-        #     "learning_style": data.learning_style,
-        #     "timeline": data.timeline,
-        #     "curriculum": discuss_stage.curriculum
-        #     }
-                    
-        return value
-            
-# Handoff Agent for the next stage
-# class transfer_to_delivery_stage(StrictTool):
-#     """Transfer to the Delivery stage once the Discussion stage is complete."""
-
-#     def execute(self, context: Dict):        
-#         logger.info(f"Transferred to the Delivery stage for {context['email']}.")
-#         # Get discussion data from DB
-#         email       = context['email']
-#         name        = context['profile']['first_name'] + " " + context['profile']['last_name']
-#         sequence_id = context['sequence_id']
-        
-#         discuss_stage  = DiscussStage.objects.get(user__email=email, sequence_id=sequence_id)
-#         is_complete, error = discuss_stage.check_complete()
-#         if not is_complete:
-#             raise ValueError(error)
-        
-#         discuss_data   = discuss_stage.get_summary()    
-#         # Get the DeliverStage object
-#         agent = deliver_agent
-#         xAPI_stage_celery_task.apply_async(args=[agent.id, email, name])
-#         # Create the start message for the Delivery agent
-#         agent.start_message = f"""        
-# **Discussion Data:**
-# {discuss_data}
-        
-# Greet the learner and introduce the Delivery stage."""
-        
-#         return Result(
-#             value="Transferred to Delivery stage.",
-#             agent=agent, 
-#             context=context
-#         )
-
+    logger.info(f"Discussion data updated successfully for {email}:\n\n{value}")  
+    return value
+ 
 discuss_agent = Agent(
     model=model,
     system_prompt=get_agent_instructions('discuss'),
     tools=[
         Tool(update_discussion_data),
-        Tool(Curriculum)
+        Tool(generate_curriculum)
     ],
-    # instrument=True,
+    instrument=True,
     model_settings=ModelSettings(
         tool_choice='auto',
         parallel_tool_calls=False
