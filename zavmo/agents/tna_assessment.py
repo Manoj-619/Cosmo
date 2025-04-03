@@ -13,7 +13,7 @@ from stage_app.models import FourDSequence, TNAassessment
 def get_ofqual_based_instructions(competency_to_assess: TNAassessment):
     all_blooms_taxonomy_levels_criteria = competency_to_assess.ofqual_criterias 
 
-    ofqual_based_instructions = f"Assessment Area: {competency_to_assess.assessment_area}"
+    ofqual_based_instructions = f"**Assessment Area: {competency_to_assess.assessment_area}**"
     for item in all_blooms_taxonomy_levels_criteria:
         ofqual_based_instructions+=f"""\n\n**Blooms Taxonomy Level:** {item['bloom_taxonomy_level']}\nTask: {item['task']}\nCriteria and Expectations: {item['criteria']} {item['expectations']}\n"""
         benchmarking_responses = item['benchmarking_responses']
@@ -33,7 +33,7 @@ def validate_on_current_level(ctx: RunContext[Deps], current_level: CurrentLevel
     sequence_id = sequences.first().id if sequences else None
 
     all_levels = ["Remember", "Understand", "Apply", "Analyze", "Evaluate", "Create"]
-    tna_assessment = TNAassessment.objects.get(user__email=email, sequence_id=sequence_id, assessment_area=current_level.assessment_area)
+    tna_assessment = TNAassessment.objects.get(user__email=email, sequence_id=sequence_id, assessment_area=current_level.assessment_area, status='In Progress')
     tna_assessment.finalized_blooms_taxonomy_level = current_level.current_bloom_taxonomy_level
     tna_assessment.save()
     if current_level.result == "FAIL":
@@ -82,8 +82,11 @@ def save_assessment_area(ctx: RunContext[Deps], assessment_area_details: Assessm
     tna_assessment.save()
 
     next_tna_assessment = TNAassessment.objects.filter(user__email=email, sequence_id=sequence_id).exclude(status='Completed').order_by('created_at').first()
-    next_tna_assessment.status = 'In Progress'
-    next_tna_assessment.save()
+    if next_tna_assessment:
+        next_tna_assessment.status = 'In Progress'
+        next_tna_assessment.save()
+    else:
+        return "Saved details of last assessment lets move to next stage."
 
     return f"""Saved details for the Assessment area: {assessment_area_details.assessment_area}."""
 

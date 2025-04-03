@@ -56,7 +56,7 @@ def generate_curriculum(ctx: RunContext[Deps], curriculum: Curriculum):
         raise ValueError("Email and sequence id are required to generate a curriculum.")   
     
     discuss_stage = DiscussStage.objects.get(user__email=email, sequence_id=sequence_id)
-    discuss_stage.curriculum = curriculum
+    discuss_stage.curriculum = curriculum.model_dump()
     discuss_stage.save()
     
     xAPI_discuss_celery_task.apply_async(args=[curriculum.model_dump(),discuss_stage.learning_style,discuss_stage.interest_areas,discuss_stage.timeline,email,name])

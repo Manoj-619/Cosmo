@@ -34,34 +34,29 @@ def chat_view(request):
     message_history = _get_message_history(user.email, sequence_id)
     email = user.email
 
-    # if stage_name == "profile" and message_history==[]:
-    #     xAPI_stage_celery_task.apply_async(args=[stage_name, email, email])
+    if stage_name == "profile" and message_history==[]:
+        xAPI_stage_celery_task.apply_async(args=[stage_name, email, email])
 
-    # Get the latest user message from the message history
-    # if message_history and message_history[-1].get("role") == "user":
-    #     latest_user_message = message_history[-1].get("content")
-    #     if len(message_history) > 1 and message_history[-2].get("role")=="assistant":
-    #         latest_stage=message_history[-2].get("sender")
-    #         latest_zavmo_message=message_history[-2].get("content")
-    #     else:
-    #         latest_stage=None
-    #         latest_zavmo_message=None
-    # else:
-    #     latest_user_message = None  # No new user message yet
-
-    # if latest_user_message:
-    #     xAPI_chat_celery_task.apply_async(args=[latest_user_message, latest_stage,email,latest_zavmo_message])
-    
     agent = get_agent(stage_name)
     deps  = _get_deps(email, sequence_id)
     deps  = Deps(email=user.email, stage_name=stage_name)
 
     response = agent.run_sync(message,message_history=message_history, deps=deps)
 
+    ## To get the sequence_id if generated - this is to save the history with messages to new sequence_id
+    user, sequence_id = _get_user_and_sequence(request)
     current_stage = deps.stage_name
-    logger.info(f"\n\nCurrent stage: {current_stage}\n\n")
     _update_message_history(email, sequence_id, json.loads(response.all_messages_json()), current_stage)
     _update_deps(email, sequence_id, deps.model_dump())
+    
+    # Get the latest user message, latest zavmo message and latest stage
+    latest_user_message  = [parts for item in json.loads(response.new_messages_json()) for parts in item['parts'] if parts['part_kind']=='user-prompt'][0]['content']
+    latest_zavmo_message = [parts for item in json.loads(response.new_messages_json()) for parts in item['parts'] if parts['part_kind']=='text'][0]['content']
+
+    if latest_user_message:
+        xAPI_chat_celery_task.apply_async(args=[latest_user_message, current_stage, email, latest_zavmo_message])
+    
+    logger.info(f"\n\nCurrent stage: {current_stage} - User: {user.email} - sequence_id: {sequence_id if sequence_id else 'Does not exist'}\n\n")
 
     if not response:
         return DRFResponse({

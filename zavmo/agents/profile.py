@@ -10,7 +10,6 @@ from agents.tna_assessment import tna_assessment_agent
 from stage_app.tasks import xAPI_profile_celery_task, xAPI_stage_celery_task
 
 import time
-import json
 import logging
 
 

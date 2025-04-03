@@ -23,12 +23,10 @@ def complete_sequence(ctx: RunContext[Deps]):
         raise ValueError("No active Demonstrate stage sequence found.")
     
     sequence.first().update_stage('completed')
-    sequence.save()
 
     # Find next incomplete sequence and set it to Discover stage
     next_sequence = FourDSequence.objects.filter(
-        user=profile.user,
-        is_complete=False
+        user=profile.user,current_stage__in=[FourDSequence.Stage.DISCOVER]
     ).order_by('created_at').first()
     
     if next_sequence:
