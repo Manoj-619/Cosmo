@@ -25,7 +25,7 @@ def FindNOSandOFQUAL(ctx: RunContext[Deps], nos_query: nos_query):
     user_profile = UserProfile.objects.get(user__email=email)
     is_complete, error = user_profile.check_complete()
     if not is_complete:
-        raise ValueError(error)
+        return f"Please update profile data using `update_profile_data` tool. {error}"
 
     ## Number of 4D sequence to create for a user => length of NOS
     nos = retrieve_nos_from_neo4j(nos_query.query)
@@ -90,7 +90,7 @@ def update_profile_data(ctx: RunContext[Deps], data: profile):
     # Get email from dependencies
     email = ctx.deps.email
     if not email:
-            raise ValueError("Email is required to update profile data.")
+        raise ValueError("Email is required to update profile data.")
         
     # Get the UserProfile object
     user_profile = UserProfile.objects.get(user__email=email)

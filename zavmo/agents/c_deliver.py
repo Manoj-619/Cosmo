@@ -63,38 +63,12 @@ def generate_lesson(ctx: RunContext[Deps], lesson: Lesson):
 
 
 
-class deliver_data(BaseModel):
-    """Update the delivery data for the current sequence."""
-    learning_progress: str = Field(description="Progress made in learning objectives.")
-    completion_status: str = Field(description="Status of completion for assigned tasks.")
-    feedback: str = Field(description="Feedback on the delivery phase.")
-    
-def update_deliver_data(ctx: RunContext[Deps], data: deliver_data):
-        email = ctx.deps.email
-        profile = UserProfile.objects.get(user__email=email)
-        
-        sequence = FourDSequence.objects.filter(
-            user=profile.user,
-            current_stage=FourDSequence.Stage.DELIVER
-        ).order_by('created_at').first()
-        
-        if not sequence:
-            raise ValueError("No active Deliver stage sequence found.")
-        
-        sequence.learning_progress = data.learning_progress
-        sequence.completion_status = data.completion_status
-        sequence.delivery_feedback = data.feedback
-        sequence.save()
-        
-        return "Delivery data updated successfully."
-
 deliver_agent = Agent(
     model,
     model_settings=ModelSettings(parallel_tool_calls=True),
     system_prompt=get_agent_instructions('deliver'),
     instrument=True,
     tools=[
-        Tool(update_deliver_data),
         Tool(generate_lesson)
     ],
     retries=3)
