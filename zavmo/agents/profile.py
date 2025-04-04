@@ -66,7 +66,7 @@ def FindNOSandOFQUAL(ctx: RunContext[Deps], nos_query: nos_query):
         else:
             logging.info(f"\n\nNo OFQUAL units found for NOS ID: {nos_data['nos_id']}. Skipping FourD Sequence creation.\n\n")
 
-    return f"NOS to OFQUAL mapped, transfer to TNA Assessment step"
+    return f"NOS to OFQUAL mapped, transfer to TNA Assessment step using `transfer_to_tna_assessment_step` tool."
 
 
 class profile(BaseModel):
