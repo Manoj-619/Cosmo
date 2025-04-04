@@ -47,7 +47,7 @@ def FindNOSandOFQUAL(ctx: RunContext[Deps], nos_query: nos_query):
         
             assessments_for_sequence = []  # Reset for each sequence
             total_assessments = 0
-            for ofqual in ofqual_units_for_nos[:1]:
+            for ofqual in ofqual_units_for_nos:
                 total_assessments += 1
                 assessment = TNAassessment(
                     user=user_profile.user,
