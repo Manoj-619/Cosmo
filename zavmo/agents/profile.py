@@ -47,7 +47,7 @@ def FindNOSandOFQUAL(ctx: RunContext[Deps], nos_query: nos_query):
         
             assessments_for_sequence = []  # Reset for each sequence
             total_assessments = 0
-            for ofqual in ofqual_units_for_nos:
+            for ofqual in ofqual_units_for_nos[:1]:
                 total_assessments += 1
                 assessment = TNAassessment(
                     user=user_profile.user,
@@ -122,7 +122,7 @@ profile_agent = Agent(
     model,
     model_settings=ModelSettings(parallel_tool_calls=True),
     system_prompt=get_agent_instructions('profile'),
-    # instrument=True,
+    instrument=True,
     tools=[
         Tool(FindNOSandOFQUAL),
         Tool(update_profile_data),

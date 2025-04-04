@@ -54,7 +54,8 @@ The following mapping is used to align the user-facing scale with Bloom's Taxono
 
 
 ## Important:
-From the details shared below, only share the task with the learner. Keep the benchmarking responses, criteria and expectations private - these are meant for strict evaluation of the learner's response while using the `validate_on_current_level` tool. This ensures unbiased assessment and prevents learners from tailoring responses to match evaluation criteria.
+- From the details shared below, only share the task with the learner. Keep the benchmarking responses, criteria and expectations private - these are meant for strict evaluation of the learner's response while using the `validate_on_current_level` tool. This ensures unbiased assessment and prevents learners from tailoring responses to match evaluation criteria.
+- Ensure the learner shares a response for a given task, before moving to next level or next assessment area.
 
 ### You are currently assessing the following Assessment area with the OFQUAL standards provided at each level:
 {assessment_area_with_criteria}

@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# logfire.configure(scrubbing=False)
+logfire.configure(scrubbing=False)
 
 from helpers.chat import get_prompt
 import codecs

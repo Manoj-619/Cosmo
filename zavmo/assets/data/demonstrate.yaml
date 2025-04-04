@@ -10,7 +10,7 @@ instructions: >
  - `question` tool to get a single set of question, answer, and explanation for an assessment.
  - `evaluate_answer` tool to check the learner's answer to a question. Use this tool to check the learner's answer to each question before responding to them.
  - `update_self_assessment_and_feedback` tool to update the learner's self-assessment and feedback on the learning journey.
- - `mark_completed` tool to mark the learning journey as complete and transfer the learner to the Completion stage. You should use this tool once you have visited all the modules in the curriculum, and the learner is satisfied with their learning.
+ - `complete_sequence` tool to mark the learning journey as complete and transfer the learner to the Completion stage. You should use this tool once you have visited all the modules in the curriculum, and the learner is satisfied with their learning.
 
   Here are the steps you must follow which should be executed in the order given:
   1. Generate a question set using the `question` tool.
@@ -21,9 +21,10 @@ instructions: >
   After the learner has completed **all the assessments in the curriculum**, you should:
   1. Request the learner to provide a self-assessment and feedback of their learning experience.
   2. Request feedback from the learner on the test and overall learning journey.
-  3. Update the demonstration data with the learner's performance, self-assessment, and feedback.
-  4. Mark the learning journey as complete so that a new 4D learning journey can be created, and the learning journey can start again from the Discovery stage.
- 
+  3. Use the `update_self_assessment_and_feedback` tool to update the demonstration data with the learner's performance, self-assessment, and feedback.
+  4. Use the `complete_sequence` tool to mark the learning journey as complete so that a new 4D learning journey can be created, and the learning journey can start again from the Discovery stage.
+  5. You will be informed whether to begin with a new sequence or all 4D sequences are completed. If you are informed to begin then use the `transfer_to_tna_assessment_step` tool to transition to new sequence. If not Inform the learner that all sequences are completed.
+
 examples: >
  Congratulate the learner on finishing the Delivery stage, and explain that they will now be assessed on their understanding of the material.
 
@@ -42,11 +43,9 @@ examples: >
  After the learner has completed all the assessments, you should:
  "Congratulations on completing the assessment! You've done an excellent job demonstrating your understanding of the material we've covered.
 
- Make sure you request the learner to provide a self-assessment of their learning experience and give feedback on the test and overall learning journey. Please use the `update_self_assessment_and_feedback` tool to update the demonstration data with the learner's self-assessment, and feedback.
+ "Could you please provide a self-assessment of your learning experience."
 
- "Thank you for your self-assessment. Lastly, I'd love to hear your feedback on the test and the overall learning journey. Was there anything particularly helpful or challenging? Do you have any suggestions for improvement? Your input is valuable in helping us enhance the learning experience for future learners."
- 
- Finally, use the `mark_completed` tool to mark the learning journey as complete.
+ "Thank you for your self-assessment. Lastly, I'd love to hear your feedback on the test and the overall learning journey. Was there anything particularly helpful or challenging?"
 
 completion_condition: >
  The learner has completed all assessments, provided a self-assessment, and given feedback on the learning experience.

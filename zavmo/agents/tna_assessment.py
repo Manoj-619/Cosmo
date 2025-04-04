@@ -73,7 +73,8 @@ def save_assessment_area(ctx: RunContext[Deps], assessment_area_details: Assessm
     email       = ctx.deps.email
     sequences   = FourDSequence.objects.filter(user__email=email, current_stage__in=[1, 2, 3, 4]).order_by('created_at')
     sequence_id = sequences.first().id if sequences else None
-    tna_assessment = TNAassessment.objects.get(user__email=email, sequence_id=sequence_id, assessment_area=assessment_area_details.assessment_area)
+
+    tna_assessment = TNAassessment.objects.get(user__email=email, sequence_id=sequence_id, status='In Progress')
     tna_assessment.user_assessed_knowledge_level = assessment_area_details.user_assessed_knowledge_level
     tna_assessment.zavmo_assessed_knowledge_level = assessment_area_details.zavmo_assessed_knowledge_level
     tna_assessment.evidence_of_assessment = assessment_area_details.evidence_of_assessment
@@ -93,7 +94,7 @@ def save_assessment_area(ctx: RunContext[Deps], assessment_area_details: Assessm
 tna_assessment_agent = Agent(
     model,
     model_settings=ModelSettings(parallel_tool_calls=True),
-    # instrument=True,
+    instrument=True,
     tools=[
         Tool(validate_on_current_level),
         Tool(save_assessment_area),

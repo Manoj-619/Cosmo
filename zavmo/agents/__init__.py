@@ -10,6 +10,7 @@ from stage_app.models import FourDSequence, UserProfile
 from stage_app.tasks import xAPI_stage_celery_task
 
 @profile_agent.tool
+@demonstrate_agent.tool
 def transfer_to_tna_assessment_step(ctx: RunContext[Deps]):
     """After the learner has completed the Discover stage, transfer to the TNA Assessment step"""
     email = ctx.deps.email
@@ -19,7 +20,7 @@ def transfer_to_tna_assessment_step(ctx: RunContext[Deps]):
     last_name  = profile.last_name
     name  = first_name + " " + last_name
     xAPI_stage_celery_task.apply_async(args=['tna_assessment', email, name])   
-    
+
     ctx.deps.stage_name = 'tna_assessment'
 
     return tna_assessment_agent.run_sync(f"Greet {first_name} and Present the table", deps=Deps(email=email, stage_name='tna_assessment'))
@@ -69,7 +70,6 @@ def transfer_to_demonstrate_stage(ctx: RunContext[Deps]):
     ctx.deps.stage_name = 'demonstrate'
 
     return demonstrate_agent.run_sync(f"Greet {first_name} the learner to the Demonstrate stage", deps=Deps(email=email, stage_name='demonstrate'))
-
 
 def get_agent(stage_name):
     """Get the agent for the given stage name"""

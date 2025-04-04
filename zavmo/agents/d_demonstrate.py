@@ -4,8 +4,47 @@ from pydantic_ai.settings import ModelSettings
 from pydantic_ai.tools import Tool
 
 from agents.common import model, get_agent_instructions, Deps
-from stage_app.models import UserProfile, FourDSequence
-from stage_app.tasks import xAPI_stage_celery_task
+from stage_app.models import UserProfile, FourDSequence, DemonstrateStage
+from stage_app.tasks import xAPI_feedback_celery_task
+
+
+
+class self_assessment_and_feedback(BaseModel):
+    """Use this tool after the learner has completed all assessments, and you have received their self-assessment and feedback."""
+    understanding_level: int = Field(description="The learner's self assessment of their understanding level, from 1 to 4 (Beginner, Intermediate, Advanced, Expert)")
+    feedback_summary: str = Field(description="A summary of the learner's feedback on the learning journey")
+    
+def update_self_assessment_and_feedback(ctx: RunContext[Deps], data: self_assessment_and_feedback):        
+        email = ctx.deps.email
+
+        profile = UserProfile.objects.get(user__email=email)
+        name = profile.first_name + " " + profile.last_name
+
+        sequence = FourDSequence.objects.filter(
+            user=profile.user,
+            current_stage=FourDSequence.Stage.DEMONSTRATE
+        ).order_by('created_at').first()
+        
+        if not sequence:
+            raise ValueError("No active Demonstrate stage sequence found.")
+        
+        # Update the DemonstrateStage object
+        demonstrate_stage = DemonstrateStage.objects.get(
+            user__email=email, 
+            sequence_id=sequence.id
+        )
+        # If no evaluations are in the demonstrate_stage object, raise an error
+        evaluations = demonstrate_stage.evaluations
+        if not evaluations:
+            raise ValueError("No evaluations found in demonstrate stage data.")
+        
+        demonstrate_stage.understanding_level = data.understanding_level
+        demonstrate_stage.feedback_summary    = data.feedback_summary
+        demonstrate_stage.save()
+        
+        xAPI_feedback_celery_task.apply_async(args=[data.feedback_summary,data.understanding_level,email,name])
+        return "Self assessment and feedback saved successfully"
+    
 
 def complete_sequence(ctx: RunContext[Deps]):
     """Mark the current sequence as complete and prepare for next sequence"""
@@ -32,7 +71,7 @@ def complete_sequence(ctx: RunContext[Deps]):
     if next_sequence:
         next_sequence.current_stage = FourDSequence.Stage.DISCOVER
         next_sequence.save()
-        return "Current sequence completed. Next sequence set to Discover stage."
+        return "Current sequence completed. Next sequence set to Discover stage. Transfer to tna assessment step using `transfer_to_tna_assessment_step` tool, to begin with new sequence."
     
     return "All sequences completed successfully!"
 
@@ -66,9 +105,10 @@ demonstrate_agent = Agent(
     model,
     model_settings=ModelSettings(parallel_tool_calls=True),
     system_prompt=get_agent_instructions('demonstrate'),
-    # instrument=True,
+    instrument=True,
     tools=[
         Tool(complete_sequence),
         Tool(update_demonstrate_data),
+        Tool(update_self_assessment_and_feedback),
     ],
     retries=3) 

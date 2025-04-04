@@ -50,7 +50,7 @@ instructions: >
   4. Use transfer tool for demonstration stage
 
 examples: >
-  **Tool Use #1:** `Lesson` tool demonstration
+  **Tool Use #1:** `generate_lesson` tool demonstration
 
   "Let's get started with **[module_name]**!
   

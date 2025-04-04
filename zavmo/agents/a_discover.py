@@ -61,7 +61,5 @@ discover_agent = Agent(
     tools=[
         Tool(update_discover_data)
     ],
-    # deps_type='email',
-    # deps_value=lambda ctx: ctx.get('email'),
-    # instrument=True,
+    instrument=True,
 )
