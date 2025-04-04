@@ -103,16 +103,19 @@ WSGI_APPLICATION = 'zavmo.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql',
+        'ENGINE': 'dj_db_conn_pool.backends.postgresql',
         'NAME': config('POSTGRES_DB'),
         'USER': config('POSTGRES_USERNAME'),
         'PASSWORD': config('POSTGRES_PASSWORD'),
         'HOST': config('POSTGRES_HOST'),
         'PORT': config('POSTGRES_PORT', default='5432'),
-    "OPTIONS": {
-        "pool": True,
-    },    
-}
+        'CONN_MAX_AGE': 0,
+        'POOL_OPTIONS': {
+            'POOL_SIZE': 25,
+            'MAX_OVERFLOW': 10,
+            'RECYCLE': 300,
+        }
+    }
 }
 
 ### Redis settings

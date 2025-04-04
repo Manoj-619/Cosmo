@@ -10,7 +10,7 @@ simplejson
 pg8000
 sqlalchemy
 psycopg2
-psycopg[pool]   # for connection pooling
+django-db-connection-pool[postgresql]
 
 # monitoring
 # supervisor
