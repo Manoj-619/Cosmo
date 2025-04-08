@@ -20,9 +20,9 @@ def transfer_to_tna_assessment_step(ctx: RunContext[Deps]):
     profile = UserProfile.objects.get(user__email=email)
 
     if current_stage=='profile':
-        is_complete, error = profile.check_complete()
-        if not is_complete:
-            return error
+        sequences = FourDSequence.objects.filter(user=profile.user, current_stage__in=[1, 2, 3, 4])
+        if not sequences.exists():
+            return "No 4D sequence found. Use `FindNOSandOFQUAL` tool to find NOS, map to OFQUAL and then create 4D sequences."
         
     elif current_stage=='demonstrate':
         sequence = FourDSequence.objects.filter(

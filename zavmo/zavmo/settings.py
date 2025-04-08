@@ -111,8 +111,8 @@ DATABASES = {
         'PORT': config('POSTGRES_PORT', default='5432'),
         'CONN_MAX_AGE': 0,
         'POOL_OPTIONS': {
-            'POOL_SIZE': 25,
-            'MAX_OVERFLOW': 10,
+            'POOL_SIZE': 50,
+            'MAX_OVERFLOW': 20,
             'RECYCLE': 300,
         }
     }
