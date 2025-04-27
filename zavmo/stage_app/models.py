@@ -204,17 +204,18 @@ class DiscoverStage(models.Model):
 
 # Stage 2
 class DiscussStage(models.Model):
-    user           = models.ForeignKey(User, on_delete=models.CASCADE, related_name='discuss_stage')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='discuss_stage')
     sequence = models.OneToOneField('FourDSequence', 
-                                    on_delete=models.CASCADE, 
-                                    db_column='sequence_id',
-                                    related_name='discuss_stage')
+                                 on_delete=models.CASCADE, 
+                                 db_column='sequence_id',
+                                 related_name='discuss_stage')
     
     interest_areas = models.JSONField(blank=True, null=True, verbose_name="Interest Areas")
     learning_style = models.TextField(blank=True, null=True, verbose_name="Learning Style")
-    timeline =  models.IntegerField(blank=True, null=True, verbose_name="Available Time (hours per week)")
-    curriculum     = models.JSONField(blank=True, null=True, verbose_name="Curriculum Plan")
+    timeline = models.IntegerField(blank=True, null=True, verbose_name="Available Time (hours per week)")
+    curriculum = models.JSONField(blank=True, null=True, verbose_name="Curriculum Plan")
     
+  
     def __str__(self):
         return f"User {self.user.email} - Sequence {self.sequence.id} - Discuss Stage"
     
@@ -235,6 +236,9 @@ class DiscussStage(models.Model):
         **Available Time (hours per week)**: {self.timeline}
         **Curriculum**:
         {self.curriculum}
+        **NOS ID**: {self.nos_id}
+        **OFQUAL ID**: {self.ofqual_id}
+        **OFQUAL Unit ID**: {self.ofqual_unit_id}
         """
 
 # Stage 3
@@ -247,9 +251,10 @@ class DeliverStage(models.Model):
     
     # Lessons is a list of dictionaries, each representing a lesson
     lessons     = models.JSONField(default=list, blank=True, null=True, verbose_name="Lessons")
-    lesson_number = models.IntegerField(default=1, verbose_name="Lesson Number", null=True, blank=True)  # Add this field
+    lesson_number = models.IntegerField(default=1, verbose_name="Lesson Number", null=True, blank=True)
     is_complete = models.BooleanField(default=False, verbose_name="Is Complete")
     
+
     def __str__(self):
         return f"User {self.user.email} - Sequence {self.sequence.id} - Deliver Stage"
         
@@ -284,6 +289,8 @@ class DemonstrateStage(models.Model):
     )
     feedback_summary = models.TextField(blank=True, null=True, verbose_name="Feedback Summary")
     
+
+
     def __str__(self):
         return f"User {self.user.email} - Sequence {self.sequence.id} - Demonstrate Stage"
     

@@ -12,49 +12,94 @@ logger = logging.getLogger(__name__)
 BASE_API_URL = os.getenv('LRS_ENDPOINT')
 
 @shared_task(name="xAPI_chat_celery_task")
-def xAPI_chat_celery_task(latest_user_message, latest_stage,email,latest_zavmo_message):
-
-    url = f'{BASE_API_URL}/chat'
+def xAPI_chat_celery_task(latest_user_message, latest_stage, email, latest_zavmo_message, module_name=None):
+    """Sends an xAPI statement about a chat interaction."""
+    url = f'{BASE_API_URL}/chat'  # Assuming this endpoint can handle xAPI statements now
     headers = {
         'Content-Type': 'application/json'
     }
-    data = {
-        "chatData": {
-            "timestamp": datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ'),
-            "zavmoChat": latest_zavmo_message,
-            "userChat": latest_user_message,
-            "stage": latest_stage
-
-        },
+    timestamp = datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
+    # Construct xAPI statement
+    xapi_statement = {
         "actor": {
-            "name": email,
-            "email": email,
-        }
+            "mbox": f"mailto:{email}",
+            "name": email, # Consider fetching a proper name if available
+            "objectType": "Agent"
+        },
+        "verb": {
+            "id": "http://adlnet.gov/expapi/verbs/interacted",
+            "display": {"en-US": "interacted"}
+        },
+        "object": {
+            "id": f"urn:zavmo:chat:{email}:{timestamp}", # Unique ID for the interaction
+            "definition": {
+                "name": {"en-US": f"Chat Interaction - Stage: {latest_stage}"},
+                "description": {"en-US": "A chat interaction between the user and Zavmo."},
+                "type": "http://adlnet.gov/expapi/activities/interaction",
+                "extensions": {
+                    "urn:zavmo:extension:timestamp": timestamp,
+                    "urn:zavmo:extension:zavmoChat": latest_zavmo_message,
+                    "urn:zavmo:extension:userChat": latest_user_message,
+                    "urn:zavmo:extension:stage": latest_stage,
+                    "urn:zavmo:extension:module_name": module_name if module_name is not None else "N/A"
+                }
+            },
+            "objectType": "Activity"
+        },
+        "timestamp": timestamp
     }
 
-    response = requests.post(url, headers=headers, json=data)
-    logger.info(response.text)
-    return response.json()
+    response = requests.post(url, headers=headers, json=xapi_statement)
+    logger.info(f"xAPI Chat Task Response: {response.text}")
+    try:
+        return response.json()
+    except json.JSONDecodeError:
+        logger.error(f"Failed to decode JSON response for xAPI Chat Task: {response.text}")
+        return {"status": "error", "message": "Invalid JSON response from server", "response_text": response.text}
+
 
 @shared_task(name="xAPI_stage_celery_task")
-def xAPI_stage_celery_task(stage_data,email,name):
-    url = f'{BASE_API_URL}/stage'
+def xAPI_stage_celery_task(stage_data, email, name, module_name=None):
+    """Sends an xAPI statement when a user reaches a new stage."""
+    url = f'{BASE_API_URL}/stage' # Assuming this endpoint can handle xAPI statements now
     headers = {
         'Content-Type': 'application/json'
     }
-    data = {
+    timestamp = datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
+    # Construct xAPI statement
+    xapi_statement = {
         "actor": {
+            "mbox": f"mailto:{email}",
             "name": name,
-            "email": email
+            "objectType": "Agent"
         },
-        "stage":{
-            "timestamp": datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ'),
-            "stage": stage_data
-        }
+        "verb": {
+            "id": "http://adlnet.gov/expapi/verbs/experienced",
+            "display": {"en-US": "experienced"}
+        },
+        "object": {
+            "id": f"urn:zavmo:stage:{stage_data}", # Unique ID for the stage experience
+            "definition": {
+                "name": {"en-US": f"Reached Stage: {stage_data}"},
+                "description": {"en-US": f"User reached the {stage_data} stage."},
+                "type": "http://adlnet.gov/expapi/activities/milestone",
+                "extensions": {
+                     "urn:zavmo:extension:timestamp": timestamp,
+                     "urn:zavmo:extension:stage": stage_data,
+                     "urn:zavmo:extension:module_name": module_name if module_name is not None else "N/A"
+                }
+            },
+            "objectType": "Activity"
+        },
+        "timestamp": timestamp
     }
-    response = requests.post(url, headers=headers, json=data)
-    logger.info(response.text)
-    return response.json()
+    response = requests.post(url, headers=headers, json=xapi_statement)
+    logger.info(f"xAPI Stage Task Response: {response.text}")
+    try:
+        return response.json()
+    except json.JSONDecodeError:
+        logger.error(f"Failed to decode JSON response for xAPI Stage Task: {response.text}")
+        return {"status": "error", "message": "Invalid JSON response from server", "response_text": response.text}
 
 
 @shared_task(name="xAPI_profile_celery_task")
@@ -86,26 +131,51 @@ def xAPI_profile_celery_task(profile_data,email):
 
 
 @shared_task(name="xAPI_discover_celery_task")
-def xAPI_discover_celery_task(discover_data,email,name):
-    url = f'{BASE_API_URL}/learningGoals'
+def xAPI_discover_celery_task(discover_data,email,name, module_name=None):
+    """Sends an xAPI statement about the user's defined learning goals."""
+    url = f'{BASE_API_URL}/learningGoals' # Assuming this endpoint can handle xAPI statements now
     headers = {
         'Content-Type': 'application/json'
     }
-    data = {
-        "chat": {
-            "learningGoals": discover_data.get('learning_goals','N/A'),
-            "learningGoalRationale": discover_data.get('learning_goal_rationale','N/A'),
-            "knowledgeLevel": discover_data.get('knowledge_level','N/A'),
-            "applicationArea": discover_data.get('application_area','N/A')
-        },
-        "actor": {
+    timestamp = datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
+    # Construct xAPI statement
+    xapi_statement = {
+         "actor": {
+            "mbox": f"mailto:{email}",
             "name": name,
-            "mbox": email
-        }
+            "objectType": "Agent"
+        },
+        "verb": {
+            "id": "http://adlnet.gov/expapi/verbs/answered", # Using 'answered' as it relates to discovery questions
+            "display": {"en-US": "answered"}
+        },
+        "object": {
+            "id": f"urn:zavmo:learningGoals:{email}", # Unique ID for this learning goal definition event
+            "definition": {
+                "name": {"en-US": "Learning Goals Definition"},
+                "description": {"en-US": "User provided information about their learning goals during the Discover stage."},
+                "type": "http://adlnet.gov/expapi/activities/profile", # Profile activity type seems appropriate
+                "extensions": {
+                    "urn:zavmo:extension:timestamp": timestamp,
+                    "urn:zavmo:extension:learningGoals": discover_data.get('learning_goals', 'N/A'),
+                    "urn:zavmo:extension:learningGoalRationale": discover_data.get('learning_goal_rationale', 'N/A'),
+                    "urn:zavmo:extension:knowledgeLevel": discover_data.get('knowledge_level', 'N/A'),
+                    "urn:zavmo:extension:applicationArea": discover_data.get('application_area', 'N/A'),
+                    "urn:zavmo:extension:module_name": module_name if module_name is not None else "N/A"
+                }
+            },
+            "objectType": "Activity"
+        },
+        "timestamp": timestamp
     }
-    response = requests.post(url, headers=headers, json=data)
-    logger.info(response.text)
-    return response.json()
+    response = requests.post(url, headers=headers, json=xapi_statement)
+    logger.info(f"xAPI Discover Task Response: {response.text}")
+    try:
+        return response.json()
+    except json.JSONDecodeError:
+        logger.error(f"Failed to decode JSON response for xAPI Discover Task: {response.text}")
+        return {"status": "error", "message": "Invalid JSON response from server", "response_text": response.text}
+
 
 @shared_task(name="xAPI_discuss_celery_task")
 def xAPI_discuss_celery_task(discuss_data,learning_style,interest_areas,timeline,email,name):
@@ -167,25 +237,37 @@ def xAPI_discuss_celery_task(discuss_data,learning_style,interest_areas,timeline
     }
 
 @shared_task(name="xAPI_lesson_celery_task")
-def xAPI_lesson_celery_task(lesson_data,email,name):
+def xAPI_lesson_celery_task(lesson, email, name, module_name=None, nos_id=None, ofqual_id=None):
     url = f'{BASE_API_URL}/lessonStart'
     headers = {
         'Content-Type': 'application/json'
     }
-    data = {
-        "actor": {  
+    xapi_statement = {
+        "actor": {
+            "mbox": f"mailto:{email}",
             "name": name,
-            "email": email
+            "objectType": "Agent"
         },
-        "lesson": {
-            "title": lesson_data.get("title","N/A"),
-            "description": lesson_data.get("lesson","N/A"),
-            "module": lesson_data.get("module","N/A"),
-            "learningObjective": lesson_data.get("learning_objective","N/A")
-        }
-
+        "verb": {
+            "id": "http://adlnet.gov/expapi/verbs/completed",
+            "display": {"en-US": "completed"}
+        },
+        "object": {
+            "id": f"lesson:{lesson.get('title', '')}",
+            "definition": {
+                "name": {"en-US": lesson.get('title', '')},
+                "description": {"en-US": lesson.get('lesson', '')},
+                "type": "http://adlnet.gov/expapi/activities/lesson",
+                "extensions": {
+                    "module_name": module_name,
+                    "nos_id": nos_id,
+                    "ofqual_id": ofqual_id
+                }
+            },
+            "objectType": "Activity"
+        },
     }
-    response = requests.post(url, headers=headers, json=data)
+    response = requests.post(url, headers=headers, json=xapi_statement)
     logger.info(response.text)
     return response.json()
 
