@@ -1,13 +1,12 @@
 from helpers.utils import get_logger
 from django.core.cache import cache
 from stage_app.models import UserProfile, FourDSequence, DeliverStage, DiscoverStage, DiscussStage, DemonstrateStage, TNAassessment
-from helpers.constants import HISTORY_SUFFIX, DEFAULT_CACHE_TIMEOUT, CONTEXT_SUFFIX
+from helpers.constants import HISTORY_SUFFIX, DEFAULT_CACHE_TIMEOUT, CONTEXT_SUFFIX, STAGE_ORDER
 from copy import deepcopy
 
 from typing import List, Dict
 from pydantic_ai.messages import ModelMessagesTypeAdapter 
 
-stage_order = ['profile', 'discover', 'tna_assessment', 'discuss', 'deliver', 'demonstrate']
 stage_models = [UserProfile, DiscoverStage, TNAassessment, DiscussStage, DeliverStage, DemonstrateStage]
 
 logger = get_logger(__name__)
@@ -36,11 +35,6 @@ def _determine_stage(user, sequence_id):
     if sequence_id:
         sequence = FourDSequence.objects.get(id=sequence_id)
         if sequence.stage_display == 'discover':
-            # discover_is_complete, discover_error = DiscoverStage.objects.get(user=profile.user, sequence=sequence).check_complete()
-            # if not discover_is_complete:
-            #     logger.info(f"Incomplete discover stage found. Running discover agent.")
-            #     return 'discover'
-
             # Check if all assessments are complete
             incomplete_assessments = [assessment for assessment in TNAassessment.objects.filter(user=profile.user, sequence=sequence) if not assessment.evidence_of_assessment]
             
@@ -49,16 +43,13 @@ def _determine_stage(user, sequence_id):
                 return 'tna_assessment'
             else:
                 return 'discuss'
-            
-            # if discover_is_complete and not incomplete_assessments:
-            #     logger.info(f"All assessments are complete. Running discuss agent.")
-            #     return 'discuss'
     
     else:
         logger.info(f"No sequence ID found. Running profile agent.")
         return 'profile'
     
     return sequence.stage_display
+
 
 def _get_message_history(email, sequence_id) -> List[Dict]:
     """Get or initialize message history."""
@@ -73,7 +64,11 @@ def _get_deps(email, sequence_id) -> Dict:
 
 def _update_message_history(email, sequence_id, all_messages: List[Dict], current_stage: str):
     """Update message history."""
-    valid_stages = ['discover', 'discuss', 'deliver', 'demonstrate', 'completed']
+    # Get valid stages from STAGE_ORDER keys, excluding 'profile' and 'tna_assessment'
+    # as they're special stages not directly tied to the FourDSequence model
+    valid_stages = [stage for stage in STAGE_ORDER.keys() 
+                   if stage not in ['profile', 'tna_assessment']]
+    
     ## Update the stage of the sequence
     if sequence_id and current_stage in valid_stages:
         sequence = FourDSequence.objects.get(
