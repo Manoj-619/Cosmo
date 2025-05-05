@@ -11,36 +11,46 @@ logger = logging.getLogger(__name__)
 # Define base URL from environment variable
 BASE_API_URL = os.getenv('LRS_ENDPOINT')
 
+# Updated task signature - Ensure it matches this
 @shared_task(name="xAPI_chat_celery_task")
-def xAPI_chat_celery_task(latest_user_message, latest_stage, email, latest_zavmo_message, module_name=None):
+def xAPI_chat_celery_task(latest_user_message, latest_zavmo_message, email, name, sequence_id, stage_name, verb_uri, verb_display, module_name=None):
     """Sends an xAPI statement about a chat interaction."""
-    url = f'{BASE_API_URL}/chat'  # Assuming this endpoint can handle xAPI statements now
+    if not BASE_API_URL: # Add check for environment variable
+        logger.error("LRS_ENDPOINT environment variable not set. Cannot send xAPI chat statement.")
+        return {"status": "error", "message": "LRS endpoint not configured."}
+
+    url = f'{BASE_API_URL}/chat' # Correct endpoint for chat
     headers = {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'X-Experience-API-Version': '1.0.3' # Keep if your endpoint supports it
     }
-    timestamp = datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
-    # Construct xAPI statement
+    timestamp = datetime.now(timezone.utc).isoformat() # Use ISO format with timezone
+    # Construct unique object ID using sequence_id
+    object_id = f"urn:zavmo:chat:{email}:{sequence_id}:{timestamp}"
+
+    # Construct xAPI statement using passed parameters
     xapi_statement = {
         "actor": {
             "mbox": f"mailto:{email}",
-            "name": email, # Consider fetching a proper name if available
+            "name": name, # Use the passed name
             "objectType": "Agent"
         },
         "verb": {
-            "id": "http://adlnet.gov/expapi/verbs/interacted",
-            "display": {"en-US": "interacted"}
+            "id": verb_uri, # Use the passed verb URI
+            "display": {"en-US": verb_display.lower()} # Use the passed verb display name
         },
         "object": {
-            "id": f"urn:zavmo:chat:{email}:{timestamp}", # Unique ID for the interaction
+            "id": object_id, # Use the unique ID with sequence_id
             "definition": {
-                "name": {"en-US": f"Chat Interaction - Stage: {latest_stage}"},
+                "name": {"en-US": f"Chat Interaction - Stage: {stage_name}"}, # Use passed stage_name
                 "description": {"en-US": "A chat interaction between the user and Zavmo."},
                 "type": "http://adlnet.gov/expapi/activities/interaction",
                 "extensions": {
                     "urn:zavmo:extension:timestamp": timestamp,
                     "urn:zavmo:extension:zavmoChat": latest_zavmo_message,
                     "urn:zavmo:extension:userChat": latest_user_message,
-                    "urn:zavmo:extension:stage": latest_stage,
+                    "urn:zavmo:extension:stage": stage_name, # Use passed stage_name
+                    "urn:zavmo:extension:sequenceId": str(sequence_id) if sequence_id else None, # Include sequence_id
                     "urn:zavmo:extension:module_name": module_name if module_name is not None else "N/A"
                 }
             },
@@ -49,13 +59,26 @@ def xAPI_chat_celery_task(latest_user_message, latest_stage, email, latest_zavmo
         "timestamp": timestamp
     }
 
-    response = requests.post(url, headers=headers, json=xapi_statement)
-    logger.info(f"xAPI Chat Task Response: {response.text}")
     try:
-        return response.json()
-    except json.JSONDecodeError:
-        logger.error(f"Failed to decode JSON response for xAPI Chat Task: {response.text}")
-        return {"status": "error", "message": "Invalid JSON response from server", "response_text": response.text}
+        # Send as a single statement, not an array, unless /chat expects an array
+        response = requests.post(url, headers=headers, json=xapi_statement, timeout=30)
+        response.raise_for_status()
+        logger.info(f"xAPI Chat Task Response Status: {response.status_code}")
+        try:
+            return response.json()
+        except json.JSONDecodeError:
+            logger.warning(f"xAPI Chat Task received non-JSON response: {response.text}")
+            return {"status": "success", "response_text": response.text}
+    except requests.exceptions.RequestException as e:
+        error_response_text = getattr(e.response, 'text', 'No response body')
+        logger.error(f"Failed to send xAPI Chat statement: {e}. Response: {error_response_text}")
+        error_details = {"status": "error", "message": str(e), "error_details": error_response_text}
+        if hasattr(e, 'response') and e.response is not None:
+            error_details["response_status"] = e.response.status_code
+        return error_details
+    except Exception as e:
+         logger.exception(f"An unexpected error occurred in xAPI_chat_celery_task: {e}") # Use logger.exception
+         return {"status": "error", "message": f"An unexpected error occurred: {str(e)}"}
 
 
 @shared_task(name="xAPI_stage_celery_task")
