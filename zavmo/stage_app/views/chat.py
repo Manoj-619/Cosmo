@@ -30,46 +30,11 @@ STAGE_VERBS_MAP = {
     "demonstrate": ["viewed", "acknowledged", "completed", "submitted", "interacted", "experienced", "attempted", "passed", "failed", "demonstrated", "applied", "received", "mastered", "achieved", "assessed", "evaluated", "answered"],
 }
 
-XAPI_VERB_IDS = {
-    # Map display names (lowercase) to their official xAPI Verb URIs
-    # (Ensure these URIs are correct for your LRS/profile)
-    "interacted": "http://adlnet.gov/expapi/verbs/interacted",
-    "updated": "http://activitystrea.ms/update",
-    "viewed": "http://id.tincanapi.com/verb/viewed",
-    "started": "http://adlnet.gov/expapi/verbs/launched",
-    "answered": "http://adlnet.gov/expapi/verbs/answered",
-    "completed": "http://adlnet.gov/expapi/verbs/completed",
-    "experienced": "http://adlnet.gov/expapi/verbs/experienced",
-    "identified": "http://activitystrea.ms/schema/1.0/identify",
-    "rated": "http://adlnet.gov/expapi/verbs/rated",
-    "failed": "http://adlnet.gov/expapi/verbs/failed",
-    "submitted": "http://activitystrea.ms/submit",
-    "discussed": "http://purl.org/xapi/adl/verbs/discussed",
-    "planned": "http://activitystrea.ms/plan",
-    "selected": "http://activitystrea.ms/select",
-    "provided": "http://activitystrea.ms/provide",
-    "responded": "http://adlnet.gov/expapi/verbs/responded",
-    "learned": "http://adlnet.gov/expapi/verbs/learned",
-    "struggled": "urn:x-learninglocker:verb:struggled", # Example custom
-    "progressed": "http://adlnet.gov/expapi/verbs/progressed",
-    "asked": "http://adlnet.gov/expapi/verbs/asked",
-    "received": "http://activitystrea.ms/receive",
-    "acknowledged": "http://activitystrea.ms/acknowledge",
-    "attempted": "http://adlnet.gov/expapi/verbs/attempted",
-    "passed": "http://adlnet.gov/expapi/verbs/passed",
-    "demonstrated": "urn:zavmo:verb:demonstrated", # Example custom
-    "applied": "urn:zavmo:verb:applied", # Example custom
-    "mastered": "http://adlnet.gov/expapi/verbs/mastered",
-    "achieved": "http://adlnet.gov/expapi/verbs/achieved",
-    "assessed": "http://adlnet.gov/expapi/verbs/assessed",
-    "evaluated": "urn:zavmo:verb:evaluated", # Example custom
-}
-
 def get_verb_uri(verb_display):
-    """Gets the URI for a given verb display name, defaulting to a custom URN if not found."""
+    """Gets a simplified verb display name."""
     verb_key = str(verb_display).lower().strip() if verb_display else ""
-    # Use XAPI_VERB_IDS map, default to custom URN structure if not found
-    return XAPI_VERB_IDS.get(verb_key, f"urn:zavmo:verbs:{verb_key}")
+    # Return the verb display name directly or a default value
+    return verb_key if verb_key else "default"
 
 def validate_stage_verb(stage, verb):
     """
