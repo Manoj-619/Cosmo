@@ -52,3 +52,15 @@ For each identified unit:
 - Extracted information must precisely match the original document.
 - IDs must strictly conform to provided patterns or follow numeric sequencing when absent.
 - Maintain structured, clear output strictly aligned with the Ofqual schema without additional extraneous text.
+
+### Additional Qualification Details
+
+Extract the following details for each qualification:
+- Qualification Type (e.g., 'Occupational Qualification', 'Vocational Qualification')
+- Qualification Level (numeric level)
+- Assessment Methods
+- Sector Subject Area
+- Awarding Organisation
+- Total Credits (if available)
+- Guided Learning Hours
+- Total Qualification Time

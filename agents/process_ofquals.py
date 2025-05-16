@@ -15,7 +15,7 @@ from extractor import ofqual_agent
 # Define PDF directory at the top for easy modification
 #ofqual_dir = r"C:\Users\smrit\Downloads\ofqual_set3_7"
 # ofqual_dir = r"/Users/adityachhabra/Documents/ofqual"
-ofqual_dir = r"F:\ofqual"
+ofqual_dir = r"/Users/gaurav/Desktop/test_pdf_folder"
 
 load_dotenv()
 
@@ -118,3 +118,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+    
